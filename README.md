@@ -37,5 +37,12 @@ optional arguments:
                         Chunk reading/writing SQL records
   -l LOG_FILE, --log-file LOG_FILE
                         Log file
+```
 
+### Note
+
+If you want to compress your newly generated/exported SQLite3 database even further you could run the [VACUUM](https://www.sqlite.org/lang_vacuum.html) command on 
+it
+```bash
+sqlite3 my_exported_database.sqlite3 'VACUUM;'
 ```
