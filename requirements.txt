@@ -1,0 +1,5 @@
+mysql-connector-python==8.0.15
+protobuf==3.6.1
+six==1.12.0
+slugify==0.0.1
+tqdm==4.31.1
