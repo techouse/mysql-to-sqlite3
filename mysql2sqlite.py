@@ -30,6 +30,8 @@ class MySQL2SQLite:
         self._mysql_database = kwargs.get("mysql_database", "transfer")
         self._sqlite_file = kwargs.get("sqlite_file", None)
 
+        self._vacuum = kwargs.get("vacuum", False)
+
         self._logger = self._setup_logger(log_file=kwargs.get("log_file", None))
 
         self._sqlite = sqlite3.connect(realpath(self._sqlite_file))
@@ -165,9 +167,9 @@ class MySQL2SQLite:
     def _transfer_table_data(self, sql, total_records=0):
         if self._chunk_size is not None and self._chunk_size > 0:
             for chunk in tqdm(
-                range(
-                    self._current_chunk_number, ceil(total_records / self._chunk_size)
-                )
+                    range(
+                        self._current_chunk_number, ceil(total_records / self._chunk_size)
+                    )
             ):
                 self._current_chunk_number = chunk
                 self._sqlite_cur.executemany(
@@ -241,6 +243,13 @@ class MySQL2SQLite:
                     )
                 )
                 sys.exit(1)
+
+        if self._vacuum:
+            self._logger.info(
+                "Vacuuming created SQLite database file.\nThis might take a while."
+            )
+            self._sqlite_cur.execute("VACUUM")
+
         self._logger.info("Done!")
 
 
@@ -276,6 +285,14 @@ if __name__ == "__main__":
         help="Chunk reading/writing SQL records",
     )
     parser.add_argument("-l", "--log-file", dest="log_file", help="Log file")
+    parser.add_argument(
+        "-V",
+        "--vacuum",
+        dest="vacuum",
+        action="store_true",
+        help="Use the VACUUM command to rebuild the SQLite database file, "
+             "repacking it into a minimal amount of disk space",
+    )
     args = parser.parse_args()
 
     if len(sys.argv) == 1:
@@ -290,6 +307,7 @@ if __name__ == "__main__":
             mysql_database=args.mysql_database,
             mysql_host=args.mysql_host,
             chunk=args.chunk,
+            vacuum=args.vacuum,
             log_file=args.log_file,
         )
         converter.transfer()
