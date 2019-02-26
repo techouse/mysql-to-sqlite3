@@ -19,7 +19,7 @@ python mysql2sqlite.py -h
 ```
 usage: mysql2sqlite.py [-h] [-f SQLITE_FILE] [-u MYSQL_USER]
                        [-p MYSQL_PASSWORD] [-d MYSQL_DATABASE]
-                       [--mysql-host MYSQL_HOST] [-c CHUNK] [-l LOG_FILE]
+                       [--mysql-host MYSQL_HOST] [-c CHUNK] [-l LOG_FILE] [-V]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -37,12 +37,6 @@ optional arguments:
                         Chunk reading/writing SQL records
   -l LOG_FILE, --log-file LOG_FILE
                         Log file
-```
-
-### Note
-
-If you want to compress your newly generated/exported SQLite3 database even further you could run the [VACUUM](https://www.sqlite.org/lang_vacuum.html) command on 
-it
-```bash
-sqlite3 my_exported_database.sqlite3 'VACUUM;'
+  -V, --vacuum          Use the VACUUM command to rebuild the SQLite database
+                        file, repacking it into a minimal amount of disk space
 ```
