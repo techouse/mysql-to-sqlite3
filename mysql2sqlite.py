@@ -272,13 +272,13 @@ if __name__ == "__main__":
         help="MySQL password",
     )
     parser.add_argument(
-        "-d", "--mysql-database", dest="mysql_database", default=None, help="MySQL host"
+        "-d", "--mysql-database", dest="mysql_database", default=None, help="MySQL database name"
     )
     parser.add_argument(
-        "--mysql-host", dest="mysql_host", default="localhost", help="MySQL host"
+        "--mysql-host", dest="mysql_host", default="localhost", help="MySQL host (default: localhost)"
     )
     parser.add_argument(
-        "--mysql-port", dest="mysql_port", default="3306", help="MySQL port"
+        "--mysql-port", dest="mysql_port", default="3306", help="MySQL port (default: 3306)"
     )
     parser.add_argument(
         "-c",
