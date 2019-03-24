@@ -43,9 +43,10 @@ class MySQL2SQLite:
             user=kwargs.get("mysql_user", None),
             password=kwargs.get("mysql_password", None),
             host=kwargs.get("mysql_host", "localhost"),
+			port=kwargs.get("mysql_port", "3306"),
         )
-        self._mysql_cur = self._mysql.cursor(raw=True)
-        self._mysql_cur_dict = self._mysql.cursor(dictionary=True)
+        self._mysql_cur = self._mysql.cursor(raw=True, buffered=True)
+        self._mysql_cur_dict = self._mysql.cursor(dictionary=True, buffered=True)
         try:
             self._mysql.database = self._mysql_database
         except mysql.connector.Error as err:
@@ -271,10 +272,13 @@ if __name__ == "__main__":
         help="MySQL password",
     )
     parser.add_argument(
-        "-d", "--mysql-database", dest="mysql_database", default=None, help="MySQL host"
+        "-d", "--mysql-database", dest="mysql_database", default=None, help="MySQL database name"
     )
     parser.add_argument(
-        "--mysql-host", dest="mysql_host", default="localhost", help="MySQL host"
+        "--mysql-host", dest="mysql_host", default="localhost", help="MySQL host (default: localhost)"
+    )
+    parser.add_argument(
+        "--mysql-port", dest="mysql_port", default="3306", help="MySQL port (default: 3306)"
     )
     parser.add_argument(
         "-c",
@@ -306,6 +310,7 @@ if __name__ == "__main__":
             mysql_password=args.mysql_password,
             mysql_database=args.mysql_database,
             mysql_host=args.mysql_host,
+            mysql_port=args.mysql_port,
             chunk=args.chunk,
             vacuum=args.vacuum,
             log_file=args.log_file,

@@ -19,7 +19,8 @@ python mysql2sqlite.py -h
 ```
 usage: mysql2sqlite.py [-h] [-f SQLITE_FILE] [-u MYSQL_USER]
                        [-p MYSQL_PASSWORD] [-d MYSQL_DATABASE]
-                       [--mysql-host MYSQL_HOST] [-c CHUNK] [-l LOG_FILE] [-V]
+                       [--mysql-host MYSQL_HOST] [--mysql-port MYSQL_PORT]
+                       [-c CHUNK] [-l LOG_FILE] [-V]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -30,9 +31,11 @@ optional arguments:
   -p MYSQL_PASSWORD, --mysql-password MYSQL_PASSWORD
                         MySQL password
   -d MYSQL_DATABASE, --mysql-database MYSQL_DATABASE
-                        MySQL host
+                        MySQL database name
   --mysql-host MYSQL_HOST
-                        MySQL host
+                        MySQL host (default: localhost)
+  --mysql-port MYSQL_PORT
+                        MySQL port (default: 3306)
   -c CHUNK, --chunk CHUNK
                         Chunk reading/writing SQL records
   -l LOG_FILE, --log-file LOG_FILE
