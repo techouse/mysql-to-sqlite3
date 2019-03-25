@@ -20,7 +20,7 @@ python mysql2sqlite.py -h
 usage: mysql2sqlite.py [-h] [-f SQLITE_FILE] [-u MYSQL_USER]
                        [-p MYSQL_PASSWORD] [-d MYSQL_DATABASE]
                        [--mysql-host MYSQL_HOST] [--mysql-port MYSQL_PORT]
-                       [-c CHUNK] [-l LOG_FILE] [-V]
+                       [-c CHUNK] [-l LOG_FILE] [-V] [--use-buffered-cursors]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -42,4 +42,9 @@ optional arguments:
                         Log file
   -V, --vacuum          Use the VACUUM command to rebuild the SQLite database
                         file, repacking it into a minimal amount of disk space
+  --use-buffered-cursors
+                        Use MySQLCursorBuffered for reading the MySQL
+                        database. This can be useful in situations where
+                        multiple queries, with small result sets, need to be
+                        combined or computed with each other.
 ```

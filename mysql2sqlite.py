@@ -30,6 +30,8 @@ class MySQL2SQLite:
         self._mysql_database = kwargs.get("mysql_database", "transfer")
         self._sqlite_file = kwargs.get("sqlite_file", None)
 
+        self._buffered = kwargs.get("buffered", False)
+
         self._vacuum = kwargs.get("vacuum", False)
 
         self._logger = self._setup_logger(log_file=kwargs.get("log_file", None))
@@ -43,10 +45,10 @@ class MySQL2SQLite:
             user=kwargs.get("mysql_user", None),
             password=kwargs.get("mysql_password", None),
             host=kwargs.get("mysql_host", "localhost"),
-			port=kwargs.get("mysql_port", "3306"),
+            port=kwargs.get("mysql_port", "3306"),
         )
-        self._mysql_cur = self._mysql.cursor(raw=True, buffered=True)
-        self._mysql_cur_dict = self._mysql.cursor(dictionary=True, buffered=True)
+        self._mysql_cur = self._mysql.cursor(raw=True, buffered=self._buffered)
+        self._mysql_cur_dict = self._mysql.cursor(dictionary=True, buffered=self._buffered)
         try:
             self._mysql.database = self._mysql_database
         except mysql.connector.Error as err:
@@ -272,13 +274,23 @@ if __name__ == "__main__":
         help="MySQL password",
     )
     parser.add_argument(
-        "-d", "--mysql-database", dest="mysql_database", default=None, help="MySQL database name"
+        "-d",
+        "--mysql-database",
+        dest="mysql_database",
+        default=None,
+        help="MySQL database name",
     )
     parser.add_argument(
-        "--mysql-host", dest="mysql_host", default="localhost", help="MySQL host (default: localhost)"
+        "--mysql-host",
+        dest="mysql_host",
+        default="localhost",
+        help="MySQL host (default: localhost)",
     )
     parser.add_argument(
-        "--mysql-port", dest="mysql_port", default="3306", help="MySQL port (default: 3306)"
+        "--mysql-port",
+        dest="mysql_port",
+        default="3306",
+        help="MySQL port (default: 3306)",
     )
     parser.add_argument(
         "-c",
@@ -297,6 +309,14 @@ if __name__ == "__main__":
         help="Use the VACUUM command to rebuild the SQLite database file, "
              "repacking it into a minimal amount of disk space",
     )
+    parser.add_argument(
+        "--use-buffered-cursors",
+        dest="buffered",
+        action="store_true",
+        help="Use MySQLCursorBuffered for reading the MySQL database. This "
+             "can be useful in situations where multiple queries, with small "
+             "result sets, need to be combined or computed with each other.",
+    )
     args = parser.parse_args()
 
     if len(sys.argv) == 1:
@@ -313,6 +333,7 @@ if __name__ == "__main__":
             mysql_port=args.mysql_port,
             chunk=args.chunk,
             vacuum=args.vacuum,
+            buffered=args.buffered,
             log_file=args.log_file,
         )
         converter.transfer()
