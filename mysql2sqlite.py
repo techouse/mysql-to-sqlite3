@@ -116,6 +116,7 @@ class MySQL2SQLite:
     def _build_create_table_sql(self, table_name):
         sql = 'CREATE TABLE IF NOT EXISTS "{}" ('.format(table_name)
         primary = "PRIMARY KEY ("
+        has_primary_key = False
         indices = ""
 
         self._mysql_cur_dict.execute("SHOW COLUMNS FROM `{}`".format(table_name))
@@ -128,6 +129,7 @@ class MySQL2SQLite:
             )
             if row["Key"] in {"PRI", "UNI", "MUL"}:
                 if row["Key"] == "PRI":
+                    has_primary_key = True
                     primary += '"{name}", '.format(name=row["Field"])
                 else:
                     indices += ' CREATE {unique} INDEX {table_name}_{column_slug_name}_IDX ON "{table_name}" ("{column_name}");'.format(
@@ -136,8 +138,11 @@ class MySQL2SQLite:
                         column_slug_name=slugify(row["Field"], separator="_"),
                         column_name=row["Field"],
                     )
-        sql += primary.rstrip(", ")
-        sql += "));"
+        if has_primary_key:
+            sql += primary.rstrip(", ")
+            sql += ")"
+        sql = sql.rstrip(", ")
+        sql += ");"
         sql += indices
         return " ".join(sql.split())
 
