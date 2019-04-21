@@ -210,42 +210,44 @@ class MySQL2SQLite:
             )
             total_records = int(self._mysql_cur_dict.fetchone()["total_records"])
 
-            # populate it
-            self._logger.info("Transferring table {}".format(table_name))
-            self._mysql_cur.execute("SELECT * FROM `{}`".format(table_name))
-            columns = [column[0] for column in self._mysql_cur.description]
-            # build the SQL string
-            sql = 'INSERT OR IGNORE INTO "{table}" ({fields}) VALUES ({placeholders})'.format(
-                table=table_name,
-                fields=('"{}", ' * len(columns)).rstrip(" ,").format(*columns),
-                placeholders=("?, " * len(columns)).rstrip(" ,"),
-            )
-            try:
-                # transfer the table data
-                self._transfer_table_data(sql=sql, total_records=total_records)
-            except mysql.connector.Error as err:
-                if err.errno == errorcode.CR_SERVER_LOST:
-                    self._logger.warning(
-                        "Connection to MySQL server lost.\nAttempting to reconnect."
-                    )
-                    # attempt a reconnect
-                    self._mysql.reconnect()
-                    # resume the transfer
+            # only continue if there is anything to transfer
+            if total_records > 0:
+                # populate it
+                self._logger.info("Transferring table {}".format(table_name))
+                self._mysql_cur.execute("SELECT * FROM `{}`".format(table_name))
+                columns = [column[0] for column in self._mysql_cur.description]
+                # build the SQL string
+                sql = 'INSERT OR IGNORE INTO "{table}" ({fields}) VALUES ({placeholders})'.format(
+                    table=table_name,
+                    fields=('"{}", ' * len(columns)).rstrip(" ,").format(*columns),
+                    placeholders=("?, " * len(columns)).rstrip(" ,"),
+                )
+                try:
+                    # transfer the table data
                     self._transfer_table_data(sql=sql, total_records=total_records)
-                else:
+                except mysql.connector.Error as err:
+                    if err.errno == errorcode.CR_SERVER_LOST:
+                        self._logger.warning(
+                            "Connection to MySQL server lost.\nAttempting to reconnect."
+                        )
+                        # attempt a reconnect
+                        self._mysql.reconnect()
+                        # resume the transfer
+                        self._transfer_table_data(sql=sql, total_records=total_records)
+                    else:
+                        self._logger.error(
+                            "transfer failed inserting data into table {}: {}".format(
+                                table_name, err
+                            )
+                        )
+                        sys.exit(1)
+                except sqlite3.Error as err:
                     self._logger.error(
                         "transfer failed inserting data into table {}: {}".format(
                             table_name, err
                         )
                     )
                     sys.exit(1)
-            except sqlite3.Error as err:
-                self._logger.error(
-                    "transfer failed inserting data into table {}: {}".format(
-                        table_name, err
-                    )
-                )
-                sys.exit(1)
 
         if self._vacuum:
             self._logger.info(
