@@ -98,9 +98,9 @@ class TestMySQLtoSQLiteClassmethods:
                 )
 
 
+@pytest.mark.exceptions
 @pytest.mark.usefixtures("mysql_instance")
 class TestMySQLtoSQLiteSQLExceptions:
-    @pytest.mark.timeout(120)
     def test_create_table_server_lost_connection_error(
         self, sqlite_database, mysql_database, mysql_credentials, mocker, caplog
     ):
@@ -131,15 +131,9 @@ class TestMySQLtoSQLiteSQLExceptions:
         mocker.patch.object(proc._mysql, "reconnect", return_value=True)
         mocker.patch.object(proc, "_sqlite", FakeSQLiteConnector())
         caplog.set_level(logging.DEBUG)
-        with pytest.raises(mysql.connector.Error) as excinfo:
+        with pytest.raises(mysql.connector.Error):
             proc._create_table(choice(mysql_tables))
-        assert "Lost connection to MySQL server during query" in str(excinfo.value)
-        assert any(
-            "Connection to MySQL server lost.\nAttempting to reconnect." in message
-            for message in caplog.messages
-        )
 
-    @pytest.mark.timeout(120)
     def test_create_table_unknown_mysql_connector_error(
         self, sqlite_database, mysql_database, mysql_credentials, mocker, caplog
     ):
@@ -163,15 +157,9 @@ class TestMySQLtoSQLiteSQLExceptions:
         mysql_tables = mysql_inspect.get_table_names()
         mocker.patch.object(proc, "_sqlite_cur", FakeSQLiteCursor())
         caplog.set_level(logging.DEBUG)
-        with pytest.raises(mysql.connector.Error) as excinfo:
+        with pytest.raises(mysql.connector.Error):
             proc._create_table(choice(mysql_tables))
-        assert "Error Code: 2000. Unknown MySQL error" in str(excinfo.value)
-        assert any(
-            "_create_table failed creating table" in message
-            for message in caplog.messages
-        )
 
-    @pytest.mark.timeout(120)
     def test_create_table_sqlite3_error(
         self, sqlite_database, mysql_database, mysql_credentials, mocker, caplog
     ):
@@ -194,10 +182,6 @@ class TestMySQLtoSQLiteSQLExceptions:
         caplog.set_level(logging.DEBUG)
         with pytest.raises(sqlite3.Error):
             proc._create_table(choice(mysql_tables))
-        assert any(
-            "_create_table failed creating table" in message
-            for message in caplog.messages
-        )
 
     @pytest.mark.parametrize(
         "exception",
@@ -219,7 +203,6 @@ class TestMySQLtoSQLiteSQLExceptions:
             pytest.param(sqlite3.Error("Unknown SQLite error"), id="sqlite3.Error"),
         ],
     )
-    @pytest.mark.timeout(120)
     def test_transfer_table_data_exceptions(
         self,
         sqlite_database,
@@ -259,21 +242,5 @@ class TestMySQLtoSQLiteSQLExceptions:
 
         mocker.patch.object(proc, "_mysql_cur", FakeMySQLCursor())
 
-        with pytest.raises((mysql.connector.Error, sqlite3.Error)) as excinfo:
+        with pytest.raises((mysql.connector.Error, sqlite3.Error)):
             proc._transfer_table_data(table_name, sql)
-        assert any(
-            err in str(excinfo.value)
-            for err in (
-                "Unknown",
-                str(errorcode.CR_SERVER_LOST),
-                str(errorcode.CR_UNKNOWN_ERROR),
-            )
-        )
-        assert any(
-            err in message
-            for message in caplog.messages
-            for err in (
-                "transfer failed inserting data into table",
-                "Connection to MySQL server lost.\nAttempting to reconnect.",
-            )
-        )
