@@ -41,6 +41,7 @@ class TestMySQLtoSQLite:
         assert "Access denied for user" in str(excinfo.value)
 
     @pytest.mark.init
+    @pytest.mark.timeout(120)
     def test_bad_mysql_connection(self, sqlite_database, mysql_credentials, mocker):
         FakeConnector = namedtuple("FakeConnector", ["is_connected"])
         mocker.patch.object(
@@ -78,6 +79,7 @@ class TestMySQLtoSQLite:
             pytest.param(Exception("Unknown database 'test_db'"), id="Exception"),
         ],
     )
+    @pytest.mark.timeout(120)
     def test_non_existing_mysql_database_raises_exception(
         self,
         sqlite_database,
@@ -184,6 +186,7 @@ class TestMySQLtoSQLite:
             pytest.param(1000, False, True, id="chunk, no vacuum, buffered cursor"),
         ],
     )
+    @pytest.mark.timeout(240)
     def test_transfer_transfers_all_tables_from_mysql_to_sqlite(
         self,
         sqlite_database,

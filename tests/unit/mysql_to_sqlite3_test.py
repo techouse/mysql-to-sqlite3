@@ -1,7 +1,6 @@
 import logging
 import sqlite3
 from random import choice
-from unittest.mock import PropertyMock
 
 import mysql.connector
 import pytest
@@ -12,8 +11,7 @@ from sqlalchemy.dialects.mysql import __all__ as mysql_column_types
 from src.mysql_to_sqlite3 import MySQLtoSQLite
 
 
-@pytest.mark.usefixtures("mysql_instance")
-class TestMySQLtoSQLite:
+class TestMySQLtoSQLiteClassmethods:
     def test_translate_type_from_mysql_to_sqlite_invalid_column_type(self, mocker):
         with pytest.raises(ValueError) as excinfo:
             mocker.patch.object(MySQLtoSQLite, "_valid_column_type", return_value=False)
@@ -99,8 +97,12 @@ class TestMySQLtoSQLite:
                     == column_type
                 )
 
+
+@pytest.mark.usefixtures("mysql_instance")
+class TestMySQLtoSQLiteSQLExceptions:
+    @pytest.mark.timeout(120)
     def test_create_table_server_lost_connection_error(
-        self, sqlite_database, mysql_database, mysql_credentials, mocker, faker, caplog
+        self, sqlite_database, mysql_database, mysql_credentials, mocker, caplog
     ):
         proc = MySQLtoSQLite(
             sqlite_file=sqlite_database,
@@ -129,15 +131,17 @@ class TestMySQLtoSQLite:
         mocker.patch.object(proc._mysql, "reconnect", return_value=True)
         mocker.patch.object(proc, "_sqlite", FakeSQLiteConnector())
         caplog.set_level(logging.DEBUG)
-        with pytest.raises(mysql.connector.Error):
+        with pytest.raises(mysql.connector.Error) as excinfo:
             proc._create_table(choice(mysql_tables))
+        assert "Lost connection to MySQL server during query" in str(excinfo.value)
         assert any(
             "Connection to MySQL server lost.\nAttempting to reconnect." in message
             for message in caplog.messages
         )
 
-    def test_create_table_other_mysql_connector_error(
-        self, sqlite_database, mysql_database, mysql_credentials, mocker, faker, caplog
+    @pytest.mark.timeout(120)
+    def test_create_table_unknown_mysql_connector_error(
+        self, sqlite_database, mysql_database, mysql_credentials, mocker, caplog
     ):
         proc = MySQLtoSQLite(
             sqlite_file=sqlite_database,
@@ -151,7 +155,7 @@ class TestMySQLtoSQLite:
         class FakeSQLiteCursor:
             def executescript(self, statement):
                 raise mysql.connector.Error(
-                    msg=faker.sentence(nb_words=12, variable_nb_words=True),
+                    msg="Error Code: 2000. Unknown MySQL error",
                     errno=errorcode.CR_UNKNOWN_ERROR,
                 )
 
@@ -159,15 +163,17 @@ class TestMySQLtoSQLite:
         mysql_tables = mysql_inspect.get_table_names()
         mocker.patch.object(proc, "_sqlite_cur", FakeSQLiteCursor())
         caplog.set_level(logging.DEBUG)
-        with pytest.raises(mysql.connector.Error):
+        with pytest.raises(mysql.connector.Error) as excinfo:
             proc._create_table(choice(mysql_tables))
+        assert "Error Code: 2000. Unknown MySQL error" in str(excinfo.value)
         assert any(
             "_create_table failed creating table" in message
             for message in caplog.messages
         )
 
+    @pytest.mark.timeout(120)
     def test_create_table_sqlite3_error(
-        self, sqlite_database, mysql_database, mysql_credentials, mocker, faker, caplog
+        self, sqlite_database, mysql_database, mysql_credentials, mocker, caplog
     ):
         proc = MySQLtoSQLite(
             sqlite_file=sqlite_database,
@@ -180,7 +186,7 @@ class TestMySQLtoSQLite:
 
         class FakeSQLiteCursor:
             def executescript(self, *args, **kwargs):
-                raise sqlite3.Error(faker.sentence(nb_words=12, variable_nb_words=True))
+                raise sqlite3.Error("Unknown SQLite error")
 
         mysql_inspect = inspect(mysql_database.engine)
         mysql_tables = mysql_inspect.get_table_names()
@@ -193,58 +199,35 @@ class TestMySQLtoSQLite:
             for message in caplog.messages
         )
 
-    def test_transfer_table_data_raises_server_lost_connection_error(
-        self, sqlite_database, mysql_database, mysql_credentials, mocker, faker, caplog
-    ):
-        proc = MySQLtoSQLite(
-            sqlite_file=sqlite_database,
-            mysql_user=mysql_credentials.user,
-            mysql_password=mysql_credentials.password,
-            mysql_database=mysql_credentials.database,
-            mysql_host=mysql_credentials.host,
-            mysql_port=mysql_credentials.port,
-        )
-
-        class FakeMySQLCursor:
-            def fetchall(self):
-                raise mysql.connector.Error(
+    @pytest.mark.parametrize(
+        "exception",
+        [
+            pytest.param(
+                mysql.connector.Error(
                     msg="Error Code: 2013. Lost connection to MySQL server during query",
                     errno=errorcode.CR_SERVER_LOST,
-                )
-
-            def fetchmany(self, size=1):
-                raise mysql.connector.Error(
-                    msg="Error Code: 2013. Lost connection to MySQL server during query",
-                    errno=errorcode.CR_SERVER_LOST,
-                )
-
-        mysql_inspect = inspect(mysql_database.engine)
-        mysql_tables = mysql_inspect.get_table_names()
-
-        table_name = choice(mysql_tables)
-        columns = [column["name"] for column in mysql_inspect.get_columns(table_name)]
-
-        sql = 'INSERT OR IGNORE INTO "{table}" ({fields}) VALUES ({placeholders})'.format(
-            table=table_name,
-            fields=('"{}", ' * len(columns)).rstrip(" ,").format(*columns),
-            placeholders=("?, " * len(columns)).rstrip(" ,"),
-        )
-
-        mocker.patch.object(proc, "_mysql_cur", FakeMySQLCursor())
-
-        with pytest.raises(mysql.connector.Error) as excinfo:
-            proc._transfer_table_data(table_name, sql)
-        assert (
-            "2013: Error Code: 2013. Lost connection to MySQL server during query"
-            in str(excinfo.value)
-        )
-        assert any(
-            "Connection to MySQL server lost.\nAttempting to reconnect." in message
-            for message in caplog.messages
-        )
-
-    def test_transfer_table_data_raises_unspecified_mysql_error(
-        self, sqlite_database, mysql_database, mysql_credentials, mocker, faker, caplog
+                ),
+                id="errorcode.CR_SERVER_LOST",
+            ),
+            pytest.param(
+                mysql.connector.Error(
+                    msg="Error Code: 2000. Unknown MySQL error",
+                    errno=errorcode.CR_UNKNOWN_ERROR,
+                ),
+                id="errorcode.CR_UNKNOWN_ERROR",
+            ),
+            pytest.param(sqlite3.Error("Unknown SQLite error"), id="sqlite3.Error"),
+        ],
+    )
+    @pytest.mark.timeout(120)
+    def test_transfer_table_data_exceptions(
+        self,
+        sqlite_database,
+        mysql_database,
+        mysql_credentials,
+        mocker,
+        caplog,
+        exception,
     ):
         proc = MySQLtoSQLite(
             sqlite_file=sqlite_database,
@@ -257,16 +240,10 @@ class TestMySQLtoSQLite:
 
         class FakeMySQLCursor:
             def fetchall(self):
-                raise mysql.connector.Error(
-                    msg="Error Code: 2000. Unknown MySQL error",
-                    errno=errorcode.CR_UNKNOWN_ERROR,
-                )
+                raise exception
 
             def fetchmany(self, size=1):
-                raise mysql.connector.Error(
-                    msg="Error Code: 2000. Unknown MySQL error",
-                    errno=errorcode.CR_UNKNOWN_ERROR,
-                )
+                raise exception
 
         mysql_inspect = inspect(mysql_database.engine)
         mysql_tables = mysql_inspect.get_table_names()
@@ -282,50 +259,21 @@ class TestMySQLtoSQLite:
 
         mocker.patch.object(proc, "_mysql_cur", FakeMySQLCursor())
 
-        with pytest.raises(mysql.connector.Error) as excinfo:
-            proc._transfer_table_data(table_name, sql)
-        assert "Error Code: 2000. Unknown MySQL error" in str(excinfo.value)
-        assert any(
-            "transfer failed inserting data into table {}".format(table_name) in message
-            for message in caplog.messages
-        )
-
-    def test_transfer_table_data_raises_sqlite3_error(
-        self, sqlite_database, mysql_database, mysql_credentials, mocker, faker, caplog
-    ):
-        proc = MySQLtoSQLite(
-            sqlite_file=sqlite_database,
-            mysql_user=mysql_credentials.user,
-            mysql_password=mysql_credentials.password,
-            mysql_database=mysql_credentials.database,
-            mysql_host=mysql_credentials.host,
-            mysql_port=mysql_credentials.port,
-        )
-
-        class FakeMySQLCursor:
-            def fetchall(self):
-                raise sqlite3.Error(faker.sentence(nb_words=12, variable_nb_words=True))
-
-            def fetchmany(self, size=1):
-                raise sqlite3.Error(faker.sentence(nb_words=12, variable_nb_words=True))
-
-        mysql_inspect = inspect(mysql_database.engine)
-        mysql_tables = mysql_inspect.get_table_names()
-
-        table_name = choice(mysql_tables)
-        columns = [column["name"] for column in mysql_inspect.get_columns(table_name)]
-
-        sql = 'INSERT OR IGNORE INTO "{table}" ({fields}) VALUES ({placeholders})'.format(
-            table=table_name,
-            fields=('"{}", ' * len(columns)).rstrip(" ,").format(*columns),
-            placeholders=("?, " * len(columns)).rstrip(" ,"),
-        )
-
-        mocker.patch.object(proc, "_mysql_cur", FakeMySQLCursor())
-
-        with pytest.raises(sqlite3.Error):
+        with pytest.raises((mysql.connector.Error, sqlite3.Error)) as excinfo:
             proc._transfer_table_data(table_name, sql)
         assert any(
-            "transfer failed inserting data into table {}".format(table_name) in message
+            err in str(excinfo.value)
+            for err in (
+                "Unknown",
+                str(errorcode.CR_SERVER_LOST),
+                str(errorcode.CR_UNKNOWN_ERROR),
+            )
+        )
+        assert any(
+            err in message
             for message in caplog.messages
+            for err in (
+                "transfer failed inserting data into table",
+                "Connection to MySQL server lost.\nAttempting to reconnect.",
+            )
         )
