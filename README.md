@@ -1,3 +1,9 @@
+![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/techouse/mysql-to-sqlite3)
+[![GitHub license](https://img.shields.io/github/license/techouse/mysql-to-sqlite3)](https://github.com/techouse/mysql-to-sqlite3/blob/master/LICENSE)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
+[![Build Status](https://travis-ci.org/techouse/mysql-to-sqlite3.svg?branch=master)](https://travis-ci.org/techouse/mysql-to-sqlite3)
+[![codecov](https://codecov.io/gh/techouse/mysql-to-sqlite3/branch/master/graph/badge.svg)](https://codecov.io/gh/techouse/mysql-to-sqlite3)
+
 # MySQL to SQLite3
 
 #### A simple Python 3 script/class to transfer data from MySQL to SQLite 3.
@@ -47,4 +53,15 @@ optional arguments:
                         database. This can be useful in situations where
                         multiple queries, with small result sets, need to be
                         combined or computed with each other.
+```
+
+### Testing
+In order to run the test suite run these commands using a Docker MySQL image.
+
+**Requires a running Docker instance!**
+```bash
+python3 -m venv env
+source env/bin/activate
+pip install -r requirements-test.txt
+pytest --cov=src
 ```
