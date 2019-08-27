@@ -4,11 +4,15 @@ from collections import namedtuple
 
 import mysql.connector
 import pytest
+import six
 from _mysql_connector import MySQLInterfaceError, MySQLError
-from mysql.connector import errorcode
+from mysql.connector import errorcode, MySQLConnection
 from sqlalchemy import MetaData, Table, select, create_engine, inspect
 
 from src.mysql_to_sqlite3 import MySQLtoSQLite
+
+if six.PY2:
+    from ..sixeptions import *
 
 
 @pytest.mark.usefixtures("mysql_instance")
@@ -48,7 +52,7 @@ class TestMySQLtoSQLite:
             "connect",
             return_value=FakeConnector(is_connected=lambda: False),
         )
-        with pytest.raises(ConnectionError) as excinfo:
+        with pytest.raises((ConnectionError, IOError)) as excinfo:
             MySQLtoSQLite(
                 sqlite_file=sqlite_database,
                 mysql_user=mysql_credentials.user,
@@ -88,10 +92,7 @@ class TestMySQLtoSQLite:
         caplog,
         exception,
     ):
-        class FakeConnector:
-            def __init__(self):
-                self._database = None
-
+        class FakeMySQLConnection(MySQLConnection):
             @property
             def database(self):
                 return self._database
@@ -117,7 +118,7 @@ class TestMySQLtoSQLite:
                 return True
 
         caplog.set_level(logging.DEBUG)
-        mocker.patch.object(mysql.connector, "connect", return_value=FakeConnector())
+        mocker.patch.object(mysql.connector, "connect", return_value=FakeMySQLConnection())
         with pytest.raises(
             (mysql.connector.Error, MySQLInterfaceError, MySQLError, Exception)
         ) as excinfo:

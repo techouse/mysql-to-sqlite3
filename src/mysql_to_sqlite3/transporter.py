@@ -1,3 +1,5 @@
+from __future__ import division
+
 import logging
 import re
 import sqlite3
@@ -6,10 +8,14 @@ from math import ceil
 from os.path import realpath
 
 import mysql.connector
+import six
 from _mysql_connector import MySQLInterfaceError
 from mysql.connector import errorcode
 from slugify import slugify
-from tqdm import tqdm
+from tqdm import trange
+
+if six.PY2:
+    from .sixeptions import *
 
 
 class MySQLtoSQLite:
@@ -236,11 +242,9 @@ class MySQLtoSQLite:
             self._mysql.reconnect()
         try:
             if self._chunk_size is not None and self._chunk_size > 0:
-                for chunk in tqdm(
-                    range(
-                        self._current_chunk_number,
-                        ceil(total_records / self._chunk_size),
-                    )
+                for chunk in trange(
+                    self._current_chunk_number,
+                    int(ceil(total_records / self._chunk_size)),
                 ):
                     self._current_chunk_number = chunk
                     self._sqlite_cur.executemany(
@@ -252,7 +256,6 @@ class MySQLtoSQLite:
                             for row in self._mysql_cur.fetchmany(self._chunk_size)
                         ),
                     )
-                    self._sqlite.commit()
             else:
                 self._sqlite_cur.executemany(
                     sql,
@@ -261,7 +264,7 @@ class MySQLtoSQLite:
                         for row in self._mysql_cur.fetchall()
                     ),
                 )
-                self._sqlite.commit()
+            self._sqlite.commit()
         except mysql.connector.Error as err:
             if err.errno == errorcode.CR_SERVER_LOST:
                 if not attempting_reconnect:

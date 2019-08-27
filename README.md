@@ -6,15 +6,25 @@
 
 # MySQL to SQLite3
 
-#### A simple Python 3 script/class to transfer data from MySQL to SQLite 3.
+#### A simple Python script/class to transfer data from MySQL to SQLite 3.
 
 This is the long overdue complimentary tool to my [SQLite3 to MySQL](https://github.com/techouse/sqlite3-to-mysql). It 
 transfers all data from a MySQL database to a SQLite3 database.
 
-### Installation
+#### Tested to work on Python 2.7 and 3.5+
+
+### How to run
+
+- using Python 2.7
 ```bash
-git clone https://github.com/techouse/mysql-to-sqlite3
-cd mysql-to-sqlite3
+virtualenv -p $(which python2) env
+source env/bin/activate
+pip install -r requirements.txt
+python mysql2sqlite.py -h
+```
+
+- using Python 3.5+
+```bash
 python3 -m venv env
 source env/bin/activate
 pip install -r requirements.txt
@@ -59,6 +69,16 @@ optional arguments:
 In order to run the test suite run these commands using a Docker MySQL image.
 
 **Requires a running Docker instance!**
+
+- using Python 2.7
+```bash
+virtualenv -p $(which python2) env
+source env/bin/activate
+pip install -r requirements-test.txt
+pytest --cov=src
+```
+
+- using Python 3.5+
 ```bash
 python3 -m venv env
 source env/bin/activate
