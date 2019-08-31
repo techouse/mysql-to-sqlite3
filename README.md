@@ -1,3 +1,5 @@
+![PyPI](https://img.shields.io/pypi/v/mysql-to-sqlite3)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mysql-to-sqlite3)
 [![GitHub license](https://img.shields.io/github/license/techouse/mysql-to-sqlite3)](https://github.com/techouse/mysql-to-sqlite3/blob/master/LICENSE)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 [![Build Status](https://travis-ci.org/techouse/mysql-to-sqlite3.svg?branch=master)](https://travis-ci.org/techouse/mysql-to-sqlite3)
@@ -47,8 +49,8 @@ In order to run the test suite run these commands using a Docker MySQL image.
 
 - using Python 2.7
 ```bash
-git clone https://github.com/techouse/sqlite3-to-mysql
-cd sqlite3-to-mysql
+git clone https://github.com/techouse/mysql-to-sqlite3
+cd mysql-to-sqlite3
 virtualenv -p $(which python2) env
 source env/bin/activate
 pip install -e .
@@ -58,8 +60,8 @@ tox
 
 - using Python 3.5+
 ```bash
-git clone https://github.com/techouse/sqlite3-to-mysql
-cd sqlite3-to-mysql                   
+git clone https://github.com/techouse/mysql-to-sqlite3
+cd mysql-to-sqlite3                   
 python3 -m venv env
 source env/bin/activate
 pip install -e .
