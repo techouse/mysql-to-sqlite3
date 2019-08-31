@@ -120,3 +120,6 @@ dmypy.json
 
 # macOS specific
 .DS_Store
+
+# Potential leftovers
+tests/db_credentials.json

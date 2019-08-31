@@ -8,7 +8,7 @@ from mysql.connector import errorcode
 from sqlalchemy import inspect
 from sqlalchemy.dialects.mysql import __all__ as mysql_column_types
 
-from src.mysql_to_sqlite3 import MySQLtoSQLite
+from mysql_to_sqlite3 import MySQLtoSQLite
 
 
 class TestMySQLtoSQLiteClassmethods:

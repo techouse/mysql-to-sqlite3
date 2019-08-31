@@ -1,13 +1,16 @@
 import socket
+from codecs import open
 from collections import namedtuple
 from contextlib import contextmanager, closing
-from os.path import join
+from os.path import join, abspath, dirname, isfile
 from time import sleep
 
 import docker
 import mysql.connector
 import pytest
 import six
+import json
+from click.testing import CliRunner
 from docker.errors import NotFound
 from mysql.connector import errorcode
 from requests import HTTPError
@@ -148,6 +151,18 @@ def mysql_credentials(pytestconfig):
         "MySQLCredentials", ["user", "password", "host", "port", "database"]
     )
 
+    db_credentials_file = abspath(join(dirname(__file__), "db_credentials.json"))
+    if isfile(db_credentials_file):
+        with open(db_credentials_file, "r", "utf-8") as fh:
+            db_credentials = json.load(fh)
+            return MySQLCredentials(
+                user=db_credentials["mysql_user"],
+                password=db_credentials["mysql_password"],
+                database=db_credentials["mysql_database"],
+                host=db_credentials["mysql_host"],
+                port=db_credentials["mysql_port"],
+            )
+
     port = pytestconfig.getoption("mysql_port") or 3306
     if pytestconfig.getoption("use_docker"):
         while is_port_in_use(port, pytestconfig.getoption("mysql_host")):
@@ -175,11 +190,16 @@ def mysql_credentials(pytestconfig):
 
 @pytest.fixture(scope="session")
 def mysql_instance(mysql_credentials, pytestconfig):
-    use_docker = pytestconfig.getoption("use_docker")
     container = None
     mysql_connection = None
     mysql_available = False
     mysql_connection_retries = 15  # failsafe
+
+    db_credentials_file = abspath(join(dirname(__file__), "db_credentials.json"))
+    if isfile(db_credentials_file):
+        use_docker = False
+    else:
+        use_docker = pytestconfig.getoption("use_docker")
 
     if use_docker:
         """ Connecting to a MySQL server within a Docker container is quite tricky :P
@@ -298,3 +318,8 @@ def mysql_database(tmpdir_factory, mysql_instance, mysql_credentials, faker):
 
     if database_exists(db.engine.url):
         drop_database(db.engine.url)
+
+
+@pytest.fixture()
+def cli_runner():
+    yield CliRunner()

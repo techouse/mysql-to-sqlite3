@@ -1,0 +1,2 @@
+[run]
+omit = mysql_to_sqlite3/__version__.py

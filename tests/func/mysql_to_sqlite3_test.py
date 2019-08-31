@@ -9,7 +9,7 @@ from _mysql_connector import MySQLInterfaceError, MySQLError
 from mysql.connector import errorcode, MySQLConnection
 from sqlalchemy import MetaData, Table, select, create_engine, inspect
 
-from src.mysql_to_sqlite3 import MySQLtoSQLite
+from mysql_to_sqlite3 import MySQLtoSQLite
 
 if six.PY2:
     from ..sixeptions import *
@@ -118,7 +118,9 @@ class TestMySQLtoSQLite:
                 return True
 
         caplog.set_level(logging.DEBUG)
-        mocker.patch.object(mysql.connector, "connect", return_value=FakeMySQLConnection())
+        mocker.patch.object(
+            mysql.connector, "connect", return_value=FakeMySQLConnection()
+        )
         with pytest.raises(
             (mysql.connector.Error, MySQLInterfaceError, MySQLError, Exception)
         ) as excinfo:
@@ -170,19 +172,19 @@ class TestMySQLtoSQLite:
                 None, False, False, id="no chunk, no vacuum, no buffered cursor"
             ),
             # 111
-            pytest.param(1000, True, True, id="chunk, vacuum, buffered cursor"),
+            pytest.param(10, True, True, id="chunk, vacuum, buffered cursor"),
             # 110
-            pytest.param(1000, True, False, id="chunk, vacuum, no buffered cursor"),
+            pytest.param(10, True, False, id="chunk, vacuum, no buffered cursor"),
             # 011
             pytest.param(None, True, True, id="no chunk, vacuum, buffered cursor"),
             # 010
             pytest.param(None, True, False, id="no chunk, vacuum, no buffered cursor"),
             # 100
-            pytest.param(1000, False, False, id="chunk, no vacuum, no buffered cursor"),
+            pytest.param(10, False, False, id="chunk, no vacuum, no buffered cursor"),
             # 001
             pytest.param(None, False, True, id="no chunk, no vacuum, buffered cursor"),
             # 101
-            pytest.param(1000, False, True, id="chunk, no vacuum, buffered cursor"),
+            pytest.param(10, False, True, id="chunk, no vacuum, buffered cursor"),
         ],
     )
     def test_transfer_transfers_all_tables_from_mysql_to_sqlite(
