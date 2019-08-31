@@ -11,7 +11,7 @@ matrix:
     - env:
         - TOXENV=py35
         - DB=mariadb:5.5
-        python: "3.5"
+      python: "3.5"
     - env:
         - TOXENV=py36
         - DB=mariadb:10.0
