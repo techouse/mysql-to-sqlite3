@@ -1,3 +1,5 @@
+"""The command line interface of MySQLtoSQLite."""
+
 import sys
 
 import click
@@ -46,7 +48,7 @@ from mysql_to_sqlite3 import MySQLtoSQLite
     "can be useful in situations where multiple queries, with small "
     "result sets, need to be combined or computed with each other.",
 )
-def cli(
+def cli(  # noqa: ignore=C0330  # pylint: disable=C0330,R0913
     sqlite_file,
     mysql_user,
     mysql_password,
@@ -58,6 +60,7 @@ def cli(
     vacuum,
     use_buffered_cursors,
 ):
+    """Transfer MySQL to SQLite using the provided CLI options."""
     try:
         converter = MySQLtoSQLite(
             sqlite_file=sqlite_file,
@@ -75,6 +78,6 @@ def cli(
     except KeyboardInterrupt:
         print("\nProcess interrupted. Exiting...")
         sys.exit(1)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=W0703
         print(err)
         sys.exit(1)

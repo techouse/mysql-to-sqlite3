@@ -1,3 +1,5 @@
+"""Use to transfer a MySQL database to SQLite."""
+
 from __future__ import division
 
 import logging
@@ -9,20 +11,22 @@ from os.path import realpath
 
 import mysql.connector
 import six
-from _mysql_connector import MySQLInterfaceError
-from mysql.connector import errorcode
+from mysql.connector import errorcode  # pylint: disable=C0412
 from slugify import slugify
 from tqdm import trange
 
 if six.PY2:
-    from .sixeptions import *
+    from .sixeptions import *  # pylint: disable=W0622,W0401,W0614
 
 
-class MySQLtoSQLite:
+class MySQLtoSQLite:  # pylint: disable=R0902,R0903
+    """Use this class to transfer a MySQL database to SQLite."""
+
     COLUMN_PATTERN = re.compile(r"^[^(]+")
     COLUMN_LENGTH_PATTERN = re.compile(r"\(\d+\)$")
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs):  # noqa: ignore=C901
+        """Constructor."""
         self._mysql_user = kwargs.get("mysql_user") or None
         if not self._mysql_user:
             raise ValueError("Please provide a MySQL user")
@@ -78,13 +82,12 @@ class MySQLtoSQLite:
             )
             try:
                 self._mysql.database = self._mysql_database
-            except (mysql.connector.Error, MySQLInterfaceError) as err:
+            except (mysql.connector.Error, Exception) as err:  # pylint: disable=W0703
                 if hasattr(err, "errno") and err.errno == errorcode.ER_BAD_DB_ERROR:
                     self._logger.error("MySQL Database does not exist!")
                     raise
-                else:
-                    self._logger.error(err)
-                    raise
+                self._logger.error(err)
+                raise
         except mysql.connector.Error as err:
             self._logger.error(err)
             raise
@@ -118,12 +121,11 @@ class MySQLtoSQLite:
             return suffix.group(0)
         return ""
 
-    @classmethod
-    def _translate_type_from_mysql_to_sqlite(cls, column_type):
-        """
-        This method could be optimized even further, however at the time
-        of writing it seemed adequate enough.
-        """
+    @classmethod  # noqa: ignore=C901
+    def _translate_type_from_mysql_to_sqlite(
+        cls, column_type  # pylint: disable=C0330
+    ):  # pylint: disable=R0911,R0912
+        """This could be optimized even further, however is seems adequate."""
         match = cls._valid_column_type(column_type)
         if not match:
             raise ValueError("Invalid column_type!")
@@ -131,48 +133,47 @@ class MySQLtoSQLite:
         data_type = match.group(0).upper()
         if data_type == "TINYINT":
             return "TINYINT"
-        elif data_type == "SMALLINT":
+        if data_type == "SMALLINT":
             return "SMALLINT"
-        elif data_type == "MEDIUMINT":
+        if data_type == "MEDIUMINT":
             return "MEDIUMINT"
-        elif data_type in {"INT", "INTEGER"}:
+        if data_type in {"INT", "INTEGER"}:
             return "INTEGER"
-        elif data_type == "BIGINT":
+        if data_type == "BIGINT":
             return "BIGINT"
-        elif data_type == "DOUBLE":
+        if data_type == "DOUBLE":
             return "DOUBLE"
-        elif data_type == "FLOAT":
+        if data_type == "FLOAT":
             return "FLOAT"
-        elif data_type in {"DECIMAL", "YEAR", "TIME", "NUMERIC"}:
+        if data_type in {"DECIMAL", "YEAR", "TIME", "NUMERIC"}:
             return "NUMERIC"
-        elif data_type == "REAL":
+        if data_type == "REAL":
             return "REAL"
-        elif data_type in {"DATETIME", "TIMESTAMP"}:
+        if data_type in {"DATETIME", "TIMESTAMP"}:
             return "DATETIME"
-        elif data_type == "DATE":
+        if data_type == "DATE":
             return "DATE"
-        elif data_type in {
-            "BIT",
-            "BINARY",
-            "BLOB",
-            "LONGBLOB",
-            "MEDIUMBLOB",
-            "TINYBLOB",
-            "VARBINARY",
+        if data_type in {
+            "BIT",  # pylint: disable=C0330
+            "BINARY",  # pylint: disable=C0330
+            "BLOB",  # pylint: disable=C0330
+            "LONGBLOB",  # pylint: disable=C0330
+            "MEDIUMBLOB",  # pylint: disable=C0330
+            "TINYBLOB",  # pylint: disable=C0330
+            "VARBINARY",  # pylint: disable=C0330
         }:
             return "BLOB"
-        elif data_type == "BOOLEAN":
+        if data_type == "BOOLEAN":
             return "BOOLEAN"
-        elif data_type == "CHAR":
+        if data_type == "CHAR":
             return "CHARACTER" + cls._column_type_length(column_type)
-        elif data_type == "NCHAR":
+        if data_type == "NCHAR":
             return "NCHAR" + cls._column_type_length(column_type)
-        elif data_type == "NVARCHAR":
+        if data_type == "NVARCHAR":
             return "NVARCHAR" + cls._column_type_length(column_type)
-        elif data_type == "VARCHAR":
+        if data_type == "VARCHAR":
             return "VARCHAR" + cls._column_type_length(column_type)
-        else:
-            return "TEXT"
+        return "TEXT"
 
     def _build_create_table_sql(self, table_name):
         sql = 'CREATE TABLE IF NOT EXISTS "{}" ('.format(table_name)
@@ -193,7 +194,7 @@ class MySQLtoSQLite:
                     has_primary_key = True
                     primary += '"{name}", '.format(name=row["Field"])
                 else:
-                    indices += """ CREATE {unique} INDEX {table_name}_{column_slug_name}_IDX ON "{table_name}" ("{column_name}");""".format(
+                    indices += """ CREATE {unique} INDEX {table_name}_{column_slug_name}_IDX ON "{table_name}" ("{column_name}");""".format(  # noqa: ignore=E501  # pylint: disable=C0301
                         unique="UNIQUE" if row["Key"] == "UNI" else "",
                         table_name=table_name,
                         column_slug_name=slugify(row["Field"], separator="_"),
@@ -217,25 +218,26 @@ class MySQLtoSQLite:
             if err.errno == errorcode.CR_SERVER_LOST:
                 if not attempting_reconnect:
                     self._logger.warning(
-                        "Connection to MySQL server lost.\nAttempting to reconnect."
+                        "Connection to MySQL server lost." "\nAttempting to reconnect."
                     )
-                    return self._create_table(table_name, True)
-                self._logger.warning(
-                    "Connection to MySQL server lost.\nReconnection attempt aborted."
-                )
-                raise
-            else:
-                self._logger.error(
-                    "_create_table failed creating table {}: {}".format(table_name, err)
-                )
-                raise
+                    self._create_table(table_name, True)
+                else:
+                    self._logger.warning(
+                        "Connection to MySQL server lost."
+                        "\nReconnection attempt aborted."
+                    )
+                    raise
+            self._logger.error(
+                "_create_table failed creating table %s: %s", table_name, err
+            )
+            raise
         except sqlite3.Error as err:
             self._logger.error(
-                "_create_table failed creating table {}: {}".format(table_name, err)
+                "_create_table failed creating table %s: %s", table_name, err
             )
             raise
 
-    def _transfer_table_data(
+    def _transfer_table_data(  # pylint: disable=C0330
         self, table_name, sql, total_records=0, attempting_reconnect=False
     ):
         if attempting_reconnect:
@@ -243,8 +245,10 @@ class MySQLtoSQLite:
         try:
             if self._chunk_size is not None and self._chunk_size > 0:
                 for chunk in trange(
-                    self._current_chunk_number,
-                    int(ceil(total_records / self._chunk_size)),
+                    self._current_chunk_number,  # pylint: disable=C0330
+                    int(
+                        ceil(total_records / self._chunk_size)
+                    ),  # pylint: disable=C0330
                 ):
                     self._current_chunk_number = chunk
                     self._sqlite_cur.executemany(
@@ -271,7 +275,7 @@ class MySQLtoSQLite:
                     self._logger.warning(
                         "Connection to MySQL server lost.\nAttempting to reconnect."
                     )
-                    return self._transfer_table_data(
+                    self._transfer_table_data(
                         table_name=table_name,
                         sql=sql,
                         total_records=total_records,
@@ -279,25 +283,21 @@ class MySQLtoSQLite:
                     )
                 else:
                     self._logger.warning(
-                        "Connection to MySQL server lost.\nReconnection attempt aborted."
+                        "Connection to MySQL server lost.\nReconnection attempt aborted."  # noqa: ignore=E501  # pylint: disable=C0301
                     )
                     raise
-            else:
-                self._logger.error(
-                    "transfer failed inserting data into table {}: {}".format(
-                        table_name, err
-                    )
-                )
-                raise
+            self._logger.error(
+                "transfer failed inserting data into table %s: %s", table_name, err
+            )
+            raise
         except sqlite3.Error as err:
             self._logger.error(
-                "transfer failed inserting data into table {}: {}".format(
-                    table_name, err
-                )
+                "transfer failed inserting data into table %s: %s", table_name, err
             )
             raise
 
     def transfer(self):
+        """The primary and only method with which we transfer all the data."""
         self._mysql_cur.execute("SHOW TABLES")
 
         for row in self._mysql_cur.fetchall():
@@ -317,11 +317,11 @@ class MySQLtoSQLite:
             # only continue if there is anything to transfer
             if total_records > 0:
                 # populate it
-                self._logger.info("Transferring table {}".format(table_name))
+                self._logger.info("Transferring table %s", table_name)
                 self._mysql_cur.execute("SELECT * FROM `{}`".format(table_name))
                 columns = [column[0] for column in self._mysql_cur.description]
                 # build the SQL string
-                sql = 'INSERT OR IGNORE INTO "{table}" ({fields}) VALUES ({placeholders})'.format(
+                sql = 'INSERT OR IGNORE INTO "{table}" ({fields}) VALUES ({placeholders})'.format(  # noqa: ignore=E501  # pylint: disable=C0301
                     table=table_name,
                     fields=('"{}", ' * len(columns)).rstrip(" ,").format(*columns),
                     placeholders=("?, " * len(columns)).rstrip(" ,"),

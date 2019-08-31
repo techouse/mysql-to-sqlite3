@@ -5,7 +5,6 @@ from collections import namedtuple
 import mysql.connector
 import pytest
 import six
-from _mysql_connector import MySQLInterfaceError, MySQLError
 from mysql.connector import errorcode, MySQLConnection
 from sqlalchemy import MetaData, Table, select, create_engine, inspect
 
@@ -74,11 +73,6 @@ class TestMySQLtoSQLite:
                 ),
                 id="mysql.connector.Error",
             ),
-            pytest.param(
-                MySQLInterfaceError("Unknown database 'test_db'"),
-                id="MySQLInterfaceError",
-            ),
-            pytest.param(MySQLError("Unknown database 'test_db'"), id="MySQLError"),
             pytest.param(Exception("Unknown database 'test_db'"), id="Exception"),
         ],
     )
@@ -121,9 +115,7 @@ class TestMySQLtoSQLite:
         mocker.patch.object(
             mysql.connector, "connect", return_value=FakeMySQLConnection()
         )
-        with pytest.raises(
-            (mysql.connector.Error, MySQLInterfaceError, MySQLError, Exception)
-        ) as excinfo:
+        with pytest.raises((mysql.connector.Error, Exception)) as excinfo:
             MySQLtoSQLite(
                 sqlite_file=sqlite_database,
                 mysql_user=mysql_credentials.user,
