@@ -137,64 +137,52 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
             return suffix.group(0)
         return ""
 
-    @classmethod  # noqa: ignore=C901
+    @classmethod
     def _translate_type_from_mysql_to_sqlite(
         cls, column_type  # pylint: disable=C0330
-    ):  # pylint: disable=R0911,R0912
+    ):  # pylint: disable=R0911
         """This could be optimized even further, however is seems adequate."""
         match = cls._valid_column_type(column_type)
         if not match:
             raise ValueError("Invalid column_type!")
 
         data_type = match.group(0).upper()
-        if data_type == "TINYINT":
-            return "TINYINT"
-        if data_type == "SMALLINT":
-            return "SMALLINT"
-        if data_type == "MEDIUMINT":
-            return "MEDIUMINT"
-        if data_type in {"INT", "INTEGER"}:
-            return "INTEGER"
-        if data_type == "BIGINT":
-            return "BIGINT"
-        if data_type == "DOUBLE":
-            return "DOUBLE"
-        if data_type == "FLOAT":
-            return "FLOAT"
-        if data_type == "DECIMAL":
-            return "DECIMAL"
-        if data_type == "NUMERIC":
-            return "NUMERIC"
-        if data_type == "TIME":
-            return "TIME"
-        if data_type == "YEAR":
-            return "YEAR"
-        if data_type == "REAL":
-            return "REAL"
-        if data_type in {"DATETIME", "TIMESTAMP"}:
-            return "DATETIME"
-        if data_type == "DATE":
-            return "DATE"
+        if data_type in {
+            "BIGINT",  # pylint: disable=C0330
+            "BLOB",  # pylint: disable=C0330
+            "BOOLEAN",  # pylint: disable=C0330
+            "DATE",  # pylint: disable=C0330
+            "DATETIME",  # pylint: disable=C0330
+            "DECIMAL",  # pylint: disable=C0330
+            "DOUBLE",  # pylint: disable=C0330
+            "FLOAT",  # pylint: disable=C0330
+            "INTEGER",  # pylint: disable=C0330
+            "MEDIUMINT",  # pylint: disable=C0330
+            "NUMERIC",  # pylint: disable=C0330
+            "REAL",  # pylint: disable=C0330
+            "SMALLINT",  # pylint: disable=C0330
+            "TIME",  # pylint: disable=C0330
+            "TINYINT",  # pylint: disable=C0330
+            "YEAR",  # pylint: disable=C0330
+        }:
+            return data_type
         if data_type in {
             "BIT",  # pylint: disable=C0330
             "BINARY",  # pylint: disable=C0330
-            "BLOB",  # pylint: disable=C0330
             "LONGBLOB",  # pylint: disable=C0330
             "MEDIUMBLOB",  # pylint: disable=C0330
             "TINYBLOB",  # pylint: disable=C0330
             "VARBINARY",  # pylint: disable=C0330
         }:
             return "BLOB"
-        if data_type == "BOOLEAN":
-            return "BOOLEAN"
+        if data_type in {"NCHAR", "NVARCHAR", "VARCHAR"}:
+            return data_type + cls._column_type_length(column_type)
         if data_type == "CHAR":
             return "CHARACTER" + cls._column_type_length(column_type)
-        if data_type == "NCHAR":
-            return "NCHAR" + cls._column_type_length(column_type)
-        if data_type == "NVARCHAR":
-            return "NVARCHAR" + cls._column_type_length(column_type)
-        if data_type == "VARCHAR":
-            return "VARCHAR" + cls._column_type_length(column_type)
+        if data_type == "INT":
+            return "INTEGER"
+        if data_type in "TIMESTAMP":
+            return "DATETIME"
         return "TEXT"
 
     def _build_create_table_sql(self, table_name):
