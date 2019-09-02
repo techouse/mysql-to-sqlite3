@@ -19,9 +19,9 @@ if six.PY2:
 @pytest.mark.usefixtures("mysql_instance")
 class TestMySQLtoSQLite:
     @pytest.mark.init
-    def test_missing_mysql_user_raises_exception(self):
+    def test_missing_mysql_user_raises_exception(self, mysql_credentials):
         with pytest.raises(ValueError) as excinfo:
-            MySQLtoSQLite()
+            MySQLtoSQLite(mysql_database=mysql_credentials.database)
         assert "Please provide a MySQL user" in str(excinfo.value)
 
     @pytest.mark.init

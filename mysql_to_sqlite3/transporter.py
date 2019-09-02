@@ -34,33 +34,28 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
     COLUMN_PATTERN = re.compile(r"^[^(]+")
     COLUMN_LENGTH_PATTERN = re.compile(r"\(\d+\)$")
 
-    def __init__(self, **kwargs):  # noqa: ignore=C901
+    def __init__(self, **kwargs):
         """Constructor."""
-        self._mysql_user = kwargs.get("mysql_user") or None
-        if not self._mysql_user:
+        if not kwargs.get("mysql_database"):
+            raise ValueError("Please provide a MySQL database")
+
+        if not kwargs.get("mysql_user"):
             raise ValueError("Please provide a MySQL user")
-        self._mysql_user = str(self._mysql_user)
 
-        self._mysql_password = kwargs.get("mysql_password") or None
-        if self._mysql_password:
-            self._mysql_password = str(self._mysql_password)
+        self._mysql_database = str(kwargs.get("mysql_database"))
 
-        self._mysql_host = kwargs.get("mysql_host") or "localhost"
-        if self._mysql_host:
-            self._mysql_host = str(self._mysql_host)
+        self._mysql_user = str(kwargs.get("mysql_user"))
 
-        self._mysql_port = kwargs.get("mysql_port") or 3306
-        if self._mysql_port:
-            self._mysql_port = int(self._mysql_port)
+        self._mysql_password = (
+            str(kwargs.get("mysql_password")) if kwargs.get("mysql_password") else None
+        )
+
+        self._mysql_host = str(kwargs.get("mysql_host") or "localhost")
+
+        self._mysql_port = int(kwargs.get("mysql_port") or 3306)
 
         self._current_chunk_number = 0
-        self._chunk_size = kwargs.get("chunk") or None
-        if self._chunk_size:
-            self._chunk_size = int(self._chunk_size)
-
-        self._mysql_database = kwargs.get("mysql_database")
-        if not self._mysql_database:
-            raise ValueError("Please provide a MySQL database")
+        self._chunk_size = int(kwargs.get("chunk")) if kwargs.get("chunk") else None
 
         self._sqlite_file = kwargs.get("sqlite_file") or None
 
