@@ -24,8 +24,6 @@ from sqlalchemy import (
     VARBINARY,
     VARCHAR,
 )
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql.functions import current_timestamp
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref
