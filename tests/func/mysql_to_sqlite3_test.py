@@ -209,13 +209,14 @@ class TestMySQLtoSQLite:
         assert all(
             message in [record.message for record in caplog.records]
             for message in {
-                # "Transferring table article_authors",
-                # "Transferring table article_images",
-                # "Transferring table article_tags",
-                # "Transferring table articles",
-                # "Transferring table authors",
-                # "Transferring table images",
-                # "Transferring table tags",
+                "Transferring table article_authors",
+                "Transferring table article_images",
+                "Transferring table article_tags",
+                "Transferring table articles",
+                "Transferring table authors",
+                "Transferring table images",
+                "Transferring table tags",
+                "Transferring table misc",
                 "Done!"
             }
         )
