@@ -1,9 +1,11 @@
 import logging
 import re
 from collections import namedtuple
+from decimal import Decimal
 
 import mysql.connector
 import pytest
+import simplejson as json
 import six
 from mysql.connector import errorcode, MySQLConnection
 from sqlalchemy import MetaData, Table, select, create_engine, inspect
@@ -223,7 +225,11 @@ class TestMySQLtoSQLite:
         assert "Done!" in out.splitlines()[-1]
 
         sqlite_engine = create_engine(
-            "sqlite:///{database}".format(database=sqlite_database)
+            "sqlite:///{database}".format(
+                database=sqlite_database,
+                json_serializer=json.dumps,
+                json_deserializer=json.loads,
+            )
         )
         sqlite_cnx = sqlite_engine.connect()
         sqlite_inspect = inspect(sqlite_engine)
@@ -262,6 +268,10 @@ class TestMySQLtoSQLite:
             sqlite_stmt = select([sqlite_table])
             sqlite_result = sqlite_cnx.execute(sqlite_stmt).fetchall()
             sqlite_result.sort()
+            sqlite_result = [
+                [float(data) if isinstance(data, Decimal) else data for data in row]
+                for row in sqlite_result
+            ]
             sqlite_results.append(sqlite_result)
 
         for table_name in mysql_tables:
@@ -271,6 +281,10 @@ class TestMySQLtoSQLite:
             mysql_stmt = select([mysql_table])
             mysql_result = mysql_cnx.execute(mysql_stmt).fetchall()
             mysql_result.sort()
+            mysql_result = [
+                [float(data) if isinstance(data, Decimal) else data for data in row]
+                for row in mysql_result
+            ]
             mysql_results.append(mysql_result)
 
         assert sqlite_results == mysql_results

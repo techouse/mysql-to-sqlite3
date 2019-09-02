@@ -6,6 +6,8 @@ import logging
 import re
 import sqlite3
 import sys
+from datetime import timedelta
+from decimal import Decimal
 from math import ceil
 from os.path import realpath
 
@@ -14,6 +16,13 @@ import six
 from mysql.connector import errorcode  # pylint: disable=C0412
 from slugify import slugify
 from tqdm import trange
+from mysql_to_sqlite3.sqlite_utils import (  # noqa: ignore=I100
+    adapt_decimal,
+    adapt_timedelta,
+    convert_decimal,
+    convert_timedelta,
+    encode_data_for_sqlite,
+)
 
 if six.PY2:
     from .sixeptions import *  # pylint: disable=W0622,W0401,W0614
@@ -61,7 +70,14 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
 
         self._logger = self._setup_logger(log_file=kwargs.get("log_file") or None)
 
-        self._sqlite = sqlite3.connect(realpath(self._sqlite_file))
+        sqlite3.register_adapter(Decimal, adapt_decimal)
+        sqlite3.register_converter("DECIMAL", convert_decimal)
+        sqlite3.register_adapter(timedelta, adapt_timedelta)
+        sqlite3.register_converter("TIME", convert_timedelta)
+
+        self._sqlite = sqlite3.connect(
+            realpath(self._sqlite_file), detect_types=sqlite3.PARSE_DECLTYPES
+        )
         self._sqlite.row_factory = sqlite3.Row
 
         self._sqlite_cur = self._sqlite.cursor()
@@ -145,8 +161,14 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
             return "DOUBLE"
         if data_type == "FLOAT":
             return "FLOAT"
-        if data_type in {"DECIMAL", "YEAR", "TIME", "NUMERIC"}:
+        if data_type == "DECIMAL":
+            return "DECIMAL"
+        if data_type == "NUMERIC":
             return "NUMERIC"
+        if data_type == "TIME":
+            return "TIME"
+        if data_type == "YEAR":
+            return "YEAR"
         if data_type == "REAL":
             return "REAL"
         if data_type in {"DATETIME", "TIMESTAMP"}:
@@ -255,7 +277,8 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
                         sql,
                         (
                             tuple(
-                                col.decode() if col is not None else None for col in row
+                                encode_data_for_sqlite(col) if col is not None else None
+                                for col in row
                             )
                             for row in self._mysql_cur.fetchmany(self._chunk_size)
                         ),
@@ -264,7 +287,10 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
                 self._sqlite_cur.executemany(
                     sql,
                     (
-                        tuple(col.decode() if col is not None else None for col in row)
+                        tuple(
+                            encode_data_for_sqlite(col) if col is not None else None
+                            for col in row
+                        )
                         for row in self._mysql_cur.fetchall()
                     ),
                 )

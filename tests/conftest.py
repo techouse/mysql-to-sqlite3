@@ -18,7 +18,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy_utils import drop_database, database_exists
 
 from .database import Database
-from .factories import AuthorFactory, TagFactory, ArticleFactory, ImageFactory
+from .factories import (
+    AuthorFactory,
+    ArticleFactory,
+    ImageFactory,
+    MiscFactory,
+    TagFactory,
+)
 
 if six.PY2:
     from .sixeptions import *
@@ -296,6 +302,7 @@ def mysql_database(tmpdir_factory, mysql_instance, mysql_credentials, faker):
             article = ArticleFactory()
             article.authors.append(AuthorFactory())
             article.tags.append(TagFactory())
+            article.misc.append(MiscFactory())
             for _ in range(faker.pyint(min_value=1, max_value=4)):
                 article.images.append(
                     ImageFactory(

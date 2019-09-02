@@ -32,10 +32,20 @@ class TestMySQLtoSQLiteClassmethods:
                     MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
                     == "INTEGER"
                 )
-            elif column_type in {"DECIMAL", "YEAR", "TIME"}:
+            elif column_type == "DECIMAL":
                 assert (
                     MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
-                    == "NUMERIC"
+                    == "DECIMAL"
+                )
+            elif column_type == "YEAR":
+                assert (
+                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
+                    == "YEAR"
+                )
+            elif column_type == "TIME":
+                assert (
+                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
+                    == "TIME"
                 )
             elif column_type == "TIMESTAMP":
                 assert (
