@@ -30,7 +30,7 @@ class MiscFactory(factory.Factory):
         model = models.Misc
 
     big_integer_field = factory.Faker("pyint", max_value=10 ** 9)
-    # large_binary_field = factory.Faker("binary", length=1024 * 10)  # FIXME
+    large_binary_field = factory.Faker("binary", length=1024 * 10)
     boolean_field = factory.Faker("boolean")
     char_field = factory.Faker("text", max_nb_chars=255)
     date_field = factory.Faker("date_this_decade")
@@ -49,7 +49,7 @@ class MiscFactory(factory.Factory):
     string_field = factory.Faker("text", max_nb_chars=255)
     text_field = factory.Faker("text", max_nb_chars=1024)
     time_field = factory.Faker("time_object")
-    # varbinary_field = factory.Faker("binary", length=255)  # FIXME
+    varbinary_field = factory.Faker("binary", length=255)
     varchar_field = factory.Faker("text", max_nb_chars=255)
     timestamp_field = factory.Faker("date_time_this_century")
 

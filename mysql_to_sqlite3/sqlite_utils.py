@@ -2,6 +2,7 @@
 
 from __future__ import division
 
+import sqlite3
 from datetime import timedelta
 from decimal import Decimal
 
@@ -32,9 +33,7 @@ def convert_timedelta(value):
 
 def encode_data_for_sqlite(value):
     """Fix encoding bytes."""
-    # try:
-    #     return value.decode()
-    # except (UnicodeDecodeError, AttributeError):
-    #     pass
-    # return value
-    return value.decode()
+    try:
+        return value.decode()
+    except (UnicodeDecodeError, AttributeError):
+        return sqlite3.Binary(value)

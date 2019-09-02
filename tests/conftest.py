@@ -288,7 +288,7 @@ def mysql_database(tmpdir_factory, mysql_instance, mysql_credentials, faker):
     temp_image_dir = tmpdir_factory.mktemp("images")
 
     db = Database(
-        "mysql+mysqlconnector://{user}:{password}@{host}:{port}/{database}".format(
+        "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
             user=mysql_credentials.user,
             password=mysql_credentials.password,
             host=mysql_credentials.host,
