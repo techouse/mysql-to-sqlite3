@@ -14,8 +14,8 @@ from os.path import realpath
 import mysql.connector
 import six
 from mysql.connector import errorcode  # pylint: disable=C0412
-from slugify import slugify
 from tqdm import trange
+
 from mysql_to_sqlite3.sqlite_utils import (  # noqa: ignore=I100
     adapt_decimal,
     adapt_timedelta,
@@ -182,55 +182,50 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
 
     def _build_create_table_sql(self, table_name):
         sql = 'CREATE TABLE IF NOT EXISTS "{}" ('.format(table_name)
-        primary = "PRIMARY KEY ("
-        has_primary_key = False
+        primary = ""
         indices = ""
 
         self._mysql_cur_dict.execute("SHOW COLUMNS FROM `{}`".format(table_name))
 
         for row in self._mysql_cur_dict.fetchall():
-            sql += ' "{name}" {type} {notnull}, '.format(
+            sql += '\n\t"{name}" {type} {notnull},'.format(
                 name=row["Field"],
                 type=self._translate_type_from_mysql_to_sqlite(row["Type"]),
                 notnull="NULL" if row["Null"] == "YES" else "NOT NULL",
             )
-            if row["Key"] in {"PRI", "MUL"}:
-                if row["Key"] == "PRI":
-                    has_primary_key = True
-                    primary += '"{name}", '.format(name=row["Field"])
-                else:
-                    indices += """ CREATE INDEX {table_name}_{column_slug_name}_IDX ON "{table_name}" ("{column_name}");""".format(  # noqa: ignore=E501  # pylint: disable=C0301
-                        table_name=table_name,
-                        column_slug_name=slugify(row["Field"], separator="_"),
-                        column_name=row["Field"],
-                    )
-        if has_primary_key:
-            sql += primary.rstrip(", ")
-            sql += ")"
-        sql = sql.rstrip(", ")
 
         self._mysql_cur_dict.execute(
             """
-            SELECT k.CONSTRAINT_NAME AS `key_name`,
-                   GROUP_CONCAT(k.COLUMN_NAME SEPARATOR ",") AS `columns`
-            FROM information_schema.TABLE_CONSTRAINTS AS i
-            LEFT JOIN information_schema.KEY_COLUMN_USAGE AS k
-                ON i.CONSTRAINT_NAME = k.CONSTRAINT_NAME
-            WHERE i.TABLE_SCHEMA = %s
-            AND i.TABLE_NAME = %s
-            AND i.CONSTRAINT_TYPE = %s
-            GROUP BY k.CONSTRAINT_NAME
+           SELECT INDEX_NAME AS `name`,
+                  IF (NON_UNIQUE = 0 AND INDEX_NAME = 'PRIMARY', 1, 0) AS `primary`,
+                  IF (NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY', 1, 0) AS `unique`,
+                  GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS `columns`
+           FROM information_schema.STATISTICS
+           WHERE TABLE_SCHEMA = %s
+           AND TABLE_NAME = %s
+           GROUP BY INDEX_NAME, NON_UNIQUE
         """,
-            (self._mysql_database, table_name, "UNIQUE"),
+            (self._mysql_database, table_name),
         )
-        for unique_key in self._mysql_cur_dict.fetchall():
-            indices += """ CREATE UNIQUE INDEX {key_name} ON "{table_name}" ({columns});""".format(  # noqa: ignore=E501  # pylint: disable=C0301
-                key_name=unique_key["key_name"],
-                table_name=table_name,
-                columns=", ".join(
-                    '"{}"'.format(x) for x in unique_key["columns"].split(",")
-                ),
-            )
+        for index in self._mysql_cur_dict.fetchall():
+            if int(index["primary"]) == 1:
+                primary += "\n\tPRIMARY KEY ({columns})".format(
+                    columns=", ".join(
+                        '"{}"'.format(column) for column in index["columns"].split(",")
+                    )
+                )
+            else:
+                indices += """CREATE {unique} INDEX {name} ON "{table}" ({columns});""".format(  # noqa: ignore=E501  # pylint: disable=C0301
+                    unique="UNIQUE" if int(index["unique"]) == 1 else "",
+                    name=index["name"],
+                    table=table_name,
+                    columns=", ".join(
+                        '"{}"'.format(column) for column in index["columns"].split(",")
+                    ),
+                )
+
+        sql += primary
+        sql = sql.rstrip(", ")
 
         self._mysql_cur_dict.execute(
             """
@@ -251,11 +246,11 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
             (self._mysql_database, table_name, "FOREIGN KEY"),
         )
         for foreign_key in self._mysql_cur_dict.fetchall():
-            sql += """, FOREIGN KEY("{column}") REFERENCES "{ref_table}" ("{ref_column}") ON UPDATE {on_update} ON DELETE {on_delete} """.format(  # noqa: ignore=E501  # pylint: disable=C0301
+            sql += """,\n\tFOREIGN KEY("{column}") REFERENCES "{ref_table}" ("{ref_column}") ON UPDATE {on_update} ON DELETE {on_delete}""".format(  # noqa: ignore=E501  # pylint: disable=C0301
                 **foreign_key
             )
 
-        sql += ");"
+        sql += "\n);"
         sql += indices
         return sql
 
