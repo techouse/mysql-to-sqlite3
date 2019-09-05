@@ -194,13 +194,12 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
                 type=self._translate_type_from_mysql_to_sqlite(row["Type"]),
                 notnull="NULL" if row["Null"] == "YES" else "NOT NULL",
             )
-            if row["Key"] in {"PRI", "UNI", "MUL"}:
+            if row["Key"] in {"PRI", "MUL"}:
                 if row["Key"] == "PRI":
                     has_primary_key = True
                     primary += '"{name}", '.format(name=row["Field"])
                 else:
-                    indices += """ CREATE {unique} INDEX {table_name}_{column_slug_name}_IDX ON "{table_name}" ("{column_name}");""".format(  # noqa: ignore=E501  # pylint: disable=C0301
-                        unique="UNIQUE" if row["Key"] == "UNI" else "",
+                    indices += """ CREATE INDEX {table_name}_{column_slug_name}_IDX ON "{table_name}" ("{column_name}");""".format(  # noqa: ignore=E501  # pylint: disable=C0301
                         table_name=table_name,
                         column_slug_name=slugify(row["Field"], separator="_"),
                         column_name=row["Field"],
@@ -209,6 +208,27 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
             sql += primary.rstrip(", ")
             sql += ")"
         sql = sql.rstrip(", ")
+
+        self._mysql_cur_dict.execute(
+            """
+            SELECT k.CONSTRAINT_NAME AS `key_name`,
+                   GROUP_CONCAT(k.COLUMN_NAME SEPARATOR ",") AS `columns`
+            FROM information_schema.TABLE_CONSTRAINTS AS i
+            LEFT JOIN information_schema.KEY_COLUMN_USAGE AS k 
+                ON i.CONSTRAINT_NAME = k.CONSTRAINT_NAME
+            WHERE i.TABLE_SCHEMA = %s
+            AND i.TABLE_NAME = %s
+            AND i.CONSTRAINT_TYPE = %s
+            GROUP BY k.CONSTRAINT_NAME
+        """,
+            (self._mysql_database, table_name, "UNIQUE"),
+        )
+        for unique_key in self._mysql_cur_dict.fetchall():
+            indices += """ CREATE UNIQUE INDEX {key_name} ON "{table_name}" ({columns});""".format(
+                key_name=unique_key["key_name"],
+                table_name=table_name,
+                columns=", ".join('"{}"'.format(x) for x in unique_key["columns"].split(","))
+            )
 
         self._mysql_cur_dict.execute(
             """
@@ -225,7 +245,7 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
             WHERE i.TABLE_SCHEMA = %s
             AND i.TABLE_NAME = %s
             AND i.CONSTRAINT_TYPE = %s
-            """,
+        """,
             (self._mysql_database, table_name, "FOREIGN KEY"),
         )
         for foreign_key in self._mysql_cur_dict.fetchall():
