@@ -214,7 +214,7 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
             SELECT k.CONSTRAINT_NAME AS `key_name`,
                    GROUP_CONCAT(k.COLUMN_NAME SEPARATOR ",") AS `columns`
             FROM information_schema.TABLE_CONSTRAINTS AS i
-            LEFT JOIN information_schema.KEY_COLUMN_USAGE AS k 
+            LEFT JOIN information_schema.KEY_COLUMN_USAGE AS k
                 ON i.CONSTRAINT_NAME = k.CONSTRAINT_NAME
             WHERE i.TABLE_SCHEMA = %s
             AND i.TABLE_NAME = %s
@@ -224,10 +224,12 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
             (self._mysql_database, table_name, "UNIQUE"),
         )
         for unique_key in self._mysql_cur_dict.fetchall():
-            indices += """ CREATE UNIQUE INDEX {key_name} ON "{table_name}" ({columns});""".format(
+            indices += """ CREATE UNIQUE INDEX {key_name} ON "{table_name}" ({columns});""".format(  # noqa: ignore=E501  # pylint: disable=C0301
                 key_name=unique_key["key_name"],
                 table_name=table_name,
-                columns=", ".join('"{}"'.format(x) for x in unique_key["columns"].split(","))
+                columns=", ".join(
+                    '"{}"'.format(x) for x in unique_key["columns"].split(",")
+                ),
             )
 
         self._mysql_cur_dict.execute(
