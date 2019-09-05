@@ -8,7 +8,7 @@ import pytest
 import simplejson as json
 import six
 from mysql.connector import errorcode, MySQLConnection
-from sqlalchemy import MetaData, Table, select, create_engine, inspect
+from sqlalchemy import MetaData, Table, select, create_engine, inspect, text
 
 from mysql_to_sqlite3 import MySQLtoSQLite
 
@@ -217,7 +217,7 @@ class TestMySQLtoSQLite:
                 "Transferring table images",
                 "Transferring table tags",
                 "Transferring table misc",
-                "Done!"
+                "Done!",
             }
         )
         assert all(record.levelname == "INFO" for record in caplog.records)
@@ -256,6 +256,45 @@ class TestMySQLtoSQLite:
             assert [
                 column["name"] for column in sqlite_inspect.get_columns(table_name)
             ] == [column["name"] for column in mysql_inspect.get_columns(table_name)]
+
+        """ Test if all the tables have the same foreign keys """
+        for table_name in mysql_tables:
+            mysql_fk_stmt = text(
+                """
+                SELECT k.COLUMN_NAME AS `from`,
+                       k.REFERENCED_TABLE_NAME AS `table`,
+                       k.REFERENCED_COLUMN_NAME AS `to`,
+                       c.UPDATE_RULE AS `on_update`,
+                       c.DELETE_RULE AS `on_delete`
+                FROM information_schema.TABLE_CONSTRAINTS AS i
+                LEFT JOIN information_schema.KEY_COLUMN_USAGE AS k ON i.CONSTRAINT_NAME = k.CONSTRAINT_NAME
+                LEFT JOIN information_schema.REFERENTIAL_CONSTRAINTS c ON c.CONSTRAINT_NAME = i.CONSTRAINT_NAME
+                WHERE i.TABLE_SCHEMA = :table_schema
+                AND i.TABLE_NAME = :table_name
+                AND i.CONSTRAINT_TYPE = :constraint_type
+            """
+            ).bindparams(
+                table_schema=mysql_credentials.database,
+                table_name=table_name,
+                constraint_type="FOREIGN KEY",
+            )
+            mysql_fk_result = mysql_cnx.execute(mysql_fk_stmt)
+            mysql_foreign_keys = [dict(row) for row in mysql_fk_result]
+
+            sqlite_fk_stmt = 'PRAGMA foreign_key_list("{table}")'.format(
+                table=table_name
+            )
+            sqlite_fk_result = sqlite_cnx.execute(sqlite_fk_stmt)
+            if sqlite_fk_result.returns_rows:
+                for row in sqlite_fk_result:
+                    fk = dict(row)
+                    assert {
+                        "table": fk["table"],
+                        "from": fk["from"],
+                        "to": fk["to"],
+                        "on_update": fk["on_update"],
+                        "on_delete": fk["on_delete"],
+                    } in mysql_foreign_keys
 
         """ Check if all the data was transferred correctly """
         sqlite_results = []

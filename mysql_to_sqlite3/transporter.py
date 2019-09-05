@@ -209,9 +209,33 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
             sql += primary.rstrip(", ")
             sql += ")"
         sql = sql.rstrip(", ")
+
+        self._mysql_cur_dict.execute(
+            """
+            SELECT k.COLUMN_NAME AS `column`,
+                   k.REFERENCED_TABLE_NAME AS `ref_table`,
+                   k.REFERENCED_COLUMN_NAME AS `ref_column`,
+                   c.UPDATE_RULE AS `on_update`,
+                   c.DELETE_RULE AS `on_delete`
+            FROM information_schema.TABLE_CONSTRAINTS AS i
+            LEFT JOIN information_schema.KEY_COLUMN_USAGE AS k
+                ON i.CONSTRAINT_NAME = k.CONSTRAINT_NAME
+            LEFT JOIN information_schema.REFERENTIAL_CONSTRAINTS AS c
+                ON c.CONSTRAINT_NAME = i.CONSTRAINT_NAME
+            WHERE i.TABLE_SCHEMA = %s
+            AND i.TABLE_NAME = %s
+            AND i.CONSTRAINT_TYPE = %s
+            """,
+            (self._mysql_database, table_name, "FOREIGN KEY"),
+        )
+        for foreign_key in self._mysql_cur_dict.fetchall():
+            sql += """, FOREIGN KEY("{column}") REFERENCES "{ref_table}" ("{ref_column}") ON UPDATE {on_update} ON DELETE {on_delete} """.format(  # noqa: ignore=E501  # pylint: disable=C0301
+                **foreign_key
+            )
+
         sql += ");"
         sql += indices
-        return " ".join(sql.split())
+        return sql
 
     def _create_table(self, table_name, attempting_reconnect=False):
         try:
@@ -282,7 +306,7 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
             if err.errno == errorcode.CR_SERVER_LOST:
                 if not attempting_reconnect:
                     self._logger.warning(
-                        "Connection to MySQL server lost.\nAttempting to reconnect."
+                        "Connection to MySQL server lost." "\nAttempting to reconnect."
                     )
                     self._transfer_table_data(
                         table_name=table_name,
@@ -292,7 +316,8 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
                     )
                 else:
                     self._logger.warning(
-                        "Connection to MySQL server lost.\nReconnection attempt aborted."  # noqa: ignore=E501  # pylint: disable=C0301
+                        "Connection to MySQL server lost."
+                        "\nReconnection attempt aborted."
                     )
                     raise
             self._logger.error(
@@ -309,35 +334,42 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
         """The primary and only method with which we transfer all the data."""
         self._mysql_cur.execute("SHOW TABLES")
 
-        for row in self._mysql_cur.fetchall():
-            # reset the chunk
-            self._current_chunk_number = 0
+        try:
+            self._sqlite_cur.execute("PRAGMA foreign_keys=OFF")
 
-            # create the table
-            table_name = row[0].decode()
-            self._create_table(table_name)
+            for row in self._mysql_cur.fetchall():
+                # reset the chunk
+                self._current_chunk_number = 0
 
-            # get the size of the data
-            self._mysql_cur_dict.execute(
-                "SELECT COUNT(*) AS `total_records` FROM `{}`".format(table_name)
-            )
-            total_records = int(self._mysql_cur_dict.fetchone()["total_records"])
+                # create the table
+                table_name = row[0].decode()
+                self._create_table(table_name)
 
-            # only continue if there is anything to transfer
-            if total_records > 0:
-                # populate it
-                self._logger.info("Transferring table %s", table_name)
-                self._mysql_cur.execute("SELECT * FROM `{}`".format(table_name))
-                columns = [column[0] for column in self._mysql_cur.description]
-                # build the SQL string
-                sql = 'INSERT OR IGNORE INTO "{table}" ({fields}) VALUES ({placeholders})'.format(  # noqa: ignore=E501  # pylint: disable=C0301
-                    table=table_name,
-                    fields=('"{}", ' * len(columns)).rstrip(" ,").format(*columns),
-                    placeholders=("?, " * len(columns)).rstrip(" ,"),
+                # get the size of the data
+                self._mysql_cur_dict.execute(
+                    "SELECT COUNT(*) AS `total_records` FROM `{}`".format(table_name)
                 )
-                self._transfer_table_data(
-                    table_name=table_name, sql=sql, total_records=total_records
-                )
+                total_records = int(self._mysql_cur_dict.fetchone()["total_records"])
+
+                # only continue if there is anything to transfer
+                if total_records > 0:
+                    # populate it
+                    self._logger.info("Transferring table %s", table_name)
+                    self._mysql_cur.execute("SELECT * FROM `{}`".format(table_name))
+                    columns = [column[0] for column in self._mysql_cur.description]
+                    # build the SQL string
+                    sql = 'INSERT OR IGNORE INTO "{table}" ({fields}) VALUES ({placeholders})'.format(  # noqa: ignore=E501  # pylint: disable=C0301
+                        table=table_name,
+                        fields=('"{}", ' * len(columns)).rstrip(" ,").format(*columns),
+                        placeholders=("?, " * len(columns)).rstrip(" ,"),
+                    )
+                    self._transfer_table_data(
+                        table_name=table_name, sql=sql, total_records=total_records
+                    )
+        except Exception:  # pylint: disable=W0706
+            raise
+        finally:
+            self._sqlite_cur.execute("PRAGMA foreign_keys=ON")
 
         if self._vacuum:
             self._logger.info(
