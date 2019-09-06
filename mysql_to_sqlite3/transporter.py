@@ -215,7 +215,7 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
                     )
                 )
             else:
-                indices += """CREATE {unique} INDEX {name} ON "{table}" ({columns});""".format(  # noqa: ignore=E501  # pylint: disable=C0301
+                indices += """CREATE {unique} INDEX {name} ON "{table}" ({columns});""".format(  # noqa: ignore=E501 pylint: disable=C0301
                     unique="UNIQUE" if int(index["unique"]) == 1 else "",
                     name=index["name"],
                     table=table_name,
@@ -246,7 +246,7 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
             (self._mysql_database, table_name, "FOREIGN KEY"),
         )
         for foreign_key in self._mysql_cur_dict.fetchall():
-            sql += """,\n\tFOREIGN KEY("{column}") REFERENCES "{ref_table}" ("{ref_column}") ON UPDATE {on_update} ON DELETE {on_delete}""".format(  # noqa: ignore=E501  # pylint: disable=C0301
+            sql += """,\n\tFOREIGN KEY("{column}") REFERENCES "{ref_table}" ("{ref_column}") ON UPDATE {on_update} ON DELETE {on_delete}""".format(  # noqa: ignore=E501 pylint: disable=C0301
                 **foreign_key
             )
 
@@ -375,7 +375,7 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
                     self._mysql_cur.execute("SELECT * FROM `{}`".format(table_name))
                     columns = [column[0] for column in self._mysql_cur.description]
                     # build the SQL string
-                    sql = 'INSERT OR IGNORE INTO "{table}" ({fields}) VALUES ({placeholders})'.format(  # noqa: ignore=E501  # pylint: disable=C0301
+                    sql = 'INSERT OR IGNORE INTO "{table}" ({fields}) VALUES ({placeholders})'.format(  # noqa: ignore=E501 pylint: disable=C0301
                         table=table_name,
                         fields=('"{}", ' * len(columns)).rstrip(" ,").format(*columns),
                         placeholders=("?, " * len(columns)).rstrip(" ,"),
