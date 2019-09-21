@@ -196,15 +196,15 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
 
         self._mysql_cur_dict.execute(
             """
-           SELECT INDEX_NAME AS `name`,
+            SELECT INDEX_NAME AS `name`,
                   IF (NON_UNIQUE = 0 AND INDEX_NAME = 'PRIMARY', 1, 0) AS `primary`,
                   IF (NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY', 1, 0) AS `unique`,
                   GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS `columns`
-           FROM information_schema.STATISTICS
-           WHERE TABLE_SCHEMA = %s
-           AND TABLE_NAME = %s
-           GROUP BY INDEX_NAME, NON_UNIQUE
-        """,
+            FROM information_schema.STATISTICS
+            WHERE TABLE_SCHEMA = %s
+            AND TABLE_NAME = %s
+            GROUP BY INDEX_NAME, NON_UNIQUE
+            """,
             (self._mysql_database, table_name),
         )
         for index in self._mysql_cur_dict.fetchall():
@@ -242,7 +242,7 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
             WHERE i.TABLE_SCHEMA = %s
             AND i.TABLE_NAME = %s
             AND i.CONSTRAINT_TYPE = %s
-        """,
+            """,
             (self._mysql_database, table_name, "FOREIGN KEY"),
         )
         for foreign_key in self._mysql_cur_dict.fetchall():
