@@ -35,7 +35,7 @@ setup(
     url=about["__url__"],
     packages=packages,
     include_package_data=True,
-    python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.8.*",
+    python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*",
     install_requires=requires,
     license=about["__license__"],
     zip_safe=False,
