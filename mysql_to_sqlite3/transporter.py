@@ -274,13 +274,13 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
                     )
                     raise
             self._logger.error(
-                "_create_table failed creating table %s: %s", table_name, err
+                "MySQL failed reading table definition from table %s: %s",
+                table_name,
+                err,
             )
             raise
         except sqlite3.Error as err:
-            self._logger.error(
-                "_create_table failed creating table %s: %s", table_name, err
-            )
+            self._logger.error("SQLite failed creating table %s: %s", table_name, err)
             raise
 
     def _transfer_table_data(  # pylint: disable=C0330
@@ -338,12 +338,16 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
                     )
                     raise
             self._logger.error(
-                "transfer failed inserting data into table %s: %s", table_name, err
+                "MySQL transfer failed reading table data from table %s: %s",
+                table_name,
+                err,
             )
             raise
         except sqlite3.Error as err:
             self._logger.error(
-                "transfer failed inserting data into table %s: %s", table_name, err
+                "SQLite transfer failed inserting data into table %s: %s",
+                table_name,
+                err,
             )
             raise
 
