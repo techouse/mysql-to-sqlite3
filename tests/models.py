@@ -163,3 +163,13 @@ class Article(Base):
         return "<Article(id='{id}', title='{title}')>".format(
             id=self.id, title=self.title
         )
+
+
+class CrazyName(Base):
+    __tablename__ = "crazy_name."
+    id = Column(Integer, primary_key=True)
+    name = Column(String(128), nullable=False, index=True)
+    dupe = Column(Boolean, index=True, default=False)
+
+    def __repr__(self):
+        return "<CrazyName(id='{id}', name='{name}')>".format(id=self.id, name=self.name)

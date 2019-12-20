@@ -108,3 +108,10 @@ class ArticleFactory(factory.Factory):
             # A list of authors were passed in, use them
             for misc in extracted:
                 self.misc.add(misc)
+
+
+class CrazyNameFactory(factory.Factory):
+    class Meta:
+        model = models.CrazyName
+
+    name = factory.Faker("name")

@@ -24,6 +24,7 @@ from .factories import (
     ImageFactory,
     MiscFactory,
     TagFactory,
+    CrazyNameFactory,
 )
 
 if six.PY2:
@@ -316,6 +317,9 @@ def mysql_database(tmpdir_factory, mysql_instance, mysql_credentials, faker):
                     )
                 )
             session.add(article)
+
+        for _ in range(faker.pyint(min_value=12, max_value=24)):
+            session.add(CrazyNameFactory())
         try:
             session.commit()
         except IntegrityError:
