@@ -35,6 +35,7 @@ class Author(Base):
     __tablename__ = "authors"
     id = Column(Integer, primary_key=True)
     name = Column(String(128), nullable=False, index=True)
+    dupe = Column(Boolean, index=True, default=False)
 
     def __repr__(self):
         return "<Author(id='{id}', name='{name}')>".format(id=self.id, name=self.name)
@@ -53,6 +54,7 @@ class Image(Base):
     id = Column(Integer, primary_key=True)
     path = Column(String(255), index=True)
     description = Column(String(255), nullable=True)
+    dupe = Column(Boolean, index=True, default=False)
 
     def __repr__(self):
         return "<Image(id='{id}', path='{path}')>".format(id=self.id, path=self.path)
@@ -70,6 +72,7 @@ class Tag(Base):
     __tablename__ = "tags"
     id = Column(Integer, primary_key=True)
     name = Column(String(128), nullable=False, index=True)
+    dupe = Column(Boolean, index=True, default=False)
 
     def __repr__(self):
         return "<Tag(id='{id}', name='{name}')>".format(id=self.id, name=self.name)
@@ -109,6 +112,7 @@ class Misc(Base):
     varbinary_field = Column(VARBINARY(255), nullable=True)
     varchar_field = Column(VARCHAR(255), nullable=True)
     timestamp_field = Column(TIMESTAMP, default=current_timestamp())
+    dupe = Column(Boolean, index=True, default=False)
 
 
 article_misc = Table(
@@ -128,6 +132,7 @@ class Article(Base):
     content = Column(Text, nullable=True)
     status = Column(CHAR(1), index=True)
     published = Column(DateTime, nullable=True)
+    dupe = Column(Boolean, index=True, default=False)
     # relationships
     authors = relationship(
         "Author",
