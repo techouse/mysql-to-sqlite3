@@ -2,7 +2,6 @@ import logging
 import re
 from collections import namedtuple
 from decimal import Decimal
-from itertools import chain
 
 import mysql.connector
 import pytest
@@ -259,15 +258,19 @@ class TestMySQLtoSQLite:
             ] == [column["name"] for column in mysql_inspect.get_columns(table_name)]
 
         """ Test if all the tables have the same indices """
-        index_keys = ("name", "column_names", "unique")
-        mysql_indices = tuple(
-            {key: index[key] for key in index_keys}
-            for index in (
-                chain.from_iterable(
-                    mysql_inspect.get_indexes(table_name) for table_name in mysql_tables
-                )
-            )
-        )
+        index_keys = {"name", "column_names", "unique"}
+        mysql_indices = []
+        for table_name in mysql_tables:
+            for index in mysql_inspect.get_indexes(table_name):
+                mysql_index = {}
+                for key in index_keys:
+                    if key == "name":
+                        mysql_index[key] = "{table}_{name}".format(
+                            table=table_name, name=index[key]
+                        )
+                    else:
+                        mysql_index[key] = index[key]
+                mysql_indices.append(mysql_index)
 
         for table_name in sqlite_tables:
             for sqlite_index in sqlite_inspect.get_indexes(table_name):
