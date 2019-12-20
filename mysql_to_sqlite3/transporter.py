@@ -215,7 +215,7 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
                     )
                 )
             else:
-                indices += """CREATE {unique} INDEX {name} ON "{table}" ({columns});""".format(  # noqa: ignore=E501 pylint: disable=C0301
+                indices += """CREATE {unique} INDEX "{name}" ON "{table}" ({columns});""".format(  # noqa: ignore=E501 pylint: disable=C0301
                     unique="UNIQUE" if int(index["unique"]) == 1 else "",
                     # combine the index name with the table name in order to
                     # make the index names unique across the database
