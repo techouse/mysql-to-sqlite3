@@ -172,4 +172,6 @@ class CrazyName(Base):
     dupe = Column(Boolean, index=True, default=False)
 
     def __repr__(self):
-        return "<CrazyName(id='{id}', name='{name}')>".format(id=self.id, name=self.name)
+        return "<CrazyName(id='{id}', name='{name}')>".format(
+            id=self.id, name=self.name
+        )

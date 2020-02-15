@@ -244,6 +244,12 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
             WHERE i.TABLE_SCHEMA = %s
             AND i.TABLE_NAME = %s
             AND i.CONSTRAINT_TYPE = %s
+            GROUP BY i.CONSTRAINT_NAME,
+                     k.COLUMN_NAME,
+                     k.REFERENCED_TABLE_NAME,
+                     k.REFERENCED_COLUMN_NAME,
+                     c.UPDATE_RULE,
+                     c.DELETE_RULE
             """,
             (self._mysql_database, table_name, "FOREIGN KEY"),
         )
