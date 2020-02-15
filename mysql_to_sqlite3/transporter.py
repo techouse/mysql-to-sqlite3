@@ -44,6 +44,8 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
 
         self._mysql_database = str(kwargs.get("mysql_database"))
 
+        self._mysql_tables = tuple(kwargs.get("mysql_tables")) or tuple()
+
         self._mysql_user = str(kwargs.get("mysql_user"))
 
         self._mysql_password = (
@@ -229,6 +231,7 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
         sql += primary
         sql = sql.rstrip(", ")
 
+        # TODO if only selected tables then skip transferring foreign keys
         self._mysql_cur_dict.execute(
             """
             SELECT k.COLUMN_NAME AS `column`,
@@ -355,7 +358,7 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
 
     def transfer(self):
         """The primary and only method with which we transfer all the data."""
-        self._mysql_cur.execute("SHOW TABLES")
+        self._mysql_cur.execute("SHOW TABLES")  # TODO only selected tables
 
         try:
             self._sqlite_cur.execute("PRAGMA foreign_keys=OFF")
