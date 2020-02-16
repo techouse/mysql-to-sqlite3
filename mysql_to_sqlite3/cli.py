@@ -21,7 +21,16 @@ from mysql_to_sqlite3.click_utils import OptionEatAll
 )
 @click.option("-u", "--mysql-user", default=None, help="MySQL user", required=True)
 @click.option("-p", "--mysql-password", default=None, help="MySQL password")
-@click.option("-t", "--mysql-tables", cls=OptionEatAll, save_other_options=False)
+@click.option(
+    "-t",
+    "--mysql-tables",
+    cls=OptionEatAll,
+    help="Transfer only these specific tables (space separated table names). "
+    "This option implies --without-foreign-keys which inhibits the transfer of foreign keys.",
+)
+@click.option(
+    "--without-foreign-keys", is_flag=True, help="Do not transfer foreign keys."
+)
 @click.option(
     "-h", "--mysql-host", default="localhost", help="MySQL host. Defaults to localhost."
 )
@@ -56,6 +65,7 @@ def cli(  # noqa: ignore=C0330  # pylint: disable=C0330,R0913
     mysql_password,
     mysql_database,
     mysql_tables,
+    without_foreign_keys,
     mysql_host,
     mysql_port,
     chunk,
@@ -71,6 +81,8 @@ def cli(  # noqa: ignore=C0330  # pylint: disable=C0330,R0913
             mysql_password=mysql_password,
             mysql_database=mysql_database,
             mysql_tables=mysql_tables,
+            without_foreign_keys=without_foreign_keys
+            or (mysql_tables is not None and len(mysql_tables) > 0),
             mysql_host=mysql_host,
             mysql_port=mysql_port,
             chunk=chunk,

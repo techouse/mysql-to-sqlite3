@@ -44,7 +44,13 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
 
         self._mysql_database = str(kwargs.get("mysql_database"))
 
-        self._mysql_tables = tuple(kwargs.get("mysql_tables")) or tuple()
+        self._mysql_tables = (
+            tuple(kwargs.get("mysql_tables"))
+            if kwargs.get("mysql_tables") is not None
+            else tuple()
+        )
+
+        self._without_foreign_keys = kwargs.get("without_foreign_keys") or False
 
         self._mysql_user = str(kwargs.get("mysql_user"))
 
@@ -89,9 +95,10 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
             if not self._mysql.is_connected():
                 raise ConnectionError("Unable to connect to MySQL")
 
-            self._mysql_cur = self._mysql.cursor(raw=True, buffered=self._buffered)
+            self._mysql_cur = self._mysql.cursor(buffered=self._buffered, raw=True)
+            self._mysql_cur_prepared = self._mysql.cursor(prepared=True)
             self._mysql_cur_dict = self._mysql.cursor(
-                dictionary=True, buffered=self._buffered
+                buffered=self._buffered, dictionary=True,
             )
             try:
                 self._mysql.database = self._mysql_database
@@ -231,35 +238,35 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
         sql += primary
         sql = sql.rstrip(", ")
 
-        # TODO if only selected tables then skip transferring foreign keys
-        self._mysql_cur_dict.execute(
-            """
-            SELECT k.COLUMN_NAME AS `column`,
-                   k.REFERENCED_TABLE_NAME AS `ref_table`,
-                   k.REFERENCED_COLUMN_NAME AS `ref_column`,
-                   c.UPDATE_RULE AS `on_update`,
-                   c.DELETE_RULE AS `on_delete`
-            FROM information_schema.TABLE_CONSTRAINTS AS i
-            LEFT JOIN information_schema.KEY_COLUMN_USAGE AS k
-                ON i.CONSTRAINT_NAME = k.CONSTRAINT_NAME
-            LEFT JOIN information_schema.REFERENTIAL_CONSTRAINTS AS c
-                ON c.CONSTRAINT_NAME = i.CONSTRAINT_NAME
-            WHERE i.TABLE_SCHEMA = %s
-            AND i.TABLE_NAME = %s
-            AND i.CONSTRAINT_TYPE = %s
-            GROUP BY i.CONSTRAINT_NAME,
-                     k.COLUMN_NAME,
-                     k.REFERENCED_TABLE_NAME,
-                     k.REFERENCED_COLUMN_NAME,
-                     c.UPDATE_RULE,
-                     c.DELETE_RULE
-            """,
-            (self._mysql_database, table_name, "FOREIGN KEY"),
-        )
-        for foreign_key in self._mysql_cur_dict.fetchall():
-            sql += """,\n\tFOREIGN KEY("{column}") REFERENCES "{ref_table}" ("{ref_column}") ON UPDATE {on_update} ON DELETE {on_delete}""".format(  # noqa: ignore=E501 pylint: disable=C0301
-                **foreign_key
+        if not self._without_foreign_keys:
+            self._mysql_cur_dict.execute(
+                """
+                SELECT k.COLUMN_NAME AS `column`,
+                       k.REFERENCED_TABLE_NAME AS `ref_table`,
+                       k.REFERENCED_COLUMN_NAME AS `ref_column`,
+                       c.UPDATE_RULE AS `on_update`,
+                       c.DELETE_RULE AS `on_delete`
+                FROM information_schema.TABLE_CONSTRAINTS AS i
+                LEFT JOIN information_schema.KEY_COLUMN_USAGE AS k
+                    ON i.CONSTRAINT_NAME = k.CONSTRAINT_NAME
+                LEFT JOIN information_schema.REFERENTIAL_CONSTRAINTS AS c
+                    ON c.CONSTRAINT_NAME = i.CONSTRAINT_NAME
+                WHERE i.TABLE_SCHEMA = %s
+                AND i.TABLE_NAME = %s
+                AND i.CONSTRAINT_TYPE = %s
+                GROUP BY i.CONSTRAINT_NAME,
+                         k.COLUMN_NAME,
+                         k.REFERENCED_TABLE_NAME,
+                         k.REFERENCED_COLUMN_NAME,
+                         c.UPDATE_RULE,
+                         c.DELETE_RULE
+                """,
+                (self._mysql_database, table_name, "FOREIGN KEY"),
             )
+            for foreign_key in self._mysql_cur_dict.fetchall():
+                sql += """,\n\tFOREIGN KEY("{column}") REFERENCES "{ref_table}" ("{ref_column}") ON UPDATE {on_update} ON DELETE {on_delete}""".format(  # noqa: ignore=E501 pylint: disable=C0301
+                    **foreign_key
+                )
 
         sql += "\n);"
         sql += indices
@@ -364,17 +371,40 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
 
     def transfer(self):
         """The primary and only method with which we transfer all the data."""
-        self._mysql_cur.execute("SHOW TABLES")  # TODO only selected tables
+        if len(self._mysql_tables) > 0:
+            # transfer only specific tables
+            self._mysql_cur_prepared.execute(
+                """
+                SELECT TABLE_NAME
+                FROM information_schema.TABLES
+                WHERE TABLE_SCHEMA = SCHEMA()
+                AND TABLE_NAME IN ({tables})
+            """.format(
+                    tables=("%s, " * len(self._mysql_tables)).rstrip(" ,")
+                ),
+                self._mysql_tables,
+            )
+            tables = (row[0] for row in self._mysql_cur_prepared.fetchall())
+        else:
+            # transfer all tables
+            self._mysql_cur.execute(
+                """
+                SELECT TABLE_NAME
+                FROM information_schema.TABLES
+                WHERE TABLE_SCHEMA = SCHEMA()
+            """
+            )
+            tables = (row[0].decode() for row in self._mysql_cur.fetchall())
 
         try:
+            # turn off foreign key checking in SQLite while transferring data
             self._sqlite_cur.execute("PRAGMA foreign_keys=OFF")
 
-            for row in self._mysql_cur.fetchall():
+            for table_name in tables:
                 # reset the chunk
                 self._current_chunk_number = 0
 
                 # create the table
-                table_name = row[0].decode()
                 self._create_table(table_name)
 
                 # get the size of the data
@@ -401,6 +431,7 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
         except Exception:  # pylint: disable=W0706
             raise
         finally:
+            # re-enable foreign key checking once done transferring
             self._sqlite_cur.execute("PRAGMA foreign_keys=ON")
 
         if self._vacuum:
