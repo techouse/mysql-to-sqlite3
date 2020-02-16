@@ -26,10 +26,10 @@ from mysql_to_sqlite3.click_utils import OptionEatAll
     "--mysql-tables",
     cls=OptionEatAll,
     help="Transfer only these specific tables (space separated table names). "
-    "This option implies --without-foreign-keys which inhibits the transfer of foreign keys.",
+    "Implies --without-foreign-keys which inhibits the transfer of foreign keys.",
 )
 @click.option(
-    "--without-foreign-keys", is_flag=True, help="Do not transfer foreign keys."
+    "-X", "--without-foreign-keys", is_flag=True, help="Do not transfer foreign keys."
 )
 @click.option(
     "-h", "--mysql-host", default="localhost", help="MySQL host. Defaults to localhost."

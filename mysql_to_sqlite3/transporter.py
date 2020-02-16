@@ -377,14 +377,15 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
         """The primary and only method with which we transfer all the data."""
         if len(self._mysql_tables) > 0:
             # transfer only specific tables
+            # pylint: disable=C0330
             self._mysql_cur_prepared.execute(
                 """
                 SELECT TABLE_NAME
                 FROM information_schema.TABLES
                 WHERE TABLE_SCHEMA = SCHEMA()
-                AND TABLE_NAME IN ({tables})
+                AND TABLE_NAME IN ({placeholders})
             """.format(
-                    tables=("%s, " * len(self._mysql_tables)).rstrip(" ,")
+                    placeholders=("%s, " * len(self._mysql_tables)).rstrip(" ,")
                 ),
                 self._mysql_tables,
             )

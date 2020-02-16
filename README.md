@@ -27,23 +27,30 @@ mysql2sqlite --help
 ```
 Usage: mysql2sqlite [OPTIONS]
 
+  Transfer MySQL to SQLite using the provided CLI options.
+
 Options:
-  -f, --sqlite-file PATH     SQLite3 database file  [required]
-  -d, --mysql-database TEXT  MySQL database name  [required]
-  -u, --mysql-user TEXT      MySQL user  [required]
-  -p, --mysql-password TEXT  MySQL password
-  -h, --mysql-host TEXT      MySQL host. Defaults to localhost.
-  -P, --mysql-port INTEGER   MySQL port. Defaults to 3306.
-  -c, --chunk INTEGER        Chunk reading/writing SQL records
-  -l, --log-file PATH        Log file
-  -V, --vacuum               Use the VACUUM command to rebuild the SQLite
-                             database file, repacking it into a minimal amount
-                             of disk space
-  --use-buffered-cursors     Use MySQLCursorBuffered for reading the MySQL
-                             database. This can be useful in situations where
-                             multiple queries, with small result sets, need to
-                             be combined or computed with each other.
-  --help                     Show this message and exit.
+  -f, --sqlite-file PATH      SQLite3 database file  [required]
+  -d, --mysql-database TEXT   MySQL database name  [required]
+  -u, --mysql-user TEXT       MySQL user  [required]
+  -p, --mysql-password TEXT   MySQL password
+  -t, --mysql-tables TEXT     Transfer only these specific tables (space
+                              separated table names). Implies --without-
+                              foreign-keys which inhibits the transfer of
+                              foreign keys.
+  -X, --without-foreign-keys  Do not transfer foreign keys.
+  -h, --mysql-host TEXT       MySQL host. Defaults to localhost.
+  -P, --mysql-port INTEGER    MySQL port. Defaults to 3306.
+  -c, --chunk INTEGER         Chunk reading/writing SQL records
+  -l, --log-file PATH         Log file
+  -V, --vacuum                Use the VACUUM command to rebuild the SQLite
+                              database file, repacking it into a minimal
+                              amount of disk space
+  --use-buffered-cursors      Use MySQLCursorBuffered for reading the MySQL
+                              database. This can be useful in situations where
+                              multiple queries, with small result sets, need
+                              to be combined or computed with each other.
+  --help                      Show this message and exit.
 ```
 
 ### Testing

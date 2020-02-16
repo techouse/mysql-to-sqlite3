@@ -415,7 +415,7 @@ class TestMySQLtoSQLite:
             mysql_database=mysql_credentials.database,
             mysql_tables=random_mysql_tables,
             mysql_host=mysql_credentials.host,
-            mysql_port=mysql_credentials.port
+            mysql_port=mysql_credentials.port,
         )
         caplog.set_level(logging.DEBUG)
         proc.transfer()
