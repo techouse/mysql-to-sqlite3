@@ -3,6 +3,8 @@ from codecs import open
 from collections import namedtuple
 from contextlib import contextmanager, closing
 from os.path import join, abspath, dirname, isfile
+from random import choice
+from string import ascii_uppercase, digits, ascii_lowercase
 from time import sleep
 
 import docker
@@ -140,7 +142,15 @@ def helpers():
 
 @pytest.fixture()
 def sqlite_database(tmpdir):
-    return str(tmpdir.join("db.sqlite3"))
+    if six.PY2:
+        db_name = "".join(
+            choice(ascii_uppercase + ascii_lowercase + digits) for _ in xrange(32)
+        )
+    else:
+        db_name = "".join(
+            choice(ascii_uppercase + ascii_lowercase + digits) for _ in range(32)
+        )
+    return str(tmpdir.join("{}.sqlite3".format(db_name)))
 
 
 def is_port_in_use(port, host="0.0.0.0"):

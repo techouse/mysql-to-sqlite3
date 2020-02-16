@@ -2,6 +2,8 @@ import logging
 import re
 from collections import namedtuple
 from decimal import Decimal
+from os import remove
+from random import choice, sample
 
 import mysql.connector
 import pytest
@@ -335,6 +337,159 @@ class TestMySQLtoSQLite:
             sqlite_results.append(sqlite_result)
 
         for table_name in mysql_tables:
+            mysql_table = Table(
+                table_name, meta, autoload=True, autoload_with=mysql_engine
+            )
+            mysql_stmt = select([mysql_table])
+            mysql_result = mysql_cnx.execute(mysql_stmt).fetchall()
+            mysql_result.sort()
+            mysql_result = [
+                [float(data) if isinstance(data, Decimal) else data for data in row]
+                for row in mysql_result
+            ]
+            mysql_results.append(mysql_result)
+
+        assert sqlite_results == mysql_results
+
+    @pytest.mark.transfer
+    @pytest.mark.parametrize(
+        "chunk, vacuum, buffered",
+        [
+            # 000
+            pytest.param(
+                None, False, False, id="no chunk, no vacuum, no buffered cursor"
+            ),
+            # 111
+            pytest.param(10, True, True, id="chunk, vacuum, buffered cursor"),
+            # 110
+            pytest.param(10, True, False, id="chunk, vacuum, no buffered cursor"),
+            # 011
+            pytest.param(None, True, True, id="no chunk, vacuum, buffered cursor"),
+            # 010
+            pytest.param(None, True, False, id="no chunk, vacuum, no buffered cursor"),
+            # 100
+            pytest.param(10, False, False, id="chunk, no vacuum, no buffered cursor"),
+            # 001
+            pytest.param(None, False, True, id="no chunk, no vacuum, buffered cursor"),
+            # 101
+            pytest.param(10, False, True, id="chunk, no vacuum, buffered cursor"),
+        ],
+    )
+    def test_transfer_specific_tables_transfers_only_specified_tables_from_mysql_to_sqlite(
+        self,
+        sqlite_database,
+        mysql_database,
+        mysql_credentials,
+        helpers,
+        capsys,
+        caplog,
+        chunk,
+        vacuum,
+        buffered,
+    ):
+        mysql_engine = create_engine(
+            "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
+                user=mysql_credentials.user,
+                password=mysql_credentials.password,
+                host=mysql_credentials.host,
+                port=mysql_credentials.port,
+                database=mysql_credentials.database,
+            )
+        )
+        mysql_cnx = mysql_engine.connect()
+        mysql_inspect = inspect(mysql_engine)
+        mysql_tables = mysql_inspect.get_table_names()
+
+        if six.PY2:
+            table_number = choice(xrange(1, len(mysql_tables)))
+        else:
+            table_number = choice(range(1, len(mysql_tables)))
+
+        random_mysql_tables = sample(mysql_tables, table_number)
+        random_mysql_tables.sort()
+
+        proc = MySQLtoSQLite(
+            sqlite_file=sqlite_database,
+            mysql_user=mysql_credentials.user,
+            mysql_password=mysql_credentials.password,
+            mysql_database=mysql_credentials.database,
+            mysql_tables=random_mysql_tables,
+            mysql_host=mysql_credentials.host,
+            mysql_port=mysql_credentials.port
+        )
+        caplog.set_level(logging.DEBUG)
+        proc.transfer()
+        assert all(
+            message in [record.message for record in caplog.records]
+            for message in set(
+                ["Transferring table {}".format(table) for table in random_mysql_tables]
+                + ["Done!"]
+            )
+        )
+        assert all(record.levelname == "INFO" for record in caplog.records)
+        assert not any(record.levelname == "ERROR" for record in caplog.records)
+        out, err = capsys.readouterr()
+        assert "Done!" in out.splitlines()[-1]
+
+        sqlite_engine = create_engine(
+            "sqlite:///{database}".format(
+                database=sqlite_database,
+                json_serializer=json.dumps,
+                json_deserializer=json.loads,
+            )
+        )
+        sqlite_cnx = sqlite_engine.connect()
+        sqlite_inspect = inspect(sqlite_engine)
+        sqlite_tables = sqlite_inspect.get_table_names()
+
+        """ Test if both databases have the same table names """
+        assert sqlite_tables == random_mysql_tables
+
+        """ Test if all the tables have the same column names """
+        for table_name in sqlite_tables:
+            assert [
+                column["name"] for column in sqlite_inspect.get_columns(table_name)
+            ] == [column["name"] for column in mysql_inspect.get_columns(table_name)]
+
+        """ Test if all the tables have the same indices """
+        index_keys = {"name", "column_names", "unique"}
+        mysql_indices = []
+        for table_name in random_mysql_tables:
+            for index in mysql_inspect.get_indexes(table_name):
+                mysql_index = {}
+                for key in index_keys:
+                    if key == "name":
+                        mysql_index[key] = "{table}_{name}".format(
+                            table=table_name, name=index[key]
+                        )
+                    else:
+                        mysql_index[key] = index[key]
+                mysql_indices.append(mysql_index)
+
+        for table_name in sqlite_tables:
+            for sqlite_index in sqlite_inspect.get_indexes(table_name):
+                sqlite_index["unique"] = bool(sqlite_index["unique"])
+                assert sqlite_index in mysql_indices
+
+        """ Check if all the data was transferred correctly """
+        sqlite_results = []
+        mysql_results = []
+
+        meta = MetaData(bind=None)
+        for table_name in sqlite_tables:
+            sqlite_table = Table(
+                table_name, meta, autoload=True, autoload_with=sqlite_engine
+            )
+            sqlite_stmt = select([sqlite_table])
+            sqlite_result = sqlite_cnx.execute(sqlite_stmt).fetchall()
+            sqlite_result.sort()
+            sqlite_result = [
+                [float(data) if isinstance(data, Decimal) else data for data in row]
+                for row in sqlite_result
+            ]
+            sqlite_results.append(sqlite_result)
+
+        for table_name in random_mysql_tables:
             mysql_table = Table(
                 table_name, meta, autoload=True, autoload_with=mysql_engine
             )

@@ -1,7 +1,8 @@
-from random import choice
+from random import choice, sample
 
 import pytest
 import six
+from sqlalchemy import create_engine, inspect
 
 from mysql_to_sqlite3 import MySQLtoSQLite
 from mysql_to_sqlite3.cli import cli as mysql2sqlite
@@ -201,3 +202,44 @@ class TestMySQLtoSQLite:
         )
         assert result.exit_code > 0
         assert "Process interrupted" in result.output
+
+    def test_transfer_specific_tables_only(
+        self, cli_runner, sqlite_database, mysql_credentials, mysql_database
+    ):
+        mysql_engine = create_engine(
+            "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
+                user=mysql_credentials.user,
+                password=mysql_credentials.password,
+                host=mysql_credentials.host,
+                port=mysql_credentials.port,
+                database=mysql_credentials.database,
+            )
+        )
+        mysql_inspect = inspect(mysql_engine)
+        mysql_tables = mysql_inspect.get_table_names()
+
+        if six.PY2:
+            table_number = choice(xrange(1, len(mysql_tables)))
+        else:
+            table_number = choice(range(1, len(mysql_tables)))
+
+        result = cli_runner.invoke(
+            mysql2sqlite,
+            [
+                "-f",
+                sqlite_database,
+                "-d",
+                mysql_credentials.database,
+                "-t",
+                " ".join(sample(mysql_tables, table_number)),
+                "-u",
+                mysql_credentials.user,
+                "-p",
+                mysql_credentials.password,
+                "-h",
+                mysql_credentials.host,
+                "-P",
+                mysql_credentials.port,
+            ],
+        )
+        assert result.exit_code == 0

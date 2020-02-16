@@ -50,7 +50,11 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
             else tuple()
         )
 
-        self._without_foreign_keys = kwargs.get("without_foreign_keys") or False
+        self._without_foreign_keys = (
+            True
+            if len(self._mysql_tables) > 0
+            else (kwargs.get("without_foreign_keys") or False)
+        )
 
         self._mysql_user = str(kwargs.get("mysql_user"))
 
