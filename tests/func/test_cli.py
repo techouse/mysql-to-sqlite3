@@ -14,26 +14,50 @@ class TestMySQLtoSQLite:
     def test_no_arguments(self, cli_runner):
         result = cli_runner.invoke(mysql2sqlite)
         assert result.exit_code > 0
-        assert 'Error: Missing option "-f" / "--sqlite-file"' in result.output
+        assert any(
+            message in result.output
+            for message in {
+                'Error: Missing option "-f" / "--sqlite-file"',
+                "Error: Missing option '-f' / '--sqlite-file'",
+            }
+        )
 
     def test_non_existing_sqlite_file(self, cli_runner, faker):
         result = cli_runner.invoke(
             mysql2sqlite, ["-f", faker.file_path(depth=1, extension=".sqlite3")]
         )
         assert result.exit_code > 0
-        assert 'Missing option "-d" / "--mysql-database"' in result.output
+        assert any(
+            message in result.output
+            for message in {
+                'Error: Missing option "-d" / "--mysql-database"',
+                "Error: Missing option '-d' / '--mysql-database'",
+            }
+        )
 
     def test_no_database_name(self, cli_runner, sqlite_database):
         result = cli_runner.invoke(mysql2sqlite, ["-f", sqlite_database])
         assert result.exit_code > 0
-        assert 'Error: Missing option "-d" / "--mysql-database"' in result.output
+        assert any(
+            message in result.output
+            for message in {
+                'Error: Missing option "-d" / "--mysql-database"',
+                "Error: Missing option '-d' / '--mysql-database'",
+            }
+        )
 
     def test_no_database_user(self, cli_runner, sqlite_database, mysql_credentials):
         result = cli_runner.invoke(
             mysql2sqlite, ["-f", sqlite_database, "-d", mysql_credentials.database]
         )
         assert result.exit_code > 0
-        assert 'Error: Missing option "-u" / "--mysql-user"' in result.output
+        assert any(
+            message in result.output
+            for message in {
+                'Error: Missing option "-u" / "--mysql-user"',
+                "Error: Missing option '-u' / '--mysql-user'",
+            }
+        )
 
     def test_invalid_database_name(
         self, cli_runner, sqlite_database, mysql_database, mysql_credentials, faker
