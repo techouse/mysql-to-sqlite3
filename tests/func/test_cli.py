@@ -231,7 +231,7 @@ class TestMySQLtoSQLite:
         self, cli_runner, sqlite_database, mysql_credentials, mysql_database
     ):
         mysql_engine = create_engine(
-            "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
+            "mysql+pymysql://{user}:{password}@{host}:{port}/{database}".format(
                 user=mysql_credentials.user,
                 password=mysql_credentials.password,
                 host=mysql_credentials.host,
