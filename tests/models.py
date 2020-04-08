@@ -1,3 +1,5 @@
+from os import environ
+
 from sqlalchemy import (
     Table,
     Column,
@@ -100,7 +102,8 @@ class Misc(Base):
     decimal_field = Column(DECIMAL(10, 2), nullable=True)
     float_field = Column(Float(12, 4), default=0)
     integer_field = Column(Integer, default=0)
-    json_field = Column(JSON, nullable=True)
+    if environ.get("LEGACY_DB", "0") == "0":
+        json_field = Column(JSON, nullable=True)
     nchar_field = Column(NCHAR(255), nullable=True)
     numeric_field = Column(Numeric(12, 4), default=0)
     unicode_field = Column(Unicode(255), nullable=True)
