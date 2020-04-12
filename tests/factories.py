@@ -1,4 +1,5 @@
 from os import environ
+from sys import version_info
 
 import factory
 
@@ -35,8 +36,10 @@ class MiscFactory(factory.Factory):
     large_binary_field = factory.Faker("binary", length=1024 * 10)
     boolean_field = factory.Faker("boolean")
     char_field = factory.Faker("text", max_nb_chars=255)
-    date_field = factory.Faker("date_this_decade")
-    date_time_field = factory.Faker("date_time_this_century")
+    # FIXME this is a hacky solution
+    if not (version_info.major == 3 and version_info.minor == 8):
+        date_field = factory.Faker("date_this_decade")
+        date_time_field = factory.Faker("date_time_this_century")
     decimal_field = factory.Faker("pydecimal", left_digits=8, right_digits=2)
     float_field = factory.Faker("pyfloat", left_digits=8, right_digits=4)
     integer_field = factory.Faker("pyint", min_value=-(2 ** 31), max_value=2 ** 31 - 1)
@@ -54,7 +57,9 @@ class MiscFactory(factory.Factory):
     time_field = factory.Faker("time_object")
     varbinary_field = factory.Faker("binary", length=255)
     varchar_field = factory.Faker("text", max_nb_chars=255)
-    timestamp_field = factory.Faker("date_time_this_century")
+    # FIXME this is a hacky solution
+    if not (version_info.major == 3 and version_info.minor == 8):
+        timestamp_field = factory.Faker("date_time_this_century")
 
 
 class ArticleFactory(factory.Factory):
@@ -66,7 +71,9 @@ class ArticleFactory(factory.Factory):
     slug = factory.Faker("slug")
     content = factory.Faker("text", max_nb_chars=1024)
     status = factory.Faker("pystr", max_chars=1)
-    published = factory.Faker("date_between", start_date="-1y", end_date="-1d")
+    # FIXME this is a hacky solution
+    if not (version_info.major == 3 and version_info.minor == 8):
+        published = factory.Faker("date_between", start_date="-1y", end_date="-1d")
 
     @factory.post_generation
     def authors(self, create, extracted, **kwargs):
