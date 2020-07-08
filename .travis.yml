@@ -231,6 +231,7 @@ matrix:
         - TOXENV=py36
         - DB=mariadb:10.4
         - LEGACY_DB=0
+      dist: xenial
       python: "3.6"
     - env:
         - TOXENV=py37
