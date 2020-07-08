@@ -1,5 +1,5 @@
 # Adapted from https://github.com/PyMySQL/PyMySQL/blob/master/.travis.yml
-dist: xenial
+dist: bionic
 language: python
 cache: pip
 
