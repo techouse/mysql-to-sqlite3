@@ -92,57 +92,57 @@ matrix:
         - TOXENV=py39-dev
         - DB=mariadb:5.5
         - LEGACY_DB=1
-        python: "3.9-dev"
+      python: "3.9-dev"
     - env:
         - TOXENV=py39-dev
         - DB=mariadb:10.0
         - LEGACY_DB=1
-        python: "3.9-dev"
+      python: "3.9-dev"
     - env:
         - TOXENV=py39-dev
         - DB=mariadb:10.1
         - LEGACY_DB=1
-        python: "3.9-dev"
+      python: "3.9-dev"
     - env:
         - TOXENV=py39-dev
         - DB=mariadb:10.2
         - LEGACY_DB=0
-        python: "3.9-dev"
+      python: "3.9-dev"
     - env:
         - TOXENV=py39-dev
         - DB=mariadb:10.3
         - LEGACY_DB=0
-        python: "3.9-dev"
+      python: "3.9-dev"
     - env:
         - TOXENV=py39-dev
         - DB=mariadb:10.4
         - LEGACY_DB=0
-        python: "3.9-dev"
+      python: "3.9-dev"
     - env:
         - TOXENV=py39-dev
         - DB=mariadb:10.5
         - LEGACY_DB=0
-        python: "3.9-dev"
+      python: "3.9-dev"
     - env:
         - TOXENV=py39-dev
         - DB=mysql:5.6
         - LEGACY_DB=1
-        python: "3.9-dev"
+      python: "3.9-dev"
     - env:
         - TOXENV=py39-dev
         - DB=mysql:5.6
         - LEGACY_DB=1
-        python: "3.9-dev"
+      python: "3.9-dev"
     - env:
         - TOXENV=py39-dev
         - DB=mysql:5.7
         - LEGACY_DB=0
-        python: "3.9-dev"
+      python: "3.9-dev"
     - env:
         - TOXENV=py39-dev
         - DB=mysql:8.0
         - LEGACY_DB=0
-        python: "3.9-dev"
+      python: "3.9-dev"
   include:
     - env:
         - TOXENV=py27
