@@ -249,6 +249,7 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
         sql = sql.rstrip(", ")
 
         if not self._without_foreign_keys:
+            server_version = self._mysql.get_server_version()
             self._mysql_cur_dict.execute(
                 """
                 SELECT k.COLUMN_NAME AS `column`,
@@ -257,9 +258,9 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
                        c.UPDATE_RULE AS `on_update`,
                        c.DELETE_RULE AS `on_delete`
                 FROM information_schema.TABLE_CONSTRAINTS AS i
-                LEFT JOIN information_schema.KEY_COLUMN_USAGE AS k
+                {JOIN} information_schema.KEY_COLUMN_USAGE AS k
                     ON i.CONSTRAINT_NAME = k.CONSTRAINT_NAME
-                LEFT JOIN information_schema.REFERENTIAL_CONSTRAINTS AS c
+                {JOIN} information_schema.REFERENTIAL_CONSTRAINTS AS c
                     ON c.CONSTRAINT_NAME = i.CONSTRAINT_NAME
                 WHERE i.TABLE_SCHEMA = %s
                 AND i.TABLE_NAME = %s
@@ -270,7 +271,12 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
                          k.REFERENCED_COLUMN_NAME,
                          c.UPDATE_RULE,
                          c.DELETE_RULE
-                """,
+                """.format(
+                    # MySQL 8.0.19 still works with "LEFT JOIN" everything above requires "JOIN"
+                    JOIN="JOIN"
+                    if (server_version[0] == 8 and server_version[2] > 19)
+                    else "LEFT JOIN"
+                ),
                 (self._mysql_database, table_name, "FOREIGN KEY"),
             )
             for foreign_key in self._mysql_cur_dict.fetchall():
