@@ -149,6 +149,12 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
     def _translate_type_from_mysql_to_sqlite(
         cls, column_type  # pylint: disable=C0330
     ):  # pylint: disable=R0911
+        """Handle MySQL 8"""
+        try:
+            column_type = column_type.decode()
+        except (UnicodeDecodeError, AttributeError):
+            pass
+
         """This could be optimized even further, however is seems adequate."""
         match = cls._valid_column_type(column_type)
         if not match:
