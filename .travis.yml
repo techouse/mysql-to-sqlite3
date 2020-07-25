@@ -89,9 +89,9 @@ matrix:
         - LEGACY_DB=0
       python: "3.9-dev"
     - env:
-      - TOXENV=pypy
-      - DB=mariadb:5.5
-      - LEGACY_DB=1
+        - TOXENV=pypy
+        - DB=mariadb:5.5
+        - LEGACY_DB=1
       python: "pypy"
       dist: xenial
     - env:
@@ -155,9 +155,9 @@ matrix:
       python: "pypy"
       dist: xenial
     - env:
-      - TOXENV=pypy3
-      - DB=mariadb:5.5
-      - LEGACY_DB=1
+        - TOXENV=pypy3
+        - DB=mariadb:5.5
+        - LEGACY_DB=1
       python: "pypy3"
     - env:
         - TOXENV=pypy3
