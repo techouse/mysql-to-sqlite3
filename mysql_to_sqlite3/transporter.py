@@ -149,13 +149,13 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
     def _translate_type_from_mysql_to_sqlite(
         cls, column_type  # pylint: disable=C0330
     ):  # pylint: disable=R0911
-        """Handle MySQL 8"""
+        """Handle MySQL 8."""
         try:
             column_type = column_type.decode()
         except (UnicodeDecodeError, AttributeError):
             pass
 
-        """This could be optimized even further, however is seems adequate."""
+        # This could be optimized even further, however is seems adequate.
         match = cls._valid_column_type(column_type)
         if not match:
             raise ValueError("Invalid column_type!")
@@ -272,7 +272,6 @@ class MySQLtoSQLite:  # pylint: disable=R0902,R0903
                          c.UPDATE_RULE,
                          c.DELETE_RULE
                 """.format(
-                    # MySQL 8.0.19 still works with "LEFT JOIN" everything above requires "JOIN"
                     JOIN="JOIN"
                     if (server_version[0] == 8 and server_version[2] > 19)
                     else "LEFT JOIN"
