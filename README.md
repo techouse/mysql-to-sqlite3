@@ -40,6 +40,7 @@ Options:
                               separated table names). Implies --without-
                               foreign-keys which inhibits the transfer of
                               foreign keys.
+
   -X, --without-foreign-keys  Do not transfer foreign keys.
   -h, --mysql-host TEXT       MySQL host. Defaults to localhost.
   -P, --mysql-port INTEGER    MySQL port. Defaults to 3306.
@@ -48,9 +49,12 @@ Options:
   -V, --vacuum                Use the VACUUM command to rebuild the SQLite
                               database file, repacking it into a minimal
                               amount of disk space
+
   --use-buffered-cursors      Use MySQLCursorBuffered for reading the MySQL
                               database. This can be useful in situations where
                               multiple queries, with small result sets, need
                               to be combined or computed with each other.
+
+  --version                   Show the version and exit.
   --help                      Show this message and exit.
 ```

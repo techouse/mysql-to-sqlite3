@@ -13,9 +13,10 @@ from subprocess import check_output
 import click
 import mysql.connector
 import pytimeparse
-import simplejson as json
+import simplejson
 import six
 import slugify
+import tabulate
 import tqdm
 
 from . import __version__ as package_version
@@ -54,7 +55,9 @@ def _implementation():
     else:
         implementation_version = "Unknown"
 
-    return {"name": implementation, "version": implementation_version}
+    return "{implementation} {implementation_version}".format(
+        implementation=implementation, implementation_version=implementation_version
+    )
 
 
 def _mysql_version():
@@ -71,36 +74,26 @@ def _mysql_version():
 def info():
     """Generate information for a bug report."""
     try:
-        platform_info = {
-            "system": platform.system(),
-            "release": platform.release(),
-        }
+        platform_info = "{system} {release}".format(
+            system=platform.system(), release=platform.release(),
+        )
     except IOError:
-        platform_info = {
-            "system": "Unknown",
-            "release": "Unknown",
-        }
+        platform_info = "Unknown"
 
-    return {
-        "platform": platform_info,
-        "implementation": _implementation(),
-        "mysql": {"version": _mysql_version()},
-        "sqlite": {"version": sqlite3.sqlite_version},
-        "mysql-connector-python": {"version": mysql.connector.__version__},
-        "click": {"version": click.__version__},
-        "six": {"version": six.__version__},
-        "tqdm": {"version": tqdm.__version__},
-        "pytimeparse": {"version": pytimeparse.__version__},
-        "python - slugify": {"version": slugify.__version__},
-        "simplejson": {"version": json.__version__},
-        "mysql-to-sqlite3": {"version": package_version.__version__},
-    }
-
-
-def main():
-    """Pretty-print the bug information as JSON."""
-    print(json.dumps(info(), sort_keys=True, indent=2))
-
-
-if __name__ == "__main__":
-    main()
+    return [
+        ["mysql-to-sqlite3", package_version.__version__],
+        ["", ""],
+        ["Operating System", platform_info],
+        ["Python", _implementation()],
+        ["MySQL", _mysql_version()],
+        ["SQLite", sqlite3.sqlite_version],
+        ["", ""],
+        ["click", click.__version__],
+        ["mysql-connector-python", mysql.connector.__version__],
+        ["python-slugify", slugify.__version__],
+        ["pytimeparse", pytimeparse.__version__],
+        ["simplejson", simplejson.__version__],
+        ["six", six.__version__],
+        ["tabulate", tabulate.__version__],
+        ["tqdm", tqdm.__version__],
+    ]

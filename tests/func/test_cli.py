@@ -267,3 +267,26 @@ class TestMySQLtoSQLite:
             ],
         )
         assert result.exit_code == 0
+
+    def test_version(self, cli_runner):
+        result = cli_runner.invoke(mysql2sqlite, ["--version"])
+        assert result.exit_code == 0
+        assert all(
+            message in result.output
+            for message in {
+                "mysql-to-sqlite3",
+                "Operating",
+                "System",
+                "Python",
+                "MySQL",
+                "SQLite",
+                "click",
+                "mysql-connector-python",
+                "python-slugify",
+                "pytimeparse",
+                "simplejson",
+                "six",
+                "tabulate",
+                "tqdm",
+            }
+        )

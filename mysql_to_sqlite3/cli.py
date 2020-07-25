@@ -1,10 +1,12 @@
 """The command line interface of MySQLtoSQLite."""
-
 import sys
 
 import click
-from mysql_to_sqlite3 import MySQLtoSQLite
-from mysql_to_sqlite3.click_utils import OptionEatAll
+from tabulate import tabulate
+
+from . import MySQLtoSQLite
+from .click_utils import OptionEatAll
+from .debug_info import info
 
 
 @click.command()
@@ -58,6 +60,9 @@ from mysql_to_sqlite3.click_utils import OptionEatAll
     help="Use MySQLCursorBuffered for reading the MySQL database. This "
     "can be useful in situations where multiple queries, with small "
     "result sets, need to be combined or computed with each other.",
+)
+@click.version_option(
+    message=tabulate(info(), headers=["software", "version"], tablefmt="github")
 )
 def cli(  # noqa: ignore=C0330  # pylint: disable=C0330,R0913
     sqlite_file,
