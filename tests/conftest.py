@@ -294,51 +294,104 @@ def mysql_instance(mysql_credentials, pytestconfig):
         container.kill()
 
 
-@pytest.fixture(scope="session")
-def mysql_database(tmpdir_factory, mysql_instance, mysql_credentials, faker):
-    temp_image_dir = tmpdir_factory.mktemp("images")
+if six.PY2:
 
-    db = Database(
-        "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
-            user=mysql_credentials.user,
-            password=mysql_credentials.password,
-            host=mysql_credentials.host,
-            port=mysql_credentials.port,
-            database=mysql_credentials.database,
+    @pytest.fixture(scope="session")
+    def mysql_database(tmpdir_factory, mysql_instance, mysql_credentials, faker):
+        temp_image_dir = tmpdir_factory.mktemp("images")
+
+        db = Database(
+            "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
+                user=mysql_credentials.user,
+                password=mysql_credentials.password,
+                host=mysql_credentials.host,
+                port=mysql_credentials.port,
+                database=mysql_credentials.database,
+            )
         )
-    )
 
-    with Helpers.session_scope(db) as session:
-        for _ in range(faker.pyint(min_value=12, max_value=24)):
-            article = ArticleFactory()
-            article.authors.append(AuthorFactory())
-            article.tags.append(TagFactory())
-            article.misc.append(MiscFactory())
-            for _ in range(faker.pyint(min_value=1, max_value=4)):
-                article.images.append(
-                    ImageFactory(
-                        path=join(
-                            str(temp_image_dir),
-                            faker.year(),
-                            faker.month(),
-                            faker.day_of_month(),
-                            faker.file_name(extension="jpg"),
+        with Helpers.session_scope(db) as session:
+            for _ in range(faker.pyint(min_value=12, max_value=24)):
+                article = ArticleFactory()
+                article.authors.append(AuthorFactory())
+                article.tags.append(TagFactory())
+                article.misc.append(MiscFactory())
+                for _ in range(faker.pyint(min_value=1, max_value=4)):
+                    article.images.append(
+                        ImageFactory(
+                            path=join(
+                                str(temp_image_dir),
+                                faker.year(),
+                                faker.month(),
+                                faker.day_of_month(),
+                                faker.file_name(extension="jpg"),
+                            )
                         )
                     )
-                )
-            session.add(article)
+                session.add(article)
 
-        for _ in range(faker.pyint(min_value=12, max_value=24)):
-            session.add(CrazyNameFactory())
-        try:
-            session.commit()
-        except IntegrityError:
-            session.rollback()
+            for _ in range(faker.pyint(min_value=12, max_value=24)):
+                session.add(CrazyNameFactory())
+            try:
+                session.commit()
+            except IntegrityError:
+                session.rollback()
 
-    yield db
+        yield db
 
-    if database_exists(db.engine.url):
-        drop_database(db.engine.url)
+        if database_exists(db.engine.url):
+            drop_database(db.engine.url)
+
+
+else:
+
+    @pytest.fixture(scope="session")
+    def mysql_database(
+        tmpdir_factory, mysql_instance, mysql_credentials, _session_faker
+    ):
+        temp_image_dir = tmpdir_factory.mktemp("images")
+
+        db = Database(
+            "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
+                user=mysql_credentials.user,
+                password=mysql_credentials.password,
+                host=mysql_credentials.host,
+                port=mysql_credentials.port,
+                database=mysql_credentials.database,
+            )
+        )
+
+        with Helpers.session_scope(db) as session:
+            for _ in range(_session_faker.pyint(min_value=12, max_value=24)):
+                article = ArticleFactory()
+                article.authors.append(AuthorFactory())
+                article.tags.append(TagFactory())
+                article.misc.append(MiscFactory())
+                for _ in range(_session_faker.pyint(min_value=1, max_value=4)):
+                    article.images.append(
+                        ImageFactory(
+                            path=join(
+                                str(temp_image_dir),
+                                _session_faker.year(),
+                                _session_faker.month(),
+                                _session_faker.day_of_month(),
+                                _session_faker.file_name(extension="jpg"),
+                            )
+                        )
+                    )
+                session.add(article)
+
+            for _ in range(_session_faker.pyint(min_value=12, max_value=24)):
+                session.add(CrazyNameFactory())
+            try:
+                session.commit()
+            except IntegrityError:
+                session.rollback()
+
+        yield db
+
+        if database_exists(db.engine.url):
+            drop_database(db.engine.url)
 
 
 @pytest.fixture()
