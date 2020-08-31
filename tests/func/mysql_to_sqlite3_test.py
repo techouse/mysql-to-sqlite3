@@ -2,7 +2,6 @@ import logging
 import re
 from collections import namedtuple
 from decimal import Decimal
-from os import remove
 from random import choice, sample
 
 import mysql.connector
@@ -21,20 +20,41 @@ if six.PY2:
 @pytest.mark.usefixtures("mysql_instance")
 class TestMySQLtoSQLite:
     @pytest.mark.init
-    def test_missing_mysql_user_raises_exception(self, mysql_credentials):
+    @pytest.mark.parametrize(
+        "quiet",
+        [
+            pytest.param(False, id="verbose"),
+            pytest.param(True, id="quiet"),
+        ],
+    )
+    def test_missing_mysql_user_raises_exception(self, mysql_credentials, quiet):
         with pytest.raises(ValueError) as excinfo:
-            MySQLtoSQLite(mysql_database=mysql_credentials.database)
+            MySQLtoSQLite(mysql_database=mysql_credentials.database, quiet=quiet)
         assert "Please provide a MySQL user" in str(excinfo.value)
 
     @pytest.mark.init
-    def test_missing_mysql_database_raises_exception(self, faker):
+    @pytest.mark.parametrize(
+        "quiet",
+        [
+            pytest.param(False, id="verbose"),
+            pytest.param(True, id="quiet"),
+        ],
+    )
+    def test_missing_mysql_database_raises_exception(self, faker, quiet):
         with pytest.raises(ValueError) as excinfo:
-            MySQLtoSQLite(mysql_user=faker.first_name().lower())
+            MySQLtoSQLite(mysql_user=faker.first_name().lower(), quiet=quiet)
         assert "Please provide a MySQL database" in str(excinfo.value)
 
     @pytest.mark.init
+    @pytest.mark.parametrize(
+        "quiet",
+        [
+            pytest.param(False, id="verbose"),
+            pytest.param(True, id="quiet"),
+        ],
+    )
     def test_invalid_mysql_credentials_raises_access_denied_exception(
-        self, sqlite_database, mysql_database, mysql_credentials, faker
+        self, sqlite_database, mysql_database, mysql_credentials, faker, quiet
     ):
         with pytest.raises(mysql.connector.Error) as excinfo:
             MySQLtoSQLite(
@@ -44,11 +64,21 @@ class TestMySQLtoSQLite:
                 mysql_database=mysql_credentials.database,
                 mysql_host=mysql_credentials.host,
                 mysql_port=mysql_credentials.port,
+                quiet=quiet,
             )
         assert "Access denied for user" in str(excinfo.value)
 
     @pytest.mark.init
-    def test_bad_mysql_connection(self, sqlite_database, mysql_credentials, mocker):
+    @pytest.mark.parametrize(
+        "quiet",
+        [
+            pytest.param(False, id="verbose"),
+            pytest.param(True, id="quiet"),
+        ],
+    )
+    def test_bad_mysql_connection(
+        self, sqlite_database, mysql_credentials, mocker, quiet
+    ):
         FakeConnector = namedtuple("FakeConnector", ["is_connected"])
         mocker.patch.object(
             mysql.connector,
@@ -64,20 +94,34 @@ class TestMySQLtoSQLite:
                 mysql_port=mysql_credentials.port,
                 mysql_database=mysql_credentials.database,
                 chunk=1000,
+                quiet=quiet,
             )
         assert "Unable to connect to MySQL" in str(excinfo.value)
 
     @pytest.mark.init
     @pytest.mark.parametrize(
-        "exception",
+        "exception, quiet",
         [
             pytest.param(
                 mysql.connector.Error(
                     msg="Unknown database 'test_db'", errno=errorcode.ER_BAD_DB_ERROR
                 ),
-                id="mysql.connector.Error",
+                False,
+                id="mysql.connector.Error verbose",
             ),
-            pytest.param(Exception("Unknown database 'test_db'"), id="Exception"),
+            pytest.param(
+                mysql.connector.Error(
+                    msg="Unknown database 'test_db'", errno=errorcode.ER_BAD_DB_ERROR
+                ),
+                True,
+                id="mysql.connector.Error quiet",
+            ),
+            pytest.param(
+                Exception("Unknown database 'test_db'"), False, id="Exception verbose"
+            ),
+            pytest.param(
+                Exception("Unknown database 'test_db'"), True, id="Exception quiet"
+            ),
         ],
     )
     def test_non_existing_mysql_database_raises_exception(
@@ -89,6 +133,7 @@ class TestMySQLtoSQLite:
         mocker,
         caplog,
         exception,
+        quiet,
     ):
         class FakeMySQLConnection(MySQLConnection):
             @property
@@ -127,6 +172,7 @@ class TestMySQLtoSQLite:
                 mysql_database=mysql_credentials.database,
                 mysql_host=mysql_credentials.host,
                 mysql_port=mysql_credentials.port,
+                quiet=quiet,
             )
             assert any(
                 "MySQL Database does not exist!" in message
@@ -135,8 +181,22 @@ class TestMySQLtoSQLite:
         assert "Unknown database" in str(excinfo.value)
 
     @pytest.mark.init
+    @pytest.mark.parametrize(
+        "quiet",
+        [
+            pytest.param(False, id="verbose"),
+            pytest.param(True, id="quiet"),
+        ],
+    )
     def test_log_to_file(
-        self, sqlite_database, mysql_database, mysql_credentials, caplog, tmpdir, faker
+        self,
+        sqlite_database,
+        mysql_database,
+        mysql_credentials,
+        caplog,
+        tmpdir,
+        faker,
+        quiet,
     ):
         log_file = tmpdir.join("db.log")
         caplog.set_level(logging.DEBUG)
@@ -149,6 +209,7 @@ class TestMySQLtoSQLite:
                 mysql_host=mysql_credentials.host,
                 mysql_port=mysql_credentials.port,
                 log_file=str(log_file),
+                quiet=quiet,
             )
         assert any("Access denied for user" in message for message in caplog.messages)
         with log_file.open("r") as log_fh:
@@ -189,7 +250,6 @@ class TestMySQLtoSQLite:
         mysql_database,
         mysql_credentials,
         helpers,
-        capsys,
         caplog,
         chunk,
         vacuum,
@@ -224,8 +284,6 @@ class TestMySQLtoSQLite:
         )
         assert all(record.levelname == "INFO" for record in caplog.records)
         assert not any(record.levelname == "ERROR" for record in caplog.records)
-        out, err = capsys.readouterr()
-        assert "Done!" in out.splitlines()[-1]
 
         sqlite_engine = create_engine(
             "sqlite:///{database}".format(
@@ -395,7 +453,6 @@ class TestMySQLtoSQLite:
         mysql_database,
         mysql_credentials,
         helpers,
-        capsys,
         caplog,
         chunk,
         vacuum,
@@ -442,8 +499,6 @@ class TestMySQLtoSQLite:
         )
         assert all(record.levelname == "INFO" for record in caplog.records)
         assert not any(record.levelname == "ERROR" for record in caplog.records)
-        out, err = capsys.readouterr()
-        assert "Done!" in out.splitlines()[-1]
 
         sqlite_engine = create_engine(
             "sqlite:///{database}".format(

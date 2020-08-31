@@ -148,26 +148,100 @@ class TestMySQLtoSQLite:
         )
 
     @pytest.mark.parametrize(
-        "chunk, vacuum, use_buffered_cursors",
+        "chunk, vacuum, use_buffered_cursors, quiet",
         [
-            # 000
+            # 0000
             pytest.param(
-                None, False, False, id="no chunk, no vacuum, no buffered cursor"
+                None,
+                False,
+                False,
+                False,
+                id="no chunk, no vacuum, no buffered cursor, verbose",
             ),
-            # 111
-            pytest.param(10, True, True, id="chunk, vacuum, buffered cursor"),
-            # 110
-            pytest.param(10, True, False, id="chunk, vacuum, no buffered cursor"),
-            # 011
-            pytest.param(None, True, True, id="no chunk, vacuum, buffered cursor"),
-            # 010
-            pytest.param(None, True, False, id="no chunk, vacuum, no buffered cursor"),
-            # 100
-            pytest.param(10, False, False, id="chunk, no vacuum, no buffered cursor"),
-            # 001
-            pytest.param(None, False, True, id="no chunk, no vacuum, buffered cursor"),
-            # 101
-            pytest.param(10, False, True, id="chunk, no vacuum, buffered cursor"),
+            # 1110
+            pytest.param(
+                10, True, True, False, id="chunk, vacuum, buffered cursor, verbose"
+            ),
+            # 1100
+            pytest.param(
+                10, True, False, False, id="chunk, vacuum, no buffered cursor, verbose"
+            ),
+            # 0110
+            pytest.param(
+                None, True, True, False, id="no chunk, vacuum, buffered cursor, verbose"
+            ),
+            # 0100
+            pytest.param(
+                None,
+                True,
+                False,
+                False,
+                id="no chunk, vacuum, no buffered cursor, verbose",
+            ),
+            # 1000
+            pytest.param(
+                10,
+                False,
+                False,
+                False,
+                id="chunk, no vacuum, no buffered cursor, verbose",
+            ),
+            # 0010
+            pytest.param(
+                None,
+                False,
+                True,
+                False,
+                id="no chunk, no vacuum, buffered cursor, verbose",
+            ),
+            # 1010
+            pytest.param(
+                10, False, True, False, id="chunk, no vacuum, buffered cursor, verbose"
+            ),
+            # 0001
+            pytest.param(
+                None,
+                False,
+                False,
+                True,
+                id="no chunk, no vacuum, no buffered cursor, quiet",
+            ),
+            # 1111
+            pytest.param(
+                10, True, True, True, id="chunk, vacuum, buffered cursor, quiet"
+            ),
+            # 1101
+            pytest.param(
+                10, True, False, True, id="chunk, vacuum, no buffered cursor, quiet"
+            ),
+            # 0111
+            pytest.param(
+                None, True, True, True, id="no chunk, vacuum, buffered cursor, quiet"
+            ),
+            # 0101
+            pytest.param(
+                None,
+                True,
+                False,
+                True,
+                id="no chunk, vacuum, no buffered cursor, quiet",
+            ),
+            # 1001
+            pytest.param(
+                10, False, False, True, id="chunk, no vacuum, no buffered cursor, quiet"
+            ),
+            # 0011
+            pytest.param(
+                None,
+                False,
+                True,
+                True,
+                id="no chunk, no vacuum, buffered cursor, quiet",
+            ),
+            # 1011
+            pytest.param(
+                10, False, True, True, id="chunk, no vacuum, buffered cursor, quiet"
+            ),
         ],
     )
     def test_minimum_valid_parameters(
@@ -179,6 +253,7 @@ class TestMySQLtoSQLite:
         chunk,
         vacuum,
         use_buffered_cursors,
+        quiet,
     ):
         arguments = [
             "-f",
@@ -200,8 +275,14 @@ class TestMySQLtoSQLite:
             arguments.append("-V")
         if use_buffered_cursors:
             arguments.append("--use-buffered-cursors")
+        if quiet:
+            arguments.append("-q")
         result = cli_runner.invoke(mysql2sqlite, arguments)
         assert result.exit_code == 0
+        if quiet:
+            assert result.output == ""
+        else:
+            assert result.output != ""
 
     def test_keyboard_interrupt(
         self, cli_runner, sqlite_database, mysql_credentials, mysql_database, mocker

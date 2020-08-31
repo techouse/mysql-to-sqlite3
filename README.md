@@ -55,6 +55,7 @@ Options:
                               multiple queries, with small result sets, need
                               to be combined or computed with each other.
 
+  -q, --quiet                 Quiet. Display only errors.
   --version                   Show the version and exit.
   --help                      Show this message and exit.
 ```

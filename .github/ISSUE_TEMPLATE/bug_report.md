@@ -26,5 +26,7 @@ $ mysql2sqlite --version
 <paste here>
 ```
 
+This command is only available on v1.3.2 and greater. Otherwise, please provide some basic information about your system (Python version, operating system, etc.).
+
 **Additional context**
 Add any other context about the problem here.

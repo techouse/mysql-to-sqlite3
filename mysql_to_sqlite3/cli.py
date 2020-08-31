@@ -61,10 +61,11 @@ from .debug_info import info
     "can be useful in situations where multiple queries, with small "
     "result sets, need to be combined or computed with each other.",
 )
+@click.option("-q", "--quiet", is_flag=True, help="Quiet. Display only errors.")
 @click.version_option(
     message=tabulate(info(), headers=["software", "version"], tablefmt="github")
 )
-def cli(  # noqa: ignore=C0330  # pylint: disable=C0330,R0913
+def cli(
     sqlite_file,
     mysql_user,
     mysql_password,
@@ -77,6 +78,7 @@ def cli(  # noqa: ignore=C0330  # pylint: disable=C0330,R0913
     log_file,
     vacuum,
     use_buffered_cursors,
+    quiet,
 ):
     """Transfer MySQL to SQLite using the provided CLI options."""
     try:
@@ -94,6 +96,7 @@ def cli(  # noqa: ignore=C0330  # pylint: disable=C0330,R0913
             vacuum=vacuum,
             buffered=use_buffered_cursors,
             log_file=log_file,
+            quiet=quiet,
         )
         converter.transfer()
     except KeyboardInterrupt:

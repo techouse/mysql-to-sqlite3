@@ -111,8 +111,15 @@ class TestMySQLtoSQLiteClassmethods:
 @pytest.mark.exceptions
 @pytest.mark.usefixtures("mysql_instance")
 class TestMySQLtoSQLiteSQLExceptions:
+    @pytest.mark.parametrize(
+        "quiet",
+        [
+            pytest.param(False, id="verbose"),
+            pytest.param(True, id="quiet"),
+        ],
+    )
     def test_create_table_server_lost_connection_error(
-        self, sqlite_database, mysql_database, mysql_credentials, mocker, caplog
+        self, sqlite_database, mysql_database, mysql_credentials, mocker, caplog, quiet
     ):
         proc = MySQLtoSQLite(
             sqlite_file=sqlite_database,
@@ -121,6 +128,7 @@ class TestMySQLtoSQLiteSQLExceptions:
             mysql_database=mysql_credentials.database,
             mysql_host=mysql_credentials.host,
             mysql_port=mysql_credentials.port,
+            quiet=quiet,
         )
 
         class FakeSQLiteCursor:
@@ -144,8 +152,15 @@ class TestMySQLtoSQLiteSQLExceptions:
         with pytest.raises(mysql.connector.Error):
             proc._create_table(choice(mysql_tables))
 
+    @pytest.mark.parametrize(
+        "quiet",
+        [
+            pytest.param(False, id="verbose"),
+            pytest.param(True, id="quiet"),
+        ],
+    )
     def test_create_table_unknown_mysql_connector_error(
-        self, sqlite_database, mysql_database, mysql_credentials, mocker, caplog
+        self, sqlite_database, mysql_database, mysql_credentials, mocker, caplog, quiet
     ):
         proc = MySQLtoSQLite(
             sqlite_file=sqlite_database,
@@ -154,6 +169,7 @@ class TestMySQLtoSQLiteSQLExceptions:
             mysql_database=mysql_credentials.database,
             mysql_host=mysql_credentials.host,
             mysql_port=mysql_credentials.port,
+            quiet=quiet,
         )
 
         class FakeSQLiteCursor:
@@ -170,8 +186,15 @@ class TestMySQLtoSQLiteSQLExceptions:
         with pytest.raises(mysql.connector.Error):
             proc._create_table(choice(mysql_tables))
 
+    @pytest.mark.parametrize(
+        "quiet",
+        [
+            pytest.param(False, id="verbose"),
+            pytest.param(True, id="quiet"),
+        ],
+    )
     def test_create_table_sqlite3_error(
-        self, sqlite_database, mysql_database, mysql_credentials, mocker, caplog
+        self, sqlite_database, mysql_database, mysql_credentials, mocker, caplog, quiet
     ):
         proc = MySQLtoSQLite(
             sqlite_file=sqlite_database,
@@ -180,6 +203,7 @@ class TestMySQLtoSQLiteSQLExceptions:
             mysql_database=mysql_credentials.database,
             mysql_host=mysql_credentials.host,
             mysql_port=mysql_credentials.port,
+            quiet=quiet,
         )
 
         class FakeSQLiteCursor:
@@ -194,23 +218,46 @@ class TestMySQLtoSQLiteSQLExceptions:
             proc._create_table(choice(mysql_tables))
 
     @pytest.mark.parametrize(
-        "exception",
+        "exception, quiet",
         [
             pytest.param(
                 mysql.connector.Error(
                     msg="Error Code: 2013. Lost connection to MySQL server during query",
                     errno=errorcode.CR_SERVER_LOST,
                 ),
-                id="errorcode.CR_SERVER_LOST",
+                False,
+                id="errorcode.CR_SERVER_LOST verbose",
+            ),
+            pytest.param(
+                mysql.connector.Error(
+                    msg="Error Code: 2013. Lost connection to MySQL server during query",
+                    errno=errorcode.CR_SERVER_LOST,
+                ),
+                True,
+                id="errorcode.CR_SERVER_LOST quiet",
             ),
             pytest.param(
                 mysql.connector.Error(
                     msg="Error Code: 2000. Unknown MySQL error",
                     errno=errorcode.CR_UNKNOWN_ERROR,
                 ),
-                id="errorcode.CR_UNKNOWN_ERROR",
+                False,
+                id="errorcode.CR_UNKNOWN_ERROR verbose",
             ),
-            pytest.param(sqlite3.Error("Unknown SQLite error"), id="sqlite3.Error"),
+            pytest.param(
+                mysql.connector.Error(
+                    msg="Error Code: 2000. Unknown MySQL error",
+                    errno=errorcode.CR_UNKNOWN_ERROR,
+                ),
+                True,
+                id="errorcode.CR_UNKNOWN_ERROR quiet",
+            ),
+            pytest.param(
+                sqlite3.Error("Unknown SQLite error"), False, id="sqlite3.Error verbose"
+            ),
+            pytest.param(
+                sqlite3.Error("Unknown SQLite error"), True, id="sqlite3.Error quiet"
+            ),
         ],
     )
     def test_transfer_table_data_exceptions(
@@ -221,6 +268,7 @@ class TestMySQLtoSQLiteSQLExceptions:
         mocker,
         caplog,
         exception,
+        quiet,
     ):
         proc = MySQLtoSQLite(
             sqlite_file=sqlite_database,
@@ -229,6 +277,7 @@ class TestMySQLtoSQLiteSQLExceptions:
             mysql_database=mysql_credentials.database,
             mysql_host=mysql_credentials.host,
             mysql_port=mysql_credentials.port,
+            quiet=quiet,
         )
 
         class FakeMySQLCursor:
@@ -244,10 +293,12 @@ class TestMySQLtoSQLiteSQLExceptions:
         table_name = choice(mysql_tables)
         columns = [column["name"] for column in mysql_inspect.get_columns(table_name)]
 
-        sql = 'INSERT OR IGNORE INTO "{table}" ({fields}) VALUES ({placeholders})'.format(
-            table=table_name,
-            fields=('"{}", ' * len(columns)).rstrip(" ,").format(*columns),
-            placeholders=("?, " * len(columns)).rstrip(" ,"),
+        sql = (
+            'INSERT OR IGNORE INTO "{table}" ({fields}) VALUES ({placeholders})'.format(
+                table=table_name,
+                fields=('"{}", ' * len(columns)).rstrip(" ,").format(*columns),
+                placeholders=("?, " * len(columns)).rstrip(" ,"),
+            )
         )
 
         mocker.patch.object(proc, "_mysql_cur", FakeMySQLCursor())
