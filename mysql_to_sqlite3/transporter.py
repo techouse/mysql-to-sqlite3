@@ -239,7 +239,7 @@ class MySQLtoSQLite:
                     )
                 )
             else:
-                indices += """CREATE {unique} INDEX "{name}" ON "{table}" ({columns});""".format(
+                indices += """CREATE {unique} INDEX IF NOT EXISTS "{name}" ON "{table}" ({columns});""".format(
                     unique="UNIQUE" if int(index["unique"]) == 1 else "",
                     # combine the index name with the table name in order to
                     # make the index names unique across the database
