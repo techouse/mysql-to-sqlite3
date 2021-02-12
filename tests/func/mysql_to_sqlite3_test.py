@@ -180,6 +180,7 @@ class TestMySQLtoSQLite:
             )
         assert "Unknown database" in str(excinfo.value)
 
+    @pytest.mark.xfail
     @pytest.mark.init
     @pytest.mark.parametrize(
         "quiet",
