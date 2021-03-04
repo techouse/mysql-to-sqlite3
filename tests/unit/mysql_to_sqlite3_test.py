@@ -20,6 +20,13 @@ class TestMySQLtoSQLiteClassmethods:
 
     def test_translate_type_from_mysql_to_sqlite_all_valid_columns(self):
         for column_type in mysql_column_types + (
+            "BIGINT UNSIGNED",
+            "INTEGER UNSIGNED",
+            "INT",
+            "INT UNSIGNED",
+            "SMALLINT UNSIGNED",
+            "TINYINT UNSIGNED",
+            "MEDIUMINT UNSIGNED",
             "CHAR(2)",
             "NCHAR(7)",
             "NVARCHAR(17)",
@@ -101,6 +108,16 @@ class TestMySQLtoSQLiteClassmethods:
                     MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
                     == "TEXT"
                 )
+            elif column_type.endswith(" UNSIGNED"):
+                if column_type.startswith("INT "):
+                    assert (
+                        MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
+                        == "INTEGER"
+                    )
+                else:
+                    assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(
+                        column_type
+                    ) == column_type.replace(" UNSIGNED", "")
             else:
                 assert (
                     MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)

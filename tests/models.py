@@ -26,6 +26,7 @@ from sqlalchemy import (
     VARBINARY,
     VARCHAR,
 )
+from sqlalchemy.dialects.mysql import BIGINT, INTEGER, MEDIUMINT, SMALLINT, TINYINT
 from sqlalchemy.sql.functions import current_timestamp
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref
@@ -94,6 +95,7 @@ class Misc(Base):
     __tablename__ = "misc"
     id = Column(Integer, primary_key=True)
     big_integer_field = Column(BigInteger, default=0)
+    big_integer_unsigned_field = Column(BIGINT(unsigned=True), default=0)
     large_binary_field = Column(LargeBinary, nullable=True)
     boolean_field = Column(Boolean, default=False)
     char_field = Column(CHAR(255), nullable=True)
@@ -102,6 +104,11 @@ class Misc(Base):
     decimal_field = Column(DECIMAL(10, 2), nullable=True)
     float_field = Column(Float(12, 4), default=0)
     integer_field = Column(Integer, default=0)
+    integer_unsigned_field = Column(INTEGER(unsigned=True), default=0)
+    tinyint_field = Column(TINYINT, default=0)
+    tinyint_unsigned_field = Column(TINYINT(unsigned=True), default=0)
+    mediumint_field = Column(MEDIUMINT, default=0)
+    mediumint_unsigned_field = Column(MEDIUMINT(unsigned=True), default=0)
     if environ.get("LEGACY_DB", "0") == "0":
         json_field = Column(JSON, nullable=True)
     nchar_field = Column(NCHAR(255), nullable=True)
@@ -109,6 +116,7 @@ class Misc(Base):
     unicode_field = Column(Unicode(255), nullable=True)
     real_field = Column(REAL(12, 4), default=0)
     small_integer_field = Column(SmallInteger, default=0)
+    small_integer_unsigned_field = Column(SMALLINT(unsigned=True), default=0)
     string_field = Column(String(255), nullable=True)
     text_field = Column(Text, nullable=True)
     time_field = Column(Time, nullable=True)

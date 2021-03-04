@@ -166,6 +166,10 @@ class MySQLtoSQLite:
             raise ValueError("Invalid column_type!")
 
         data_type = match.group(0).upper()
+
+        if data_type.endswith(" UNSIGNED"):
+            data_type = data_type.replace(" UNSIGNED", "")
+
         if data_type in {
             "BIGINT",
             "BLOB",
