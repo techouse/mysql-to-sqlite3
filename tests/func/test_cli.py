@@ -105,9 +105,55 @@ class TestMySQLtoSQLite:
                 mysql_credentials.database,
                 "-u",
                 mysql_credentials.user,
-                "-p",
+                "--mysql-password",
                 faker.password(length=16),
             ],
+        )
+        assert result.exit_code > 0
+        assert "1045 (28000): Access denied" in result.output
+
+    def test_database_password_prompt(
+        self,
+        cli_runner,
+        sqlite_database,
+        mysql_credentials,
+        mysql_database,
+    ):
+        result = cli_runner.invoke(
+            mysql2sqlite,
+            args=[
+                "-f",
+                sqlite_database,
+                "-d",
+                mysql_credentials.database,
+                "-u",
+                mysql_credentials.user,
+                "-p",
+            ],
+            input=mysql_credentials.password,
+        )
+        assert result.exit_code == 0
+
+    def test_invalid_database_password_prompt(
+        self,
+        cli_runner,
+        sqlite_database,
+        mysql_credentials,
+        mysql_database,
+        faker,
+    ):
+        result = cli_runner.invoke(
+            mysql2sqlite,
+            args=[
+                "-f",
+                sqlite_database,
+                "-d",
+                mysql_credentials.database,
+                "-u",
+                mysql_credentials.user,
+                "-p",
+            ],
+            input=faker.password(length=16),
         )
         assert result.exit_code > 0
         assert "1045 (28000): Access denied" in result.output
@@ -130,7 +176,7 @@ class TestMySQLtoSQLite:
                 mysql_credentials.database,
                 "-u",
                 mysql_credentials.user,
-                "-p",
+                "--mysql-password",
                 mysql_credentials.password,
                 "-h",
                 mysql_credentials.host,
@@ -262,7 +308,7 @@ class TestMySQLtoSQLite:
             mysql_credentials.database,
             "-u",
             mysql_credentials.user,
-            "-p",
+            "--mysql-password",
             mysql_credentials.password,
             "-h",
             mysql_credentials.host,
@@ -297,7 +343,7 @@ class TestMySQLtoSQLite:
                 mysql_credentials.database,
                 "-u",
                 mysql_credentials.user,
-                "-p",
+                "--mysql-password",
                 mysql_credentials.password,
                 "-h",
                 mysql_credentials.host,
@@ -339,7 +385,7 @@ class TestMySQLtoSQLite:
                 " ".join(sample(mysql_tables, table_number)),
                 "-u",
                 mysql_credentials.user,
-                "-p",
+                "--mysql-password",
                 mysql_credentials.password,
                 "-h",
                 mysql_credentials.host,

@@ -5,7 +5,7 @@ import click
 from tabulate import tabulate
 
 from . import MySQLtoSQLite
-from .click_utils import OptionEatAll
+from .click_utils import OptionEatAll, prompt_password
 from .debug_info import info
 
 
@@ -22,7 +22,15 @@ from .debug_info import info
     "-d", "--mysql-database", default=None, help="MySQL database name", required=True
 )
 @click.option("-u", "--mysql-user", default=None, help="MySQL user", required=True)
-@click.option("-p", "--mysql-password", default=None, help="MySQL password")
+@click.option(
+    "-p",
+    "--prompt-mysql-password",
+    is_flag=True,
+    default=False,
+    callback=prompt_password,
+    help="Prompt for MySQL password",
+)
+@click.option("--mysql-password", default=None, help="MySQL password")
 @click.option(
     "-t",
     "--mysql-tables",
@@ -71,6 +79,7 @@ from .debug_info import info
 def cli(
     sqlite_file,
     mysql_user,
+    prompt_mysql_password,
     mysql_password,
     mysql_database,
     mysql_tables,
@@ -89,7 +98,7 @@ def cli(
         converter = MySQLtoSQLite(
             sqlite_file=sqlite_file,
             mysql_user=mysql_user,
-            mysql_password=mysql_password,
+            mysql_password=mysql_password or prompt_mysql_password,
             mysql_database=mysql_database,
             mysql_tables=mysql_tables,
             without_foreign_keys=without_foreign_keys
