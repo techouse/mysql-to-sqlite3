@@ -45,6 +45,7 @@ Options:
   -X, --without-foreign-keys  Do not transfer foreign keys.
   -h, --mysql-host TEXT       MySQL host. Defaults to localhost.
   -P, --mysql-port INTEGER    MySQL port. Defaults to 3306.
+  -S, --skip-ssl              Disable MySQL connection encryption.
   -c, --chunk INTEGER         Chunk reading/writing SQL records
   -l, --log-file PATH         Log file
   -V, --vacuum                Use the VACUUM command to rebuild the SQLite

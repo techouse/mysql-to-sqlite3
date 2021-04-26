@@ -40,6 +40,9 @@ from .debug_info import info
     "-P", "--mysql-port", type=int, default=3306, help="MySQL port. Defaults to 3306."
 )
 @click.option(
+    "-S", "--skip-ssl", is_flag=True, help="Disable MySQL connection encryption."
+)
+@click.option(
     "-c",
     "--chunk",
     type=int,
@@ -74,6 +77,7 @@ def cli(
     without_foreign_keys,
     mysql_host,
     mysql_port,
+    skip_ssl,
     chunk,
     log_file,
     vacuum,
@@ -92,6 +96,7 @@ def cli(
             or (mysql_tables is not None and len(mysql_tables) > 0),
             mysql_host=mysql_host,
             mysql_port=mysql_port,
+            mysql_ssl_disabled=skip_ssl,
             chunk=chunk,
             vacuum=vacuum,
             buffered=use_buffered_cursors,
