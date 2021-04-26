@@ -14,7 +14,7 @@ from sys import stdout
 import mysql.connector
 import six
 from mysql.connector import errorcode
-from tqdm import trange
+from tqdm import tqdm, trange
 
 from mysql_to_sqlite3.sqlite_utils import (
     adapt_decimal,
@@ -356,7 +356,11 @@ class MySQLtoSQLite:
                             encode_data_for_sqlite(col) if col is not None else None
                             for col in row
                         )
-                        for row in self._mysql_cur.fetchall()
+                        for row in tqdm(
+                            self._mysql_cur.fetchall(),
+                            total=total_records,
+                            disable=self._quiet,
+                        )
                     ),
                 )
             self._sqlite.commit()
