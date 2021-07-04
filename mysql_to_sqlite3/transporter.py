@@ -215,6 +215,11 @@ class MySQLtoSQLite:
     def _translate_default_from_mysql_to_sqlite(
         cls, column_default=None, column_type=None
     ):
+        try:
+            column_default = column_default.decode()
+        except (UnicodeDecodeError, AttributeError):
+            pass
+
         numeric_column_types = {
             "BIGINT",
             "DECIMAL",
@@ -240,22 +245,36 @@ class MySQLtoSQLite:
             if column_type in numeric_column_types:
                 return "DEFAULT {}".format(column_default)
         if six.PY2:
-            if unicode(  # noqa: ignore=F405 pylint: disable=E0602
-                str(column_default), "utf-8"
-            ).isnumeric():
+            if (
+                isinstance(
+                    column_default, unicode  # noqa: ignore=F405 pylint: disable=E0602
+                )
+                and column_default.isnumeric()
+            ):
                 if column_type in numeric_column_types:
                     return "DEFAULT {}".format(column_default)
         else:
             if str(column_default).isnumeric():
                 if column_type in numeric_column_types:
                     return "DEFAULT {}".format(column_default)
-        if isinstance(column_default, str):
-            if column_default.upper() in {
-                "CURRENT_TIME",
-                "CURRENT_DATE",
-                "CURRENT_TIMESTAMP",
-            }:
-                return "DEFAULT {}".format(column_default.upper())
+        if six.PY2:
+            if isinstance(
+                column_default, unicode  # noqa: ignore=F405 pylint: disable=E0602
+            ):
+                if column_default.upper() in {
+                    "CURRENT_TIME",
+                    "CURRENT_DATE",
+                    "CURRENT_TIMESTAMP",
+                }:
+                    return "DEFAULT {}".format(column_default.upper())
+        else:
+            if isinstance(column_default, str):
+                if column_default.upper() in {
+                    "CURRENT_TIME",
+                    "CURRENT_DATE",
+                    "CURRENT_TIMESTAMP",
+                }:
+                    return "DEFAULT {}".format(column_default.upper())
         return "DEFAULT '{}'".format(column_default)
 
     def _build_create_table_sql(self, table_name):
