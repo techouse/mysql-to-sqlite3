@@ -215,6 +215,19 @@ class MySQLtoSQLite:
     def _translate_default_from_mysql_to_sqlite(
         cls, column_default=None, column_type=None
     ):
+        numeric_column_types = {
+            "BIGINT",
+            "DECIMAL",
+            "DOUBLE",
+            "FLOAT",
+            "INTEGER",
+            "MEDIUMINT",
+            "NUMERIC",
+            "REAL",
+            "SMALLINT",
+            "TINYINT",
+            "INTEGER",
+        }
         if column_default is None:
             return ""
         if isinstance(column_default, bool):
@@ -223,21 +236,19 @@ class MySQLtoSQLite:
                     return "DEFAULT(TRUE)"
                 return "DEFAULT(FALSE)"
             return "DEFAULT {}".format(int(column_default))
-        if isinstance(column_default, (int, float)) or str(column_default).isnumeric():
-            if column_type in {
-                "BIGINT",
-                "DECIMAL",
-                "DOUBLE",
-                "FLOAT",
-                "INTEGER",
-                "MEDIUMINT",
-                "NUMERIC",
-                "REAL",
-                "SMALLINT",
-                "TINYINT",
-                "INTEGER",
-            }:
+        if isinstance(column_default, (int, float)):
+            if column_type in numeric_column_types:
                 return "DEFAULT {}".format(column_default)
+        if six.PY2:
+            if unicode(  # noqa: ignore=F405 pylint: disable=E0602
+                str(column_default), "utf-8"
+            ).isnumeric():
+                if column_type in numeric_column_types:
+                    return "DEFAULT {}".format(column_default)
+        else:
+            if str(column_default).isnumeric():
+                if column_type in numeric_column_types:
+                    return "DEFAULT {}".format(column_default)
         if isinstance(column_default, str):
             if column_default.upper() in {
                 "CURRENT_TIME",
