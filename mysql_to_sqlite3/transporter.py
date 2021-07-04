@@ -218,13 +218,26 @@ class MySQLtoSQLite:
         if column_default is None:
             return ""
         if isinstance(column_default, bool):
-            if column_type == "BOOLEAN" and sqlite3.sqlite_version > "3.23.0":
+            if column_type == "BOOLEAN" and sqlite3.sqlite_version >= "3.23.0":
                 if column_default:
                     return "DEFAULT(TRUE)"
                 return "DEFAULT(FALSE)"
             return "DEFAULT {}".format(int(column_default))
-        if isinstance(column_default, (int, float)):
-            return "DEFAULT {}".format(column_default)
+        if isinstance(column_default, (int, float)) or str(column_default).isnumeric():
+            if column_type in {
+                "BIGINT",
+                "DECIMAL",
+                "DOUBLE",
+                "FLOAT",
+                "INTEGER",
+                "MEDIUMINT",
+                "NUMERIC",
+                "REAL",
+                "SMALLINT",
+                "TINYINT",
+                "INTEGER",
+            }:
+                return "DEFAULT {}".format(column_default)
         if isinstance(column_default, str):
             if column_default.upper() in {
                 "CURRENT_TIME",

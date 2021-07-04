@@ -125,62 +125,94 @@ class TestMySQLtoSQLiteClassmethods:
                 )
 
     @pytest.mark.parametrize(
-        "column_default",
+        "column_default, sqlite_default_translation",
         [
-            None,
-            "",
-            False,
-            True,
-            "0",
-            "1",
-            0,
-            1,
-            123456789,
-            1234.56789,
-            "lorem",
-            "lorem ipsum dolor",
-            "CURRENT_TIME",
-            "current_time",
-            "CURRENT_DATE",
-            "current_date",
-            "CURRENT_TIMESTAMP",
-            "current_timestamp",
+            pytest.param(None, "", id="None"),
+            pytest.param("", "DEFAULT ''", id='""'),
+            pytest.param("lorem", "DEFAULT 'lorem'", id='"lorem"'),
+            pytest.param(
+                "lorem ipsum dolor",
+                "DEFAULT 'lorem ipsum dolor'",
+                id='"lorem ipsum dolor"',
+            ),
+            pytest.param("CURRENT_TIME", "DEFAULT CURRENT_TIME", id='"CURRENT_TIME"'),
+            pytest.param("current_time", "DEFAULT CURRENT_TIME", id='"current_time"'),
+            pytest.param("CURRENT_DATE", "DEFAULT CURRENT_DATE", id='"CURRENT_DATE"'),
+            pytest.param("current_date", "DEFAULT CURRENT_DATE", id='"current_date"'),
+            pytest.param(
+                "CURRENT_TIMESTAMP",
+                "DEFAULT CURRENT_TIMESTAMP",
+                id='"CURRENT_TIMESTAMP"',
+            ),
+            pytest.param(
+                "current_timestamp",
+                "DEFAULT CURRENT_TIMESTAMP",
+                id='"current_timestamp"',
+            ),
         ],
     )
-    def test_translate_default_from_mysql_to_sqlite(self, faker, column_default):
-        if column_default is None:
-            assert (
-                MySQLtoSQLite._translate_default_from_mysql_to_sqlite(column_default)
-                == ""
+    def test_translate_default_from_mysql_to_sqlite(
+        self, column_default, sqlite_default_translation
+    ):
+        assert (
+            MySQLtoSQLite._translate_default_from_mysql_to_sqlite(column_default)
+            == sqlite_default_translation
+        )
+
+    @pytest.mark.parametrize(
+        "column_default, sqlite_default_translation, sqlite_version",
+        [
+            pytest.param(False, "DEFAULT(FALSE)", "3.23.0", id="False (NEW)"),
+            pytest.param(True, "DEFAULT(TRUE)", "3.23.0", id="True (NEW)"),
+            pytest.param(False, "DEFAULT 0", "3.22.0", id="False (OLD)"),
+            pytest.param(True, "DEFAULT 1", "3.22.0", id="True (OLD)"),
+        ],
+    )
+    def test_translate_default_booleans_from_mysql_to_sqlite(
+        self, mocker, column_default, sqlite_default_translation, sqlite_version
+    ):
+        mocker.patch.object(sqlite3, "sqlite_version", sqlite_version)
+        assert (
+            MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
+                column_default, "BOOLEAN"
             )
-        elif isinstance(column_default, bool):
-            assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
-                column_default
-            ) == "DEFAULT {}".format(int(column_default))
-            if sqlite3.sqlite_version > "3.23.0":
-                assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
-                    column_default, "BOOLEAN"
-                ) == "DEFAULT({})".format("TRUE" if column_default else "FALSE")
-            else:
-                assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
-                    column_default, "BOOLEAN"
-                ) == "DEFAULT {}".format(int(column_default))
-        elif isinstance(column_default, (int, float)):
-            assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
-                column_default
-            ) == "DEFAULT {}".format(column_default)
-        elif isinstance(column_default, str) and column_default.upper() in {
-            "CURRENT_TIME",
-            "CURRENT_DATE",
-            "CURRENT_TIMESTAMP",
-        }:
-            assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
-                column_default
-            ) == "DEFAULT {}".format(column_default.upper())
-        else:
-            assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
-                column_default
-            ) == "DEFAULT '{}'".format(column_default)
+            == sqlite_default_translation
+        )
+
+    @pytest.mark.parametrize(
+        "column_default, sqlite_default_translation, column_type",
+        [
+            pytest.param("0", "DEFAULT 0", "NUMERIC", id='"0" (NUMERIC)'),
+            pytest.param("1", "DEFAULT 1", "NUMERIC", id='"1" (NUMERIC)'),
+            pytest.param("0", "DEFAULT '0'", "TEXT", id='"0" (TEXT)'),
+            pytest.param("1", "DEFAULT '1'", "TEXT", id='"1" (TEXT)'),
+            pytest.param(0, "DEFAULT 0", "NUMERIC", id="0 (NUMERIC)"),
+            pytest.param(1, "DEFAULT 1", "NUMERIC", id="1 (NUMERIC)"),
+            pytest.param(0, "DEFAULT '0'", "TEXT", id="0 (TEXT)"),
+            pytest.param(1, "DEFAULT '1'", "TEXT", id="1 (TEXT)"),
+            pytest.param(
+                123456789, "DEFAULT 123456789", "NUMERIC", id="123456789 (NUMERIC)"
+            ),
+            pytest.param(
+                1234.56789, "DEFAULT 1234.56789", "NUMERIC", id="1234.56789 (NUMERIC)"
+            ),
+            pytest.param(
+                123456789, "DEFAULT '123456789'", "TEXT", id="123456789 (TEXT)"
+            ),
+            pytest.param(
+                1234.56789, "DEFAULT '1234.56789'", "TEXT", id="1234.56789 (TEXT)"
+            ),
+        ],
+    )
+    def test_translate_default_numbers_from_mysql_to_sqlite(
+        self, column_default, sqlite_default_translation, column_type
+    ):
+        assert (
+            MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
+                column_default, column_type
+            )
+            == sqlite_default_translation
+        )
 
 
 @pytest.mark.exceptions
