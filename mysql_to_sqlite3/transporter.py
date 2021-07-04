@@ -211,6 +211,28 @@ class MySQLtoSQLite:
             return "DATETIME"
         return "TEXT"
 
+    @classmethod
+    def _translate_default_from_mysql_to_sqlite(
+        cls, column_default=None, column_type=None
+    ):
+        if column_default is None or column_default == "":
+            return ""
+        if isinstance(column_default, bool):
+            if column_type == "BOOLEAN":
+                if column_default is True:
+                    return "DEFAULT(TRUE)"
+                return "DEFAULT(FALSE)"
+            return "DEFAULT '{}'".format(int(column_default))
+        if not isinstance(column_default, str):
+            column_default = str(column_default)
+        if column_default.upper() in {
+            "CURRENT_TIME",
+            "CURRENT_DATE",
+            "CURRENT_TIMESTAMP",
+        }:
+            return "DEFAULT {}".format(column_default.upper())
+        return "DEFAULT '{}'".format(column_default)
+
     def _build_create_table_sql(self, table_name):
         sql = 'CREATE TABLE IF NOT EXISTS "{}" ('.format(table_name)
         primary = ""
@@ -219,10 +241,14 @@ class MySQLtoSQLite:
         self._mysql_cur_dict.execute("SHOW COLUMNS FROM `{}`".format(table_name))
 
         for row in self._mysql_cur_dict.fetchall():
-            sql += '\n\t"{name}" {type} {notnull},'.format(
+            column_type = self._translate_type_from_mysql_to_sqlite(row["Type"])
+            sql += '\n\t"{name}" {type} {notnull} {default},'.format(
                 name=row["Field"],
-                type=self._translate_type_from_mysql_to_sqlite(row["Type"]),
+                type=column_type,
                 notnull="NULL" if row["Null"] == "YES" else "NOT NULL",
+                default=self._translate_default_from_mysql_to_sqlite(
+                    row["Default"], column_type
+                ),
             )
 
         self._mysql_cur_dict.execute(
