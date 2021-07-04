@@ -154,9 +154,14 @@ class TestMySQLtoSQLiteClassmethods:
                 assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
                     column_default
                 ) == "DEFAULT '{}'".format(int(column_default))
-                assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
-                    column_default, "BOOLEAN"
-                ) == "DEFAULT({})".format("TRUE" if column_default else "FALSE")
+                if sqlite3.sqlite_version > "3.23.0":
+                    assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
+                        column_default, "BOOLEAN"
+                    ) == "DEFAULT({})".format("TRUE" if column_default else "FALSE")
+                else:
+                    assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
+                        column_default, "BOOLEAN"
+                    ) == "DEFAULT '{}'".format(int(column_default))
             elif isinstance(column_default, str) and column_default.upper() in {
                 "CURRENT_TIME",
                 "CURRENT_DATE",

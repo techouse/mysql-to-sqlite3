@@ -218,8 +218,8 @@ class MySQLtoSQLite:
         if column_default is None or column_default == "":
             return ""
         if isinstance(column_default, bool):
-            if column_type == "BOOLEAN":
-                if column_default is True:
+            if column_type == "BOOLEAN" and sqlite3.sqlite_version > "3.23.0":
+                if column_default:
                     return "DEFAULT(TRUE)"
                 return "DEFAULT(FALSE)"
             return "DEFAULT '{}'".format(int(column_default))
