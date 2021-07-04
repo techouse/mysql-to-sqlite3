@@ -164,8 +164,8 @@ class TestMySQLtoSQLiteClassmethods:
         [
             pytest.param(False, "DEFAULT(FALSE)", "3.23.0", id="False (NEW)"),
             pytest.param(True, "DEFAULT(TRUE)", "3.23.0", id="True (NEW)"),
-            pytest.param(False, "DEFAULT 0", "3.22.0", id="False (OLD)"),
-            pytest.param(True, "DEFAULT 1", "3.22.0", id="True (OLD)"),
+            pytest.param(False, "DEFAULT '0'", "3.22.0", id="False (OLD)"),
+            pytest.param(True, "DEFAULT '1'", "3.22.0", id="True (OLD)"),
         ],
     )
     def test_translate_default_booleans_from_mysql_to_sqlite(
@@ -182,19 +182,19 @@ class TestMySQLtoSQLiteClassmethods:
     @pytest.mark.parametrize(
         "column_default, sqlite_default_translation, column_type",
         [
-            pytest.param("0", "DEFAULT 0", "NUMERIC", id='"0" (NUMERIC)'),
-            pytest.param("1", "DEFAULT 1", "NUMERIC", id='"1" (NUMERIC)'),
+            pytest.param("0", "DEFAULT '0'", "NUMERIC", id='"0" (NUMERIC)'),
+            pytest.param("1", "DEFAULT '1'", "NUMERIC", id='"1" (NUMERIC)'),
             pytest.param("0", "DEFAULT '0'", "TEXT", id='"0" (TEXT)'),
             pytest.param("1", "DEFAULT '1'", "TEXT", id='"1" (TEXT)'),
-            pytest.param(0, "DEFAULT 0", "NUMERIC", id="0 (NUMERIC)"),
-            pytest.param(1, "DEFAULT 1", "NUMERIC", id="1 (NUMERIC)"),
+            pytest.param(0, "DEFAULT '0'", "NUMERIC", id="0 (NUMERIC)"),
+            pytest.param(1, "DEFAULT '1'", "NUMERIC", id="1 (NUMERIC)"),
             pytest.param(0, "DEFAULT '0'", "TEXT", id="0 (TEXT)"),
             pytest.param(1, "DEFAULT '1'", "TEXT", id="1 (TEXT)"),
             pytest.param(
-                123456789, "DEFAULT 123456789", "NUMERIC", id="123456789 (NUMERIC)"
+                123456789, "DEFAULT '123456789'", "NUMERIC", id="123456789 (NUMERIC)"
             ),
             pytest.param(
-                1234.56789, "DEFAULT 1234.56789", "NUMERIC", id="1234.56789 (NUMERIC)"
+                1234.56789, "DEFAULT '1234.56789'", "NUMERIC", id="1234.56789 (NUMERIC)"
             ),
             pytest.param(
                 123456789, "DEFAULT '123456789'", "TEXT", id="123456789 (TEXT)"

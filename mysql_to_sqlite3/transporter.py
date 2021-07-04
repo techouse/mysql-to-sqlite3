@@ -220,19 +220,6 @@ class MySQLtoSQLite:
         except (UnicodeDecodeError, AttributeError):
             pass
 
-        numeric_column_types = {
-            "BIGINT",
-            "DECIMAL",
-            "DOUBLE",
-            "FLOAT",
-            "INTEGER",
-            "MEDIUMINT",
-            "NUMERIC",
-            "REAL",
-            "SMALLINT",
-            "TINYINT",
-            "INTEGER",
-        }
         if column_default is None:
             return ""
         if isinstance(column_default, bool):
@@ -240,41 +227,19 @@ class MySQLtoSQLite:
                 if column_default:
                     return "DEFAULT(TRUE)"
                 return "DEFAULT(FALSE)"
-            return "DEFAULT {}".format(int(column_default))
-        if isinstance(column_default, (int, float)):
-            if column_type in numeric_column_types:
-                return "DEFAULT {}".format(column_default)
-        if six.PY2:
-            if (
-                isinstance(
-                    column_default, unicode  # noqa: ignore=F405 pylint: disable=E0602
-                )
-                and column_default.isnumeric()
-            ):
-                if column_type in numeric_column_types:
-                    return "DEFAULT {}".format(column_default)
-        else:
-            if str(column_default).isnumeric():
-                if column_type in numeric_column_types:
-                    return "DEFAULT {}".format(column_default)
-        if six.PY2:
-            if isinstance(
+            return "DEFAULT '{}'".format(int(column_default))
+        if (
+            six.PY2
+            and isinstance(
                 column_default, unicode  # noqa: ignore=F405 pylint: disable=E0602
-            ):
-                if column_default.upper() in {
-                    "CURRENT_TIME",
-                    "CURRENT_DATE",
-                    "CURRENT_TIMESTAMP",
-                }:
-                    return "DEFAULT {}".format(column_default.upper())
-        else:
-            if isinstance(column_default, str):
-                if column_default.upper() in {
-                    "CURRENT_TIME",
-                    "CURRENT_DATE",
-                    "CURRENT_TIMESTAMP",
-                }:
-                    return "DEFAULT {}".format(column_default.upper())
+            )
+        ) or isinstance(column_default, str):
+            if column_default.upper() in {
+                "CURRENT_TIME",
+                "CURRENT_DATE",
+                "CURRENT_TIMESTAMP",
+            }:
+                return "DEFAULT {}".format(column_default.upper())
         return "DEFAULT '{}'".format(column_default)
 
     def _build_create_table_sql(self, table_name):
