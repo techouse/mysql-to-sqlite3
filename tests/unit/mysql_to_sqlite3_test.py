@@ -124,56 +124,63 @@ class TestMySQLtoSQLiteClassmethods:
                     == column_type
                 )
 
-    def test_translate_default_from_mysql_to_sqlite(self, faker):
-        for column_default in (
+    @pytest.mark.parametrize(
+        "column_default",
+        [
             None,
+            "",
             False,
             True,
             "0",
             "1",
             0,
             1,
-            faker.pyint(),
-            faker.pyfloat(),
-            faker.word(),
+            123456789,
+            1234.56789,
+            "lorem",
+            "lorem ipsum dolor",
             "CURRENT_TIME",
             "current_time",
             "CURRENT_DATE",
             "current_date",
             "CURRENT_TIMESTAMP",
             "current_timestamp",
-        ):
-            if column_default is None:
-                assert (
-                    MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
-                        column_default
-                    )
-                    == ""
-                )
-            elif isinstance(column_default, bool):
+        ],
+    )
+    def test_translate_default_from_mysql_to_sqlite(self, faker, column_default):
+        if column_default is None:
+            assert (
+                MySQLtoSQLite._translate_default_from_mysql_to_sqlite(column_default)
+                == ""
+            )
+        elif isinstance(column_default, bool):
+            assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
+                column_default
+            ) == "DEFAULT {}".format(int(column_default))
+            if sqlite3.sqlite_version > "3.23.0":
                 assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
-                    column_default
-                ) == "DEFAULT '{}'".format(int(column_default))
-                if sqlite3.sqlite_version > "3.23.0":
-                    assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
-                        column_default, "BOOLEAN"
-                    ) == "DEFAULT({})".format("TRUE" if column_default else "FALSE")
-                else:
-                    assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
-                        column_default, "BOOLEAN"
-                    ) == "DEFAULT '{}'".format(int(column_default))
-            elif isinstance(column_default, str) and column_default.upper() in {
-                "CURRENT_TIME",
-                "CURRENT_DATE",
-                "CURRENT_TIMESTAMP",
-            }:
-                assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
-                    column_default
-                ) == "DEFAULT {}".format(column_default.upper())
+                    column_default, "BOOLEAN"
+                ) == "DEFAULT({})".format("TRUE" if column_default else "FALSE")
             else:
                 assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
-                    column_default
-                ) == "DEFAULT '{}'".format(column_default)
+                    column_default, "BOOLEAN"
+                ) == "DEFAULT {}".format(int(column_default))
+        elif isinstance(column_default, (int, float)):
+            assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
+                column_default
+            ) == "DEFAULT {}".format(column_default)
+        elif isinstance(column_default, str) and column_default.upper() in {
+            "CURRENT_TIME",
+            "CURRENT_DATE",
+            "CURRENT_TIMESTAMP",
+        }:
+            assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
+                column_default
+            ) == "DEFAULT {}".format(column_default.upper())
+        else:
+            assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
+                column_default
+            ) == "DEFAULT '{}'".format(column_default)
 
 
 @pytest.mark.exceptions

@@ -215,22 +215,23 @@ class MySQLtoSQLite:
     def _translate_default_from_mysql_to_sqlite(
         cls, column_default=None, column_type=None
     ):
-        if column_default is None or column_default == "":
+        if column_default is None:
             return ""
         if isinstance(column_default, bool):
             if column_type == "BOOLEAN" and sqlite3.sqlite_version > "3.23.0":
                 if column_default:
                     return "DEFAULT(TRUE)"
                 return "DEFAULT(FALSE)"
-            return "DEFAULT '{}'".format(int(column_default))
-        if not isinstance(column_default, str):
-            column_default = str(column_default)
-        if column_default.upper() in {
-            "CURRENT_TIME",
-            "CURRENT_DATE",
-            "CURRENT_TIMESTAMP",
-        }:
-            return "DEFAULT {}".format(column_default.upper())
+            return "DEFAULT {}".format(int(column_default))
+        if isinstance(column_default, (int, float)):
+            return "DEFAULT {}".format(column_default)
+        if isinstance(column_default, str):
+            if column_default.upper() in {
+                "CURRENT_TIME",
+                "CURRENT_DATE",
+                "CURRENT_TIMESTAMP",
+            }:
+                return "DEFAULT {}".format(column_default.upper())
         return "DEFAULT '{}'".format(column_default)
 
     def _build_create_table_sql(self, table_name):
