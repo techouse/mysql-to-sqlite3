@@ -18,7 +18,8 @@ requires = [
     "simplejson>=3.16.0",
     "six>=1.12.0",
     "tqdm>=4.35.0",
-    "tabulate",
+    "tabulate<0.8.6 ; python_version<'3.5'",
+    "tabulate ; python_version>='3.5'",
 ]
 
 about = {}
