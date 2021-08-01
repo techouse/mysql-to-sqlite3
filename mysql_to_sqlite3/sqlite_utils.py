@@ -37,3 +37,11 @@ def encode_data_for_sqlite(value):
         return value.decode()
     except (UnicodeDecodeError, AttributeError):
         return sqlite3.Binary(value)
+
+
+class CollatingSequences:
+    """Taken from https://www.sqlite.org/datatype3.html#collating_sequences."""
+
+    BINARY = "BINARY"
+    NOCASE = "NOCASE"
+    RTRIM = "RTRIM"

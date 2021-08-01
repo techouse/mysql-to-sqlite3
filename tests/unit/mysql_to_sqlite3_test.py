@@ -9,6 +9,7 @@ from sqlalchemy import inspect
 from sqlalchemy.dialects.mysql import __all__ as mysql_column_types
 
 from mysql_to_sqlite3 import MySQLtoSQLite
+from mysql_to_sqlite3.sqlite_utils import CollatingSequences
 
 
 class TestMySQLtoSQLiteClassmethods:
@@ -213,6 +214,151 @@ class TestMySQLtoSQLiteClassmethods:
             )
             == sqlite_default_translation
         )
+
+    @pytest.mark.parametrize(
+        "collation, resulting_column_collation, column_type",
+        [
+            pytest.param(
+                CollatingSequences.BINARY,
+                "",
+                "CHARACTER",
+                id="{} (CHARACTER)".format(CollatingSequences.BINARY),
+            ),
+            pytest.param(
+                CollatingSequences.NOCASE,
+                "COLLATE {}".format(CollatingSequences.NOCASE),
+                "CHARACTER",
+                id="{} (CHARACTER)".format(CollatingSequences.NOCASE),
+            ),
+            pytest.param(
+                CollatingSequences.RTRIM,
+                "COLLATE {}".format(CollatingSequences.RTRIM),
+                "CHARACTER",
+                id="{} (CHARACTER)".format(CollatingSequences.RTRIM),
+            ),
+            pytest.param(
+                CollatingSequences.BINARY,
+                "",
+                "NCHAR",
+                id="{} (NCHAR)".format(CollatingSequences.BINARY),
+            ),
+            pytest.param(
+                CollatingSequences.NOCASE,
+                "COLLATE {}".format(CollatingSequences.NOCASE),
+                "NCHAR",
+                id="{} (NCHAR)".format(CollatingSequences.NOCASE),
+            ),
+            pytest.param(
+                CollatingSequences.RTRIM,
+                "COLLATE {}".format(CollatingSequences.RTRIM),
+                "NCHAR",
+                id="{} (NCHAR)".format(CollatingSequences.RTRIM),
+            ),
+            pytest.param(
+                CollatingSequences.BINARY,
+                "",
+                "NVARCHAR",
+                id="{} (NVARCHAR)".format(CollatingSequences.BINARY),
+            ),
+            pytest.param(
+                CollatingSequences.NOCASE,
+                "COLLATE {}".format(CollatingSequences.NOCASE),
+                "NVARCHAR",
+                id="{} (NVARCHAR)".format(CollatingSequences.NOCASE),
+            ),
+            pytest.param(
+                CollatingSequences.RTRIM,
+                "COLLATE {}".format(CollatingSequences.RTRIM),
+                "NVARCHAR",
+                id="{} (NVARCHAR)".format(CollatingSequences.RTRIM),
+            ),
+            pytest.param(
+                CollatingSequences.BINARY,
+                "",
+                "TEXT",
+                id="{} (TEXT)".format(CollatingSequences.BINARY),
+            ),
+            pytest.param(
+                CollatingSequences.NOCASE,
+                "COLLATE {}".format(CollatingSequences.NOCASE),
+                "TEXT",
+                id="{} (TEXT)".format(CollatingSequences.NOCASE),
+            ),
+            pytest.param(
+                CollatingSequences.RTRIM,
+                "COLLATE {}".format(CollatingSequences.RTRIM),
+                "TEXT",
+                id="{} (TEXT)".format(CollatingSequences.RTRIM),
+            ),
+            pytest.param(
+                CollatingSequences.BINARY,
+                "",
+                "VARCHAR",
+                id="{} (VARCHAR)".format(CollatingSequences.BINARY),
+            ),
+            pytest.param(
+                CollatingSequences.NOCASE,
+                "COLLATE {}".format(CollatingSequences.NOCASE),
+                "VARCHAR",
+                id="{} (VARCHAR)".format(CollatingSequences.NOCASE),
+            ),
+            pytest.param(
+                CollatingSequences.RTRIM,
+                "COLLATE {}".format(CollatingSequences.RTRIM),
+                "VARCHAR",
+                id="{} (VARCHAR)".format(CollatingSequences.RTRIM),
+            ),
+        ],
+    )
+    def test_data_type_collation_sequence_is_applied_on_textual_data_types(
+        self,
+        collation,
+        resulting_column_collation,
+        column_type,
+    ):
+        assert (
+            MySQLtoSQLite._data_type_collation_sequence(collation, column_type)
+            == resulting_column_collation
+        )
+
+    def test_data_type_collation_sequence_is_not_applied_on_non_textual_data_types(
+        self,
+    ):
+        for column_type in (
+            "BIGINT",
+            "BINARY",
+            "BIT",
+            "BLOB",
+            "BOOLEAN",
+            "DATE",
+            "DATETIME",
+            "DATETIME",
+            "DECIMAL",
+            "DOUBLE",
+            "FLOAT",
+            "INTEGER",
+            "INTEGER",
+            "LONGBLOB",
+            "MEDIUMBLOB",
+            "MEDIUMINT",
+            "NUMERIC",
+            "REAL",
+            "SMALLINT",
+            "TIME",
+            "TINYBLOB",
+            "TINYINT",
+            "VARBINARY",
+            "YEAR",
+        ):
+            for collation in (
+                CollatingSequences.BINARY,
+                CollatingSequences.NOCASE,
+                CollatingSequences.RTRIM,
+            ):
+                assert (
+                    MySQLtoSQLite._data_type_collation_sequence(collation, column_type)
+                    == ""
+                )
 
 
 @pytest.mark.exceptions

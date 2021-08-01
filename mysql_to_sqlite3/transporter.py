@@ -17,6 +17,7 @@ from mysql.connector import errorcode
 from tqdm import tqdm, trange
 
 from mysql_to_sqlite3.sqlite_utils import (
+    CollatingSequences,
     adapt_decimal,
     adapt_timedelta,
     convert_decimal,
@@ -49,6 +50,15 @@ class MySQLtoSQLite:
             if kwargs.get("mysql_tables") is not None
             else tuple()
         )
+
+        if kwargs.get("collation") is not None and kwargs.get("collation").upper() in {
+            CollatingSequences.BINARY,
+            CollatingSequences.NOCASE,
+            CollatingSequences.RTRIM,
+        }:
+            self._collation = kwargs.get("collation").upper()
+        else:
+            self._collation = CollatingSequences.BINARY
 
         self._without_foreign_keys = (
             True
@@ -242,6 +252,23 @@ class MySQLtoSQLite:
                 return "DEFAULT {}".format(column_default.upper())
         return "DEFAULT '{}'".format(column_default)
 
+    @classmethod
+    def _data_type_collation_sequence(
+        cls, collation=CollatingSequences.BINARY, column_type=None
+    ):
+        if column_type and collation != CollatingSequences.BINARY:
+            if column_type.startswith(
+                (
+                    "CHARACTER",
+                    "NCHAR",
+                    "NVARCHAR",
+                    "TEXT",
+                    "VARCHAR",
+                )
+            ):
+                return "COLLATE {collation}".format(collation=collation)
+        return ""
+
     def _build_create_table_sql(self, table_name):
         sql = 'CREATE TABLE IF NOT EXISTS "{}" ('.format(table_name)
         primary = ""
@@ -251,12 +278,15 @@ class MySQLtoSQLite:
 
         for row in self._mysql_cur_dict.fetchall():
             column_type = self._translate_type_from_mysql_to_sqlite(row["Type"])
-            sql += '\n\t"{name}" {type} {notnull} {default},'.format(
+            sql += '\n\t"{name}" {type} {notnull} {default} {collation},'.format(
                 name=row["Field"],
                 type=column_type,
                 notnull="NULL" if row["Null"] == "YES" else "NOT NULL",
                 default=self._translate_default_from_mysql_to_sqlite(
                     row["Default"], column_type
+                ),
+                collation=self._data_type_collation_sequence(
+                    self._collation, column_type
                 ),
             )
 

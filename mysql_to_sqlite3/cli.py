@@ -7,6 +7,7 @@ from tabulate import tabulate
 from . import MySQLtoSQLite
 from .click_utils import OptionEatAll, prompt_password
 from .debug_info import info
+from .sqlite_utils import CollatingSequences
 
 
 @click.command()
@@ -37,6 +38,21 @@ from .debug_info import info
     cls=OptionEatAll,
     help="Transfer only these specific tables (space separated table names). "
     "Implies --without-foreign-keys which inhibits the transfer of foreign keys.",
+)
+@click.option(
+    "-C",
+    "--collation",
+    type=click.Choice(
+        [
+            CollatingSequences.BINARY,
+            CollatingSequences.NOCASE,
+            CollatingSequences.RTRIM,
+        ],
+        case_sensitive=False,
+    ),
+    default=CollatingSequences.BINARY,
+    show_default=True,
+    help="Create datatypes of TEXT affinity using a specified collation sequence.",
 )
 @click.option(
     "-X", "--without-foreign-keys", is_flag=True, help="Do not transfer foreign keys."
@@ -83,6 +99,7 @@ def cli(
     mysql_password,
     mysql_database,
     mysql_tables,
+    collation,
     without_foreign_keys,
     mysql_host,
     mysql_port,
@@ -101,6 +118,7 @@ def cli(
             mysql_password=mysql_password or prompt_mysql_password,
             mysql_database=mysql_database,
             mysql_tables=mysql_tables,
+            collation=collation,
             without_foreign_keys=without_foreign_keys
             or (mysql_tables is not None and len(mysql_tables) > 0),
             mysql_host=mysql_host,
