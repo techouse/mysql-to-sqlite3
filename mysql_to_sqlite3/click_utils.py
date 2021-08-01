@@ -62,3 +62,10 @@ def prompt_password(ctx, param, use_password):  # pylint: disable=W0613
             mysql_password = click.prompt("MySQL password", hide_input=True)
 
         return mysql_password
+
+
+def validate_positive_integer(ctx, param, value):  # pylint: disable=W0613
+    """Allow only positive integers and 0."""
+    if value < 0:
+        raise click.BadParameter("Should be a positive integer or 0.")
+    return value

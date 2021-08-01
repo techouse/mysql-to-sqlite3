@@ -43,6 +43,9 @@ Options:
                                   foreign-keys which inhibits the transfer of
                                   foreign keys.
 
+  -L, --limit-rows INTEGER        Transfer only a limited number of rows from
+                                  each table.
+
   -C, --collation [BINARY|NOCASE|RTRIM]
                                   Create datatypes of TEXT affinity using a
                                   specified collation sequence.  [default:

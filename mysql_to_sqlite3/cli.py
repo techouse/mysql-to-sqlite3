@@ -5,7 +5,7 @@ import click
 from tabulate import tabulate
 
 from . import MySQLtoSQLite
-from .click_utils import OptionEatAll, prompt_password
+from .click_utils import OptionEatAll, prompt_password, validate_positive_integer
 from .debug_info import info
 from .sqlite_utils import CollatingSequences
 
@@ -38,6 +38,14 @@ from .sqlite_utils import CollatingSequences
     cls=OptionEatAll,
     help="Transfer only these specific tables (space separated table names). "
     "Implies --without-foreign-keys which inhibits the transfer of foreign keys.",
+)
+@click.option(
+    "-L",
+    "--limit-rows",
+    type=int,
+    callback=validate_positive_integer,
+    default=0,
+    help="Transfer only a limited number of rows from each table.",
 )
 @click.option(
     "-C",
@@ -99,6 +107,7 @@ def cli(
     mysql_password,
     mysql_database,
     mysql_tables,
+    limit_rows,
     collation,
     without_foreign_keys,
     mysql_host,
@@ -118,6 +127,7 @@ def cli(
             mysql_password=mysql_password or prompt_mysql_password,
             mysql_database=mysql_database,
             mysql_tables=mysql_tables,
+            limit_rows=limit_rows,
             collation=collation,
             without_foreign_keys=without_foreign_keys
             or (mysql_tables is not None and len(mysql_tables) > 0),
