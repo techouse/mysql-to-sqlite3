@@ -51,6 +51,10 @@ Options:
                                   specified collation sequence.  [default:
                                   BINARY]
 
+  -K, --prefix-indices            Prefix indices with their corresponding
+                                  tables. This ensures that their names remain
+                                  unique across the SQLite database.
+
   -X, --without-foreign-keys      Do not transfer foreign keys.
   -h, --mysql-host TEXT           MySQL host. Defaults to localhost.
   -P, --mysql-port INTEGER        MySQL port. Defaults to 3306.

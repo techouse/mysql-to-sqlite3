@@ -226,26 +226,136 @@ class TestMySQLtoSQLite:
 
     @pytest.mark.transfer
     @pytest.mark.parametrize(
-        "chunk, vacuum, buffered",
+        "chunk, vacuum, buffered, prefix_indices",
         [
-            # 000
+            # 0000
             pytest.param(
-                None, False, False, id="no chunk, no vacuum, no buffered cursor"
+                None,
+                False,
+                False,
+                False,
+                id="no chunk, no vacuum, no buffered cursor, no prefix indices",
             ),
-            # 111
-            pytest.param(10, True, True, id="chunk, vacuum, buffered cursor"),
-            # 110
-            pytest.param(10, True, False, id="chunk, vacuum, no buffered cursor"),
-            # 011
-            pytest.param(None, True, True, id="no chunk, vacuum, buffered cursor"),
-            # 010
-            pytest.param(None, True, False, id="no chunk, vacuum, no buffered cursor"),
-            # 100
-            pytest.param(10, False, False, id="chunk, no vacuum, no buffered cursor"),
-            # 001
-            pytest.param(None, False, True, id="no chunk, no vacuum, buffered cursor"),
-            # 101
-            pytest.param(10, False, True, id="chunk, no vacuum, buffered cursor"),
+            # 0001
+            pytest.param(
+                None,
+                False,
+                False,
+                True,
+                id="no chunk, no vacuum, no buffered cursor, prefix indices",
+            ),
+            # 1110
+            pytest.param(
+                10,
+                True,
+                True,
+                False,
+                id="chunk, vacuum, buffered cursor, no prefix indices",
+            ),
+            # 1111
+            pytest.param(
+                10,
+                True,
+                True,
+                True,
+                id="chunk, vacuum, buffered cursor, prefix indices",
+            ),
+            # 1100
+            pytest.param(
+                10,
+                True,
+                False,
+                False,
+                id="chunk, vacuum, no buffered cursor, no prefix indices",
+            ),
+            # 1101
+            pytest.param(
+                10,
+                True,
+                False,
+                True,
+                id="chunk, vacuum, no buffered cursor, prefix indices",
+            ),
+            # 0110
+            pytest.param(
+                None,
+                True,
+                True,
+                False,
+                id="no chunk, vacuum, buffered cursor, no prefix indices",
+            ),
+            # 0111
+            pytest.param(
+                None,
+                True,
+                True,
+                True,
+                id="no chunk, vacuum, buffered cursor, prefix indices",
+            ),
+            # 0100
+            pytest.param(
+                None,
+                True,
+                False,
+                False,
+                id="no chunk, vacuum, no buffered cursor, no prefix indices",
+            ),
+            # 0101
+            pytest.param(
+                None,
+                True,
+                False,
+                True,
+                id="no chunk, vacuum, no buffered cursor, prefix indices",
+            ),
+            # 1000
+            pytest.param(
+                10,
+                False,
+                False,
+                False,
+                id="chunk, no vacuum, no buffered cursor, no prefix indices",
+            ),
+            # 1001
+            pytest.param(
+                10,
+                False,
+                False,
+                True,
+                id="chunk, no vacuum, no buffered cursor, prefix indices",
+            ),
+            # 0010
+            pytest.param(
+                None,
+                False,
+                True,
+                False,
+                id="no chunk, no vacuum, buffered cursor, no prefix indices",
+            ),
+            # 0011
+            pytest.param(
+                None,
+                False,
+                True,
+                True,
+                id="no chunk, no vacuum, buffered cursor, prefix indices",
+            ),
+            # 1010
+            pytest.param(
+                10,
+                False,
+                True,
+                False,
+                id="chunk, no vacuum, buffered cursor, no prefix indices",
+            ),
+            # 1011
+            pytest.param(
+                10,
+                False,
+                True,
+                True,
+                id="chunk, no vacuum, buffered cursor, prefix indices",
+            ),
         ],
     )
     def test_transfer_transfers_all_tables_from_mysql_to_sqlite(
@@ -258,6 +368,7 @@ class TestMySQLtoSQLite:
         chunk,
         vacuum,
         buffered,
+        prefix_indices,
     ):
         proc = MySQLtoSQLite(
             sqlite_file=sqlite_database,
@@ -269,6 +380,7 @@ class TestMySQLtoSQLite:
             chunk=chunk,
             vacuum=vacuum,
             buffered=buffered,
+            prefix_indices=prefix_indices,
         )
         caplog.set_level(logging.DEBUG)
         proc.transfer()
@@ -337,7 +449,7 @@ class TestMySQLtoSQLite:
             for index in mysql_inspect.get_indexes(table_name):
                 mysql_index = {}
                 for key in index_keys:
-                    if key == "name":
+                    if key == "name" and prefix_indices:
                         mysql_index[key] = "{table}_{name}".format(
                             table=table_name, name=index[key]
                         )
@@ -429,26 +541,136 @@ class TestMySQLtoSQLite:
 
     @pytest.mark.transfer
     @pytest.mark.parametrize(
-        "chunk, vacuum, buffered",
+        "chunk, vacuum, buffered, prefix_indices",
         [
-            # 000
+            # 0000
             pytest.param(
-                None, False, False, id="no chunk, no vacuum, no buffered cursor"
+                None,
+                False,
+                False,
+                False,
+                id="no chunk, no vacuum, no buffered cursor, no prefix indices",
             ),
-            # 111
-            pytest.param(10, True, True, id="chunk, vacuum, buffered cursor"),
-            # 110
-            pytest.param(10, True, False, id="chunk, vacuum, no buffered cursor"),
-            # 011
-            pytest.param(None, True, True, id="no chunk, vacuum, buffered cursor"),
-            # 010
-            pytest.param(None, True, False, id="no chunk, vacuum, no buffered cursor"),
-            # 100
-            pytest.param(10, False, False, id="chunk, no vacuum, no buffered cursor"),
-            # 001
-            pytest.param(None, False, True, id="no chunk, no vacuum, buffered cursor"),
-            # 101
-            pytest.param(10, False, True, id="chunk, no vacuum, buffered cursor"),
+            # 0001
+            pytest.param(
+                None,
+                False,
+                False,
+                True,
+                id="no chunk, no vacuum, no buffered cursor, prefix indices",
+            ),
+            # 1110
+            pytest.param(
+                10,
+                True,
+                True,
+                False,
+                id="chunk, vacuum, buffered cursor, no prefix indices",
+            ),
+            # 1111
+            pytest.param(
+                10,
+                True,
+                True,
+                True,
+                id="chunk, vacuum, buffered cursor, prefix indices",
+            ),
+            # 1100
+            pytest.param(
+                10,
+                True,
+                False,
+                False,
+                id="chunk, vacuum, no buffered cursor, no prefix indices",
+            ),
+            # 1101
+            pytest.param(
+                10,
+                True,
+                False,
+                True,
+                id="chunk, vacuum, no buffered cursor, prefix indices",
+            ),
+            # 0110
+            pytest.param(
+                None,
+                True,
+                True,
+                False,
+                id="no chunk, vacuum, buffered cursor, no prefix indices",
+            ),
+            # 0111
+            pytest.param(
+                None,
+                True,
+                True,
+                True,
+                id="no chunk, vacuum, buffered cursor, prefix indices",
+            ),
+            # 0100
+            pytest.param(
+                None,
+                True,
+                False,
+                False,
+                id="no chunk, vacuum, no buffered cursor, no prefix indices",
+            ),
+            # 0101
+            pytest.param(
+                None,
+                True,
+                False,
+                True,
+                id="no chunk, vacuum, no buffered cursor, prefix indices",
+            ),
+            # 1000
+            pytest.param(
+                10,
+                False,
+                False,
+                False,
+                id="chunk, no vacuum, no buffered cursor, no prefix indices",
+            ),
+            # 1001
+            pytest.param(
+                10,
+                False,
+                False,
+                True,
+                id="chunk, no vacuum, no buffered cursor, prefix indices",
+            ),
+            # 0010
+            pytest.param(
+                None,
+                False,
+                True,
+                False,
+                id="no chunk, no vacuum, buffered cursor, no prefix indices",
+            ),
+            # 0011
+            pytest.param(
+                None,
+                False,
+                True,
+                True,
+                id="no chunk, no vacuum, buffered cursor, prefix indices",
+            ),
+            # 1010
+            pytest.param(
+                10,
+                False,
+                True,
+                False,
+                id="chunk, no vacuum, buffered cursor, no prefix indices",
+            ),
+            # 1011
+            pytest.param(
+                10,
+                False,
+                True,
+                True,
+                id="chunk, no vacuum, buffered cursor, prefix indices",
+            ),
         ],
     )
     def test_transfer_specific_tables_transfers_only_specified_tables_from_mysql_to_sqlite(
@@ -461,6 +683,7 @@ class TestMySQLtoSQLite:
         chunk,
         vacuum,
         buffered,
+        prefix_indices,
     ):
         mysql_engine = create_engine(
             "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
@@ -491,6 +714,7 @@ class TestMySQLtoSQLite:
             mysql_tables=random_mysql_tables,
             mysql_host=mysql_credentials.host,
             mysql_port=mysql_credentials.port,
+            prefix_indices=prefix_indices,
         )
         caplog.set_level(logging.DEBUG)
         proc.transfer()
@@ -531,7 +755,7 @@ class TestMySQLtoSQLite:
             for index in mysql_inspect.get_indexes(table_name):
                 mysql_index = {}
                 for key in index_keys:
-                    if key == "name":
+                    if key == "name" and prefix_indices:
                         mysql_index[key] = "{table}_{name}".format(
                             table=table_name, name=index[key]
                         )
@@ -579,26 +803,136 @@ class TestMySQLtoSQLite:
 
     @pytest.mark.transfer
     @pytest.mark.parametrize(
-        "chunk, vacuum, buffered",
+        "chunk, vacuum, buffered, prefix_indices",
         [
-            # 000
+            # 0000
             pytest.param(
-                None, False, False, id="no chunk, no vacuum, no buffered cursor"
+                None,
+                False,
+                False,
+                False,
+                id="no chunk, no vacuum, no buffered cursor, no prefix indices",
             ),
-            # 111
-            pytest.param(10, True, True, id="chunk, vacuum, buffered cursor"),
-            # 110
-            pytest.param(10, True, False, id="chunk, vacuum, no buffered cursor"),
-            # 011
-            pytest.param(None, True, True, id="no chunk, vacuum, buffered cursor"),
-            # 010
-            pytest.param(None, True, False, id="no chunk, vacuum, no buffered cursor"),
-            # 100
-            pytest.param(10, False, False, id="chunk, no vacuum, no buffered cursor"),
-            # 001
-            pytest.param(None, False, True, id="no chunk, no vacuum, buffered cursor"),
-            # 101
-            pytest.param(10, False, True, id="chunk, no vacuum, buffered cursor"),
+            # 0001
+            pytest.param(
+                None,
+                False,
+                False,
+                True,
+                id="no chunk, no vacuum, no buffered cursor, prefix indices",
+            ),
+            # 1110
+            pytest.param(
+                10,
+                True,
+                True,
+                False,
+                id="chunk, vacuum, buffered cursor, no prefix indices",
+            ),
+            # 1111
+            pytest.param(
+                10,
+                True,
+                True,
+                True,
+                id="chunk, vacuum, buffered cursor, prefix indices",
+            ),
+            # 1100
+            pytest.param(
+                10,
+                True,
+                False,
+                False,
+                id="chunk, vacuum, no buffered cursor, no prefix indices",
+            ),
+            # 1101
+            pytest.param(
+                10,
+                True,
+                False,
+                True,
+                id="chunk, vacuum, no buffered cursor, prefix indices",
+            ),
+            # 0110
+            pytest.param(
+                None,
+                True,
+                True,
+                False,
+                id="no chunk, vacuum, buffered cursor, no prefix indices",
+            ),
+            # 0111
+            pytest.param(
+                None,
+                True,
+                True,
+                True,
+                id="no chunk, vacuum, buffered cursor, prefix indices",
+            ),
+            # 0100
+            pytest.param(
+                None,
+                True,
+                False,
+                False,
+                id="no chunk, vacuum, no buffered cursor, no prefix indices",
+            ),
+            # 0101
+            pytest.param(
+                None,
+                True,
+                False,
+                True,
+                id="no chunk, vacuum, no buffered cursor, prefix indices",
+            ),
+            # 1000
+            pytest.param(
+                10,
+                False,
+                False,
+                False,
+                id="chunk, no vacuum, no buffered cursor, no prefix indices",
+            ),
+            # 1001
+            pytest.param(
+                10,
+                False,
+                False,
+                True,
+                id="chunk, no vacuum, no buffered cursor, prefix indices",
+            ),
+            # 0010
+            pytest.param(
+                None,
+                False,
+                True,
+                False,
+                id="no chunk, no vacuum, buffered cursor, no prefix indices",
+            ),
+            # 0011
+            pytest.param(
+                None,
+                False,
+                True,
+                True,
+                id="no chunk, no vacuum, buffered cursor, prefix indices",
+            ),
+            # 1010
+            pytest.param(
+                10,
+                False,
+                True,
+                False,
+                id="chunk, no vacuum, buffered cursor, no prefix indices",
+            ),
+            # 1011
+            pytest.param(
+                10,
+                False,
+                True,
+                True,
+                id="chunk, no vacuum, buffered cursor, prefix indices",
+            ),
         ],
     )
     def test_transfer_limited_rows_from_mysql_to_sqlite(
@@ -611,6 +945,7 @@ class TestMySQLtoSQLite:
         chunk,
         vacuum,
         buffered,
+        prefix_indices,
     ):
         if six.PY2:
             limit_rows = choice(xrange(1, 10))
@@ -625,6 +960,7 @@ class TestMySQLtoSQLite:
             limit_rows=limit_rows,
             mysql_host=mysql_credentials.host,
             mysql_port=mysql_credentials.port,
+            prefix_indices=prefix_indices,
         )
         caplog.set_level(logging.DEBUG)
         proc.transfer()
@@ -693,7 +1029,7 @@ class TestMySQLtoSQLite:
             for index in mysql_inspect.get_indexes(table_name):
                 mysql_index = {}
                 for key in index_keys:
-                    if key == "name":
+                    if key == "name" and prefix_indices:
                         mysql_index[key] = "{table}_{name}".format(
                             table=table_name, name=index[key]
                         )

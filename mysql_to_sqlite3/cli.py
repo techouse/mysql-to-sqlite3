@@ -63,6 +63,13 @@ from .sqlite_utils import CollatingSequences
     help="Create datatypes of TEXT affinity using a specified collation sequence.",
 )
 @click.option(
+    "-K",
+    "--prefix-indices",
+    is_flag=True,
+    help="Prefix indices with their corresponding tables. "
+    "This ensures that their names remain unique across the SQLite database.",
+)
+@click.option(
     "-X", "--without-foreign-keys", is_flag=True, help="Do not transfer foreign keys."
 )
 @click.option(
@@ -109,6 +116,7 @@ def cli(
     mysql_tables,
     limit_rows,
     collation,
+    prefix_indices,
     without_foreign_keys,
     mysql_host,
     mysql_port,
@@ -129,6 +137,7 @@ def cli(
             mysql_tables=mysql_tables,
             limit_rows=limit_rows,
             collation=collation,
+            prefix_indices=prefix_indices,
             without_foreign_keys=without_foreign_keys
             or (mysql_tables is not None and len(mysql_tables) > 0),
             mysql_host=mysql_host,

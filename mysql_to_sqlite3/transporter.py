@@ -62,6 +62,8 @@ class MySQLtoSQLite:
         else:
             self._collation = CollatingSequences.BINARY
 
+        self._prefix_indices = kwargs.get("prefix_indices") or False
+
         self._without_foreign_keys = (
             True
             if len(self._mysql_tables) > 0
@@ -315,9 +317,9 @@ class MySQLtoSQLite:
             else:
                 indices += """CREATE {unique} INDEX IF NOT EXISTS "{name}" ON "{table}" ({columns});""".format(
                     unique="UNIQUE" if int(index["unique"]) == 1 else "",
-                    # combine the index name with the table name in order to
-                    # make the index names unique across the database
-                    name="{table}_{name}".format(table=table_name, name=index["name"]),
+                    name="{table}_{name}".format(table=table_name, name=index["name"])
+                    if self._prefix_indices
+                    else index["name"],
                     table=table_name,
                     columns=", ".join(
                         '"{}"'.format(column) for column in index["columns"].split(",")
