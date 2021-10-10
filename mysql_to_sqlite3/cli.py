@@ -90,6 +90,7 @@ from .sqlite_utils import CollatingSequences
     help="Chunk reading/writing SQL records",
 )
 @click.option("-l", "--log-file", type=click.Path(), help="Log file")
+@click.option("--json-as-text", is_flag=True, help="Transfer JSON columns as TEXT.")
 @click.option(
     "-V",
     "--vacuum",
@@ -124,6 +125,7 @@ def cli(
     skip_ssl,
     chunk,
     log_file,
+    json_as_text,
     vacuum,
     use_buffered_cursors,
     quiet,
@@ -145,6 +147,7 @@ def cli(
             mysql_port=mysql_port,
             mysql_ssl_disabled=skip_ssl,
             chunk=chunk,
+            json_as_text=json_as_text,
             vacuum=vacuum,
             buffered=use_buffered_cursors,
             log_file=log_file,

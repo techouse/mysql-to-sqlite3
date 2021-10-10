@@ -16,7 +16,7 @@ class TestMySQLtoSQLiteClassmethods:
     def test_translate_type_from_mysql_to_sqlite_invalid_column_type(self, mocker):
         with pytest.raises(ValueError) as excinfo:
             mocker.patch.object(MySQLtoSQLite, "_valid_column_type", return_value=False)
-            MySQLtoSQLite._translate_type_from_mysql_to_sqlite("text")
+            MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type="text")
         assert "Invalid column_type!" in str(excinfo.value)
 
     def test_translate_type_from_mysql_to_sqlite_all_valid_columns(self):
@@ -99,7 +99,6 @@ class TestMySQLtoSQLiteClassmethods:
                 )
             elif column_type in {
                 "ENUM",
-                "JSON",
                 "LONGTEXT",
                 "MEDIUMTEXT",
                 "SET",
@@ -108,6 +107,17 @@ class TestMySQLtoSQLiteClassmethods:
                 assert (
                     MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
                     == "TEXT"
+                )
+            elif column_type == "JSON":
+                assert (
+                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
+                    == "TEXT"
+                )
+                assert (
+                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(
+                        column_type, sqlite_json1_extension_enabled=True
+                    )
+                    == "JSON"
                 )
             elif column_type.endswith(" UNSIGNED"):
                 if column_type.startswith("INT "):

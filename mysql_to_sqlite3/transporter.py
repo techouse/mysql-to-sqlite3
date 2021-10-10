@@ -109,6 +109,11 @@ class MySQLtoSQLite:
 
         self._sqlite_cur = self._sqlite.cursor()
 
+        self._json_as_text = kwargs.get("json_as_text") or False
+        self._sqlite_json1_extension_enabled = (
+            not self._json_as_text and self._check_sqlite_json1_extension_enabled()
+        )
+
         try:
             self._mysql = mysql.connector.connect(
                 user=self._mysql_user,
@@ -170,7 +175,9 @@ class MySQLtoSQLite:
         return ""
 
     @classmethod
-    def _translate_type_from_mysql_to_sqlite(cls, column_type):
+    def _translate_type_from_mysql_to_sqlite(
+        cls, column_type, sqlite_json1_extension_enabled=False
+    ):
         """Handle MySQL 8."""
         try:
             column_type = column_type.decode()
@@ -223,6 +230,8 @@ class MySQLtoSQLite:
             return "INTEGER"
         if data_type in "TIMESTAMP":
             return "DATETIME"
+        if data_type == "JSON" and sqlite_json1_extension_enabled:
+            return "JSON"
         return "TEXT"
 
     @classmethod
@@ -273,6 +282,13 @@ class MySQLtoSQLite:
                 return "COLLATE {collation}".format(collation=collation)
         return ""
 
+    def _check_sqlite_json1_extension_enabled(self):
+        try:
+            self._sqlite_cur.execute("PRAGMA compile_options")
+            return "ENABLE_JSON1" in set(row[0] for row in self._sqlite_cur.fetchall())
+        except sqlite3.Error:
+            return False
+
     def _build_create_table_sql(self, table_name):
         sql = 'CREATE TABLE IF NOT EXISTS "{}" ('.format(table_name)
         primary = ""
@@ -281,7 +297,10 @@ class MySQLtoSQLite:
         self._mysql_cur_dict.execute("SHOW COLUMNS FROM `{}`".format(table_name))
 
         for row in self._mysql_cur_dict.fetchall():
-            column_type = self._translate_type_from_mysql_to_sqlite(row["Type"])
+            column_type = self._translate_type_from_mysql_to_sqlite(
+                column_type=row["Type"],
+                sqlite_json1_extension_enabled=self._sqlite_json1_extension_enabled,
+            )
             sql += '\n\t"{name}" {type} {notnull} {default} {collation},'.format(
                 name=row["Field"],
                 type=column_type,
