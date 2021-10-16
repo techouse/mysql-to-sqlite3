@@ -74,6 +74,12 @@ from .sqlite_utils import CollatingSequences
     "-X", "--without-foreign-keys", is_flag=True, help="Do not transfer foreign keys."
 )
 @click.option(
+    "-W",
+    "--without-data",
+    is_flag=True,
+    help="Do not transfer table data, DDL only.",
+)
+@click.option(
     "-h", "--mysql-host", default="localhost", help="MySQL host. Defaults to localhost."
 )
 @click.option(
@@ -120,6 +126,7 @@ def cli(
     collation,
     prefix_indices,
     without_foreign_keys,
+    without_data,
     mysql_host,
     mysql_port,
     skip_ssl,
@@ -143,6 +150,7 @@ def cli(
             prefix_indices=prefix_indices,
             without_foreign_keys=without_foreign_keys
             or (mysql_tables is not None and len(mysql_tables) > 0),
+            without_data=without_data,
             mysql_host=mysql_host,
             mysql_port=mysql_port,
             mysql_ssl_disabled=skip_ssl,

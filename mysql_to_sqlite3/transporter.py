@@ -70,6 +70,8 @@ class MySQLtoSQLite:
             else (kwargs.get("without_foreign_keys") or False)
         )
 
+        self._without_data = kwargs.get("without_data") or False
+
         self._mysql_user = str(kwargs.get("mysql_user"))
 
         self._mysql_password = (
@@ -520,58 +522,68 @@ class MySQLtoSQLite:
             self._sqlite_cur.execute("PRAGMA foreign_keys=OFF")
 
             for table_name in tables:
+                self._logger.info(
+                    "%sTransferring table %s",
+                    "[WITHOUT DATA] " if self._without_data else "",
+                    table_name,
+                )
+
                 # reset the chunk
                 self._current_chunk_number = 0
 
                 # create the table
                 self._create_table(table_name)
 
-                # get the size of the data
-                if self._limit_rows > 0:
-                    # limit to the requested number of rows
-                    self._mysql_cur_dict.execute(
-                        """
-                            SELECT COUNT(*) AS `total_records`
-                            FROM (SELECT * FROM `{table_name}` LIMIT {limit}) AS `table`
-                        """.format(
-                            table_name=table_name, limit=self._limit_rows
+                if not self._without_data:
+                    # get the size of the data
+                    if self._limit_rows > 0:
+                        # limit to the requested number of rows
+                        self._mysql_cur_dict.execute(
+                            """
+                                SELECT COUNT(*) AS `total_records`
+                                FROM (SELECT * FROM `{table_name}` LIMIT {limit}) AS `table`
+                            """.format(
+                                table_name=table_name, limit=self._limit_rows
+                            )
                         )
-                    )
-                else:
-                    # get all rows
-                    self._mysql_cur_dict.execute(
-                        "SELECT COUNT(*) AS `total_records` FROM `{table_name}`".format(
-                            table_name=table_name
+                    else:
+                        # get all rows
+                        self._mysql_cur_dict.execute(
+                            "SELECT COUNT(*) AS `total_records` FROM `{table_name}`".format(
+                                table_name=table_name
+                            )
                         )
+                    total_records = int(
+                        self._mysql_cur_dict.fetchone()["total_records"]
                     )
-                total_records = int(self._mysql_cur_dict.fetchone()["total_records"])
 
-                # only continue if there is anything to transfer
-                if total_records > 0:
-                    # populate it
-                    self._logger.info("Transferring table %s", table_name)
-                    self._mysql_cur.execute(
-                        "SELECT * FROM `{table_name}` {limit}".format(
-                            table_name=table_name,
-                            limit="LIMIT {}".format(self._limit_rows)
-                            if self._limit_rows > 0
-                            else "",
+                    # only continue if there is anything to transfer
+                    if total_records > 0:
+                        # populate it
+                        self._mysql_cur.execute(
+                            "SELECT * FROM `{table_name}` {limit}".format(
+                                table_name=table_name,
+                                limit="LIMIT {}".format(self._limit_rows)
+                                if self._limit_rows > 0
+                                else "",
+                            )
                         )
-                    )
-                    columns = [column[0] for column in self._mysql_cur.description]
-                    # build the SQL string
-                    sql = """
-                        INSERT OR IGNORE
-                        INTO "{table}" ({fields})
-                        VALUES ({placeholders})
-                    """.format(
-                        table=table_name,
-                        fields=('"{}", ' * len(columns)).rstrip(" ,").format(*columns),
-                        placeholders=("?, " * len(columns)).rstrip(" ,"),
-                    )
-                    self._transfer_table_data(
-                        table_name=table_name, sql=sql, total_records=total_records
-                    )
+                        columns = [column[0] for column in self._mysql_cur.description]
+                        # build the SQL string
+                        sql = """
+                            INSERT OR IGNORE
+                            INTO "{table}" ({fields})
+                            VALUES ({placeholders})
+                        """.format(
+                            table=table_name,
+                            fields=('"{}", ' * len(columns))
+                            .rstrip(" ,")
+                            .format(*columns),
+                            placeholders=("?, " * len(columns)).rstrip(" ,"),
+                        )
+                        self._transfer_table_data(
+                            table_name=table_name, sql=sql, total_records=total_records
+                        )
         except Exception:  # pylint: disable=W0706
             raise
         finally:
