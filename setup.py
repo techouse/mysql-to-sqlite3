@@ -14,7 +14,7 @@ requires = [
     "mysql-connector-python>=8.0.18 ; python_version>='3.6'",
     "pytimeparse>=1.1.8",
     "python-slugify>=3.0.3,<5.0.0 ; python_version<'3.6'",
-    "python-slugify>=3.0.3 ; python_version>='3.6'",
+    "python-slugify>=3.0.3,<6.0.0 ; python_version>='3.6'",
     "simplejson>=3.16.0",
     "six>=1.12.0",
     "tqdm>=4.35.0",
