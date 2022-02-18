@@ -546,6 +546,11 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -U codecov tox-gh-actions
           pip install -r requirements_dev.txt
+          
+      - name: Fix MySQL GA
+        run: |
+          sudo apt-get update
+          sudo apt-get remove mysql* && sudo apt-get install -y mysql-server libmysqlclient-dev
 
       - name: Set up MySQL
         env:
