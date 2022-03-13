@@ -74,6 +74,7 @@ Options:
                                   computed with each other.
 
   -q, --quiet                     Quiet. Display only errors.
+  --debug                         Debug mode. Will throw exceptions.
   --version                       Show the version and exit.
   --help                          Show this message and exit.
 ```
