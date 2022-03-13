@@ -162,9 +162,9 @@ class TestMySQLtoSQLite:
         self, cli_runner, sqlite_database, mysql_database, mysql_credentials, faker
     ):
         if six.PY2:
-            port = choice(xrange(2, 2 ** 16 - 1))
+            port = choice(xrange(2, 2**16 - 1))
         else:
-            port = choice(range(2, 2 ** 16 - 1))
+            port = choice(range(2, 2**16 - 1))
         if port == mysql_credentials.port:
             port -= 1
         result = cli_runner.invoke(

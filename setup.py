@@ -20,6 +20,7 @@ requires = [
     "tqdm>=4.35.0",
     "tabulate<0.8.6 ; python_version<'3.5'",
     "tabulate ; python_version>='3.5'",
+    "backports-datetime-fromisoformat>=1.0.0 ; python_version>='3.4' and python_version<='3.6'",
 ]
 
 about = {}

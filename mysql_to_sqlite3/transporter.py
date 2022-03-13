@@ -20,6 +20,7 @@ from mysql_to_sqlite3.sqlite_utils import (
     CollatingSequences,
     adapt_decimal,
     adapt_timedelta,
+    convert_date,
     convert_decimal,
     convert_timedelta,
     encode_data_for_sqlite,
@@ -102,6 +103,7 @@ class MySQLtoSQLite:
         sqlite3.register_adapter(Decimal, adapt_decimal)
         sqlite3.register_converter("DECIMAL", convert_decimal)
         sqlite3.register_adapter(timedelta, adapt_timedelta)
+        sqlite3.register_converter("DATE", convert_date)
         sqlite3.register_converter("TIME", convert_timedelta)
 
         self._sqlite = sqlite3.connect(

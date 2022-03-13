@@ -183,7 +183,7 @@ def mysql_credentials(pytestconfig):
     port = pytestconfig.getoption("mysql_port") or 3306
     if pytestconfig.getoption("use_docker"):
         while is_port_in_use(port, pytestconfig.getoption("mysql_host")):
-            if port >= 2 ** 16 - 1:
+            if port >= 2**16 - 1:
                 pytest.fail(
                     "No ports appear to be available on the host {}".format(
                         pytestconfig.getoption("mysql_host")
@@ -341,7 +341,6 @@ if six.PY2:
 
         if database_exists(db.engine.url):
             drop_database(db.engine.url)
-
 
 else:
 

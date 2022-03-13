@@ -3,10 +3,17 @@
 from __future__ import division
 
 import sqlite3
-from datetime import timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
+from sys import version_info
 
+import six
 from pytimeparse.timeparse import timeparse
+
+if version_info.major == 3 and 4 <= version_info.minor <= 6:
+    from backports.datetime_fromisoformat import MonkeyPatch  # pylint: disable=E0401
+
+    MonkeyPatch.patch_fromisoformat()
 
 
 def adapt_decimal(value):
@@ -45,3 +52,20 @@ class CollatingSequences:
     BINARY = "BINARY"
     NOCASE = "NOCASE"
     RTRIM = "RTRIM"
+
+
+def convert_date(value):
+    """Handle SQLite date conversion."""
+    if six.PY3:
+        try:
+            return date.fromisoformat(value.decode())
+        except ValueError as err:
+            raise ValueError(  # pylint: disable=W0707
+                "DATE field contains {}".format(err)
+            )
+    try:
+        return datetime.strptime(value.decode(), "%Y-%m-%d").date()
+    except ValueError as err:
+        raise ValueError(  # pylint: disable=W0707
+            "DATE field contains Invalid isoformat string: {}".format(err)
+        )

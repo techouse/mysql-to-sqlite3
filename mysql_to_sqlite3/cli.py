@@ -112,6 +112,7 @@ from .sqlite_utils import CollatingSequences
     "result sets, need to be combined or computed with each other.",
 )
 @click.option("-q", "--quiet", is_flag=True, help="Quiet. Display only errors.")
+@click.option("--debug", is_flag=True, help="Debug mode. Will throw exceptions.")
 @click.version_option(
     message=tabulate(info(), headers=["software", "version"], tablefmt="github")
 )
@@ -136,6 +137,7 @@ def cli(
     vacuum,
     use_buffered_cursors,
     quiet,
+    debug,
 ):
     """Transfer MySQL to SQLite using the provided CLI options."""
     try:
@@ -163,8 +165,12 @@ def cli(
         )
         converter.transfer()
     except KeyboardInterrupt:
+        if debug:
+            raise
         print("\nProcess interrupted. Exiting...")
         sys.exit(1)
     except Exception as err:  # pylint: disable=W0703
+        if debug:
+            raise
         print(err)
         sys.exit(1)
