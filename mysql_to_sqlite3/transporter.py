@@ -83,6 +83,8 @@ class MySQLtoSQLite:
 
         self._mysql_port = int(kwargs.get("mysql_port") or 3306)
 
+        self._mysql_socket = kwargs.get("mysql_socket") or None
+
         self._mysql_ssl_disabled = kwargs.get("mysql_ssl_disabled") or False
 
         self._current_chunk_number = 0
@@ -124,6 +126,7 @@ class MySQLtoSQLite:
                 password=self._mysql_password,
                 host=self._mysql_host,
                 port=self._mysql_port,
+                unix_socket=self._mysql_socket,
                 ssl_disabled=self._mysql_ssl_disabled,
             )
             if not self._mysql.is_connected():

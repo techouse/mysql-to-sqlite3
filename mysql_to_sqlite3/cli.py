@@ -86,6 +86,9 @@ from .sqlite_utils import CollatingSequences
     "-P", "--mysql-port", type=int, default=3306, help="MySQL port. Defaults to 3306."
 )
 @click.option(
+    "-s", "--mysql-socket", default=None, help="MySQL UNIX socket to connect to."
+)
+@click.option(
     "-S", "--skip-ssl", is_flag=True, help="Disable MySQL connection encryption."
 )
 @click.option(
@@ -130,6 +133,7 @@ def cli(
     without_data,
     mysql_host,
     mysql_port,
+    mysql_socket,
     skip_ssl,
     chunk,
     log_file,
@@ -155,6 +159,7 @@ def cli(
             without_data=without_data,
             mysql_host=mysql_host,
             mysql_port=mysql_port,
+            mysql_socket=mysql_socket,
             mysql_ssl_disabled=skip_ssl,
             chunk=chunk,
             json_as_text=json_as_text,
