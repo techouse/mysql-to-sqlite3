@@ -505,7 +505,7 @@ class MySQLtoSQLite:
                 WHERE TABLE_SCHEMA = SCHEMA()
                 {exclude_format}
             """.format(
-                exclude_format = ('AND ({phrase})').format(phrase=' OR '.join([f'TABLE_NAME LIKE "{x}"' for x in self._exclude]))
+                exclude_format = ('AND ({phrase})').format(phrase=' OR '.join(['TABLE_NAME LIKE "{x}"'.format(x=x) for x in self._exclude]))
                 )
             )
             filtered = '\n            AND TABLE_NAME NOT IN ({f})'.format(
@@ -517,7 +517,7 @@ class MySQLtoSQLite:
         # transfer only specific tables
         inc = '\n            AND TABLE_NAME IN ({placeholders})'.format(
                     placeholders=', '.join(
-                        f'"{w}"' for w in self._mysql_tables
+                        '"{w}"'.format(w=w) for w in self._mysql_tables
                     )
                 ) if len(self._mysql_tables) > 0 else ''
 
