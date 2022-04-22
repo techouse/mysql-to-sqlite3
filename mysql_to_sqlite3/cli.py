@@ -41,6 +41,13 @@ from .sqlite_utils import CollatingSequences
     "Implies --without-foreign-keys which inhibits the transfer of foreign keys.",
 )
 @click.option(
+    "-e",
+    "--exclude",
+    type=list,
+    cls=OptionEatAll,
+    help="Exclude thes specific tables from Transfering (space separated table names).",
+)
+@click.option(
     "-L",
     "--limit-rows",
     type=int,
@@ -123,6 +130,7 @@ def cli(
     mysql_password,
     mysql_database,
     mysql_tables,
+    exclude,
     limit_rows,
     collation,
     prefix_indices,
@@ -147,6 +155,7 @@ def cli(
             mysql_password=mysql_password or prompt_mysql_password,
             mysql_database=mysql_database,
             mysql_tables=mysql_tables,
+            exclude=exclude,
             limit_rows=limit_rows,
             collation=collation,
             prefix_indices=prefix_indices,

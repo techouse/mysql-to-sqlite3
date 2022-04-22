@@ -52,6 +52,8 @@ class MySQLtoSQLite:
             else tuple()
         )
 
+        self._exclude = kwargs.get("exclude") or []
+
         self._limit_rows = int(kwargs.get("limit_rows") or 0)
 
         if kwargs.get("collation") is not None and kwargs.get("collation").upper() in {
@@ -493,31 +495,41 @@ class MySQLtoSQLite:
 
     def transfer(self):
         """The primary and only method with which we transfer all the data."""
-        if len(self._mysql_tables) > 0:
-            # transfer only specific tables
-
+        filtered = ''
+        if len(self._exclude) > 0:
+            # exclude specific tables
             self._mysql_cur_prepared.execute(
                 """
                 SELECT TABLE_NAME
                 FROM information_schema.TABLES
                 WHERE TABLE_SCHEMA = SCHEMA()
-                AND TABLE_NAME IN ({placeholders})
+                {exclude_format}
             """.format(
-                    placeholders=("%s, " * len(self._mysql_tables)).rstrip(" ,")
-                ),
-                self._mysql_tables,
+                exclude_format = ('AND ({phrase})').format(phrase=' OR '.join([f'TABLE_NAME LIKE "{x}"' for x in self._exclude]))
+                )
             )
-            tables = (row[0] for row in self._mysql_cur_prepared.fetchall())
-        else:
-            # transfer all tables
-            self._mysql_cur.execute(
-                """
-                SELECT TABLE_NAME
-                FROM information_schema.TABLES
-                WHERE TABLE_SCHEMA = SCHEMA()
+            filtered = '\n            AND TABLE_NAME NOT IN ({f})'.format(
+                            f=', '.join(
+                            [f'"{row[0]}"' for row in self._mysql_cur_prepared.fetchall()]
+                            )
+                        )
+
+        # transfer only specific tables
+        inc = '\n            AND TABLE_NAME IN ({placeholders})'.format(
+                    placeholders=', '.join(
+                        f'"{w}"' for w in self._mysql_tables
+                    )
+                ) if len(self._mysql_tables) > 0 else ''
+
+        # run resulting query
+        self._mysql_cur_prepared.execute(
+            f"""
+            SELECT TABLE_NAME
+            FROM information_schema.TABLES
+            WHERE TABLE_SCHEMA = SCHEMA(){inc}{filtered}
             """
-            )
-            tables = (row[0].decode() for row in self._mysql_cur.fetchall())
+        )
+        tables = (row[0] for row in self._mysql_cur_prepared.fetchall())
 
         try:
             # turn off foreign key checking in SQLite while transferring data
