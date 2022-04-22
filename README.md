@@ -41,7 +41,15 @@ Options:
   -t, --mysql-tables TUPLE        Transfer only these specific tables (space
                                   separated table names). Implies --without-
                                   foreign-keys which inhibits the transfer of
-                                  foreign keys.
+                                  foreign keys. Can not be used together with
+                                  --exclude-mysql-tables.
+
+  -e, --exclude-mysql-tables TUPLE
+                                  Transfer all tables except these specific
+                                  tables (space separated table names).
+                                  Implies --without-foreign-keys which
+                                  inhibits the transfer of foreign keys. Can
+                                  not be used together with --mysql-tables.
 
   -L, --limit-rows INTEGER        Transfer only a limited number of rows from
                                   each table.
