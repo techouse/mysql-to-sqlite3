@@ -510,7 +510,7 @@ class MySQLtoSQLite:
             )
             filtered = '\n            AND TABLE_NAME NOT IN ({f})'.format(
                             f=', '.join(
-                            [f'"{row[0]}"' for row in self._mysql_cur_prepared.fetchall()]
+                            ['"{r}"'.format(r=row[0]) for row in self._mysql_cur_prepared.fetchall()]
                             )
                         )
 
@@ -523,11 +523,14 @@ class MySQLtoSQLite:
 
         # run resulting query
         self._mysql_cur_prepared.execute(
-            f"""
+            """
             SELECT TABLE_NAME
             FROM information_schema.TABLES
             WHERE TABLE_SCHEMA = SCHEMA(){inc}{filtered}
-            """
+            """.format(
+                inc=inc,
+                filtered=filtered
+                )
         )
         tables = (row[0] for row in self._mysql_cur_prepared.fetchall())
 
