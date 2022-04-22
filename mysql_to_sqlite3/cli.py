@@ -38,7 +38,17 @@ from .sqlite_utils import CollatingSequences
     type=tuple,
     cls=OptionEatAll,
     help="Transfer only these specific tables (space separated table names). "
-    "Implies --without-foreign-keys which inhibits the transfer of foreign keys.",
+    "Implies --without-foreign-keys which inhibits the transfer of foreign keys. "
+    "Can not be used together with --exclude-mysql-tables.",
+)
+@click.option(
+    "-e",
+    "--exclude-mysql-tables",
+    type=tuple,
+    cls=OptionEatAll,
+    help="Transfer all tables except these specific tables (space separated table names). "
+    "Implies --without-foreign-keys which inhibits the transfer of foreign keys. "
+    "Can not be used together with --mysql-tables.",
 )
 @click.option(
     "-L",
@@ -123,6 +133,7 @@ def cli(
     mysql_password,
     mysql_database,
     mysql_tables,
+    exclude_mysql_tables,
     limit_rows,
     collation,
     prefix_indices,
@@ -141,12 +152,18 @@ def cli(
 ):
     """Transfer MySQL to SQLite using the provided CLI options."""
     try:
+        if mysql_tables and exclude_mysql_tables:
+            raise click.UsageError(
+                "Illegal usage: --mysql-tables and --exclude-mysql-tables are mutually exclusive!"
+            )
+
         converter = MySQLtoSQLite(
             sqlite_file=sqlite_file,
             mysql_user=mysql_user,
             mysql_password=mysql_password or prompt_mysql_password,
             mysql_database=mysql_database,
             mysql_tables=mysql_tables,
+            exclude_mysql_tables=exclude_mysql_tables,
             limit_rows=limit_rows,
             collation=collation,
             prefix_indices=prefix_indices,

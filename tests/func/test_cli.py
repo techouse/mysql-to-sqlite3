@@ -354,6 +354,61 @@ class TestMySQLtoSQLite:
         assert result.exit_code > 0
         assert "Process interrupted" in result.output
 
+    def test_specific_tables_include_and_exclude_are_mutually_exclusive_options(
+        self, cli_runner, sqlite_database, mysql_credentials, mysql_database
+    ):
+        mysql_engine = create_engine(
+            "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
+                user=mysql_credentials.user,
+                password=mysql_credentials.password,
+                host=mysql_credentials.host,
+                port=mysql_credentials.port,
+                database=mysql_credentials.database,
+            )
+        )
+        mysql_cnx = mysql_engine.connect()
+        mysql_inspect = inspect(mysql_engine)
+        mysql_tables = mysql_inspect.get_table_names()
+
+        if six.PY2:
+            table_number = choice(xrange(1, len(mysql_tables) // 2))
+        else:
+            table_number = choice(range(1, len(mysql_tables) // 2))
+
+        include_mysql_tables = sample(mysql_tables, table_number)
+        include_mysql_tables.sort()
+        exclude_mysql_tables = list(
+            set(sample(mysql_tables, table_number)) - set(include_mysql_tables)
+        )
+        exclude_mysql_tables.sort()
+
+        result = cli_runner.invoke(
+            mysql2sqlite,
+            [
+                "-f",
+                sqlite_database,
+                "-d",
+                mysql_credentials.database,
+                "-t",
+                " ".join(include_mysql_tables),
+                "-e",
+                " ".join(exclude_mysql_tables),
+                "-u",
+                mysql_credentials.user,
+                "--mysql-password",
+                mysql_credentials.password,
+                "-h",
+                mysql_credentials.host,
+                "-P",
+                mysql_credentials.port,
+            ],
+        )
+        assert result.exit_code > 0
+        assert (
+            "Illegal usage: --mysql-tables and --exclude-mysql-tables are mutually exclusive!"
+            in result.output
+        )
+
     def test_transfer_specific_tables_only(
         self, cli_runner, sqlite_database, mysql_credentials, mysql_database
     ):

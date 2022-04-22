@@ -52,6 +52,17 @@ class MySQLtoSQLite:
             else tuple()
         )
 
+        self._exclude_mysql_tables = (
+            tuple(kwargs.get("exclude_mysql_tables"))
+            if kwargs.get("exclude_mysql_tables") is not None
+            else tuple()
+        )
+
+        if len(self._mysql_tables) > 0 and len(self._exclude_mysql_tables) > 0:
+            raise ValueError(
+                "mysql_tables and exclude_mysql_tables are mutually exclusive"
+            )
+
         self._limit_rows = int(kwargs.get("limit_rows") or 0)
 
         if kwargs.get("collation") is not None and kwargs.get("collation").upper() in {
@@ -67,7 +78,7 @@ class MySQLtoSQLite:
 
         self._without_foreign_keys = (
             True
-            if len(self._mysql_tables) > 0
+            if len(self._mysql_tables) > 0 or len(self._exclude_mysql_tables) > 0
             else (kwargs.get("without_foreign_keys") or False)
         )
 
@@ -493,19 +504,25 @@ class MySQLtoSQLite:
 
     def transfer(self):
         """The primary and only method with which we transfer all the data."""
-        if len(self._mysql_tables) > 0:
+        if len(self._mysql_tables) > 0 or len(self._exclude_mysql_tables) > 0:
             # transfer only specific tables
+            specific_tables = (
+                self._exclude_mysql_tables
+                if len(self._exclude_mysql_tables) > 0
+                else self._mysql_tables
+            )
 
             self._mysql_cur_prepared.execute(
                 """
                 SELECT TABLE_NAME
                 FROM information_schema.TABLES
                 WHERE TABLE_SCHEMA = SCHEMA()
-                AND TABLE_NAME IN ({placeholders})
+                AND TABLE_NAME {exclude} IN ({placeholders})
             """.format(
-                    placeholders=("%s, " * len(self._mysql_tables)).rstrip(" ,")
+                    exclude="NOT" if len(self._exclude_mysql_tables) > 0 else "",
+                    placeholders=("%s, " * len(specific_tables)).rstrip(" ,"),
                 ),
-                self._mysql_tables,
+                specific_tables,
             )
             tables = (row[0] for row in self._mysql_cur_prepared.fetchall())
         else:

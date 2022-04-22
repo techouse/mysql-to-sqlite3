@@ -540,136 +540,319 @@ class TestMySQLtoSQLite:
         assert sqlite_results == mysql_results
 
     @pytest.mark.transfer
+    def test_specific_tables_include_and_exclude_are_mutually_exclusive_options(
+        self,
+        sqlite_database,
+        mysql_credentials,
+        caplog,
+        faker,
+    ):
+        with pytest.raises(ValueError) as excinfo:
+            MySQLtoSQLite(
+                sqlite_file=sqlite_database,
+                mysql_user=mysql_credentials.user,
+                mysql_password=mysql_credentials.password,
+                mysql_database=mysql_credentials.database,
+                mysql_tables=faker.words(nb=3),
+                exclude_mysql_tables=faker.words(nb=3),
+                mysql_host=mysql_credentials.host,
+                mysql_port=mysql_credentials.port,
+            )
+        assert "mysql_tables and exclude_mysql_tables are mutually exclusive" in str(
+            excinfo.value
+        )
+
+    @pytest.mark.transfer
     @pytest.mark.parametrize(
-        "chunk, vacuum, buffered, prefix_indices",
+        "chunk, vacuum, buffered, prefix_indices, exclude_tables",
         [
-            # 0000
+            # 00000
             pytest.param(
                 None,
                 False,
                 False,
                 False,
-                id="no chunk, no vacuum, no buffered cursor, no prefix indices",
+                False,
+                id="no chunk, no vacuum, no buffered cursor, no prefix indices, include tables",
             ),
-            # 0001
+            # 00001
+            pytest.param(
+                None,
+                False,
+                False,
+                False,
+                True,
+                id="no chunk, no vacuum, no buffered cursor, no prefix indices, exclude tables",
+            ),
+            # 00010
             pytest.param(
                 None,
                 False,
                 False,
                 True,
-                id="no chunk, no vacuum, no buffered cursor, prefix indices",
+                False,
+                id="no chunk, no vacuum, no buffered cursor, prefix indices, include tables",
             ),
-            # 1110
+            # 00011
+            pytest.param(
+                None,
+                False,
+                False,
+                True,
+                True,
+                id="no chunk, no vacuum, no buffered cursor, prefix indices, exclude tables",
+            ),
+            # 11100
             pytest.param(
                 10,
                 True,
                 True,
                 False,
-                id="chunk, vacuum, buffered cursor, no prefix indices",
+                False,
+                id="chunk, vacuum, buffered cursor, no prefix indices, include tables",
             ),
-            # 1111
+            # 11101
+            pytest.param(
+                10,
+                True,
+                True,
+                False,
+                True,
+                id="chunk, vacuum, buffered cursor, no prefix indices, exclude tables",
+            ),
+            # 11110
             pytest.param(
                 10,
                 True,
                 True,
                 True,
-                id="chunk, vacuum, buffered cursor, prefix indices",
+                False,
+                id="chunk, vacuum, buffered cursor, prefix indices, include tables",
             ),
-            # 1100
+            # 11111
+            pytest.param(
+                10,
+                True,
+                True,
+                True,
+                True,
+                id="chunk, vacuum, buffered cursor, prefix indices, exclude tables",
+            ),
+            # 11000
             pytest.param(
                 10,
                 True,
                 False,
                 False,
-                id="chunk, vacuum, no buffered cursor, no prefix indices",
+                False,
+                id="chunk, vacuum, no buffered cursor, no prefix indices, include tables",
             ),
-            # 1101
+            # 11001
+            pytest.param(
+                10,
+                True,
+                False,
+                False,
+                True,
+                id="chunk, vacuum, no buffered cursor, no prefix indices, exclude tables",
+            ),
+            # 11010
             pytest.param(
                 10,
                 True,
                 False,
                 True,
-                id="chunk, vacuum, no buffered cursor, prefix indices",
+                False,
+                id="chunk, vacuum, no buffered cursor, prefix indices, include tables",
             ),
-            # 0110
+            # 11011
+            pytest.param(
+                10,
+                True,
+                False,
+                True,
+                True,
+                id="chunk, vacuum, no buffered cursor, prefix indices, exclude tables",
+            ),
+            # 01100
             pytest.param(
                 None,
                 True,
                 True,
                 False,
-                id="no chunk, vacuum, buffered cursor, no prefix indices",
+                False,
+                id="no chunk, vacuum, buffered cursor, no prefix indices, include tables",
             ),
-            # 0111
+            # 01101
+            pytest.param(
+                None,
+                True,
+                True,
+                False,
+                True,
+                id="no chunk, vacuum, buffered cursor, no prefix indices, exclude tables",
+            ),
+            # 01110
             pytest.param(
                 None,
                 True,
                 True,
                 True,
-                id="no chunk, vacuum, buffered cursor, prefix indices",
+                False,
+                id="no chunk, vacuum, buffered cursor, prefix indices, include tables",
             ),
-            # 0100
+            # 01111
+            pytest.param(
+                None,
+                True,
+                True,
+                True,
+                True,
+                id="no chunk, vacuum, buffered cursor, prefix indices, exclude tables",
+            ),
+            # 01000
             pytest.param(
                 None,
                 True,
                 False,
                 False,
-                id="no chunk, vacuum, no buffered cursor, no prefix indices",
+                False,
+                id="no chunk, vacuum, no buffered cursor, no prefix indices, include tables",
             ),
-            # 0101
+            # 01001
+            pytest.param(
+                None,
+                True,
+                False,
+                False,
+                True,
+                id="no chunk, vacuum, no buffered cursor, no prefix indices, exclude tables",
+            ),
+            # 01010
             pytest.param(
                 None,
                 True,
                 False,
                 True,
-                id="no chunk, vacuum, no buffered cursor, prefix indices",
+                False,
+                id="no chunk, vacuum, no buffered cursor, prefix indices, include tables",
             ),
-            # 1000
+            # 01011
+            pytest.param(
+                None,
+                True,
+                False,
+                True,
+                True,
+                id="no chunk, vacuum, no buffered cursor, prefix indices, exclude tables",
+            ),
+            # 10000
             pytest.param(
                 10,
                 False,
                 False,
                 False,
-                id="chunk, no vacuum, no buffered cursor, no prefix indices",
+                False,
+                id="chunk, no vacuum, no buffered cursor, no prefix indices, include tables",
             ),
-            # 1001
+            # 10001
+            pytest.param(
+                10,
+                False,
+                False,
+                False,
+                True,
+                id="chunk, no vacuum, no buffered cursor, no prefix indices, exclude tables",
+            ),
+            # 10010
             pytest.param(
                 10,
                 False,
                 False,
                 True,
-                id="chunk, no vacuum, no buffered cursor, prefix indices",
+                False,
+                id="chunk, no vacuum, no buffered cursor, prefix indices, include tables",
             ),
-            # 0010
+            # 10011
+            pytest.param(
+                10,
+                False,
+                False,
+                True,
+                True,
+                id="chunk, no vacuum, no buffered cursor, prefix indices, exclude tables",
+            ),
+            # 00100
             pytest.param(
                 None,
                 False,
                 True,
                 False,
-                id="no chunk, no vacuum, buffered cursor, no prefix indices",
+                False,
+                id="no chunk, no vacuum, buffered cursor, no prefix indices, include tables",
             ),
-            # 0011
+            # 00101
+            pytest.param(
+                None,
+                False,
+                True,
+                False,
+                True,
+                id="no chunk, no vacuum, buffered cursor, no prefix indices, exclude tables",
+            ),
+            # 00110
             pytest.param(
                 None,
                 False,
                 True,
                 True,
-                id="no chunk, no vacuum, buffered cursor, prefix indices",
+                False,
+                id="no chunk, no vacuum, buffered cursor, prefix indices, include tables",
             ),
-            # 1010
+            # 00111
+            pytest.param(
+                None,
+                False,
+                True,
+                True,
+                True,
+                id="no chunk, no vacuum, buffered cursor, prefix indices, exclude tables",
+            ),
+            # 10100
             pytest.param(
                 10,
                 False,
                 True,
                 False,
-                id="chunk, no vacuum, buffered cursor, no prefix indices",
+                False,
+                id="chunk, no vacuum, buffered cursor, no prefix indices, include tables",
             ),
-            # 1011
+            # 10101
+            pytest.param(
+                10,
+                False,
+                True,
+                False,
+                True,
+                id="chunk, no vacuum, buffered cursor, no prefix indices, exclude tables",
+            ),
+            # 10110
             pytest.param(
                 10,
                 False,
                 True,
                 True,
-                id="chunk, no vacuum, buffered cursor, prefix indices",
+                False,
+                id="chunk, no vacuum, buffered cursor, prefix indices, include tables",
+            ),
+            # 10111
+            pytest.param(
+                10,
+                False,
+                True,
+                True,
+                True,
+                id="chunk, no vacuum, buffered cursor, prefix indices, exclude tables",
             ),
         ],
     )
@@ -684,6 +867,7 @@ class TestMySQLtoSQLite:
         vacuum,
         buffered,
         prefix_indices,
+        exclude_tables,
     ):
         mysql_engine = create_engine(
             "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
@@ -706,12 +890,16 @@ class TestMySQLtoSQLite:
         random_mysql_tables = sample(mysql_tables, table_number)
         random_mysql_tables.sort()
 
+        remaining_tables = list(set(mysql_tables) - set(random_mysql_tables))
+        remaining_tables.sort()
+
         proc = MySQLtoSQLite(
             sqlite_file=sqlite_database,
             mysql_user=mysql_credentials.user,
             mysql_password=mysql_credentials.password,
             mysql_database=mysql_credentials.database,
-            mysql_tables=random_mysql_tables,
+            mysql_tables=None if exclude_tables else random_mysql_tables,
+            exclude_mysql_tables=random_mysql_tables if exclude_tables else None,
             mysql_host=mysql_credentials.host,
             mysql_port=mysql_credentials.port,
             prefix_indices=prefix_indices,
@@ -721,7 +909,12 @@ class TestMySQLtoSQLite:
         assert all(
             message in [record.message for record in caplog.records]
             for message in set(
-                ["Transferring table {}".format(table) for table in random_mysql_tables]
+                [
+                    "Transferring table {}".format(table)
+                    for table in (
+                        remaining_tables if exclude_tables else random_mysql_tables
+                    )
+                ]
                 + ["Done!"]
             )
         )
@@ -740,7 +933,10 @@ class TestMySQLtoSQLite:
         sqlite_tables = sqlite_inspect.get_table_names()
 
         """ Test if both databases have the same table names """
-        assert sqlite_tables == random_mysql_tables
+        if exclude_tables:
+            assert set(sqlite_tables) == set(remaining_tables)
+        else:
+            assert set(sqlite_tables) == set(random_mysql_tables)
 
         """ Test if all the tables have the same column names """
         for table_name in sqlite_tables:
@@ -751,7 +947,7 @@ class TestMySQLtoSQLite:
         """ Test if all the tables have the same indices """
         index_keys = {"name", "column_names", "unique"}
         mysql_indices = []
-        for table_name in random_mysql_tables:
+        for table_name in remaining_tables if exclude_tables else random_mysql_tables:
             for index in mysql_inspect.get_indexes(table_name):
                 mysql_index = {}
                 for key in index_keys:
@@ -786,7 +982,7 @@ class TestMySQLtoSQLite:
             ]
             sqlite_results.append(sqlite_result)
 
-        for table_name in random_mysql_tables:
+        for table_name in remaining_tables if exclude_tables else random_mysql_tables:
             mysql_table = Table(
                 table_name, meta, autoload=True, autoload_with=mysql_engine
             )
