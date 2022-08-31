@@ -33,7 +33,7 @@ class TestMySQLtoSQLiteClassmethods:
             "NVARCHAR(17)",
             "VARCHAR(123)",
         ):
-            if column_type in {"dialect", "insert", "Insert"}:
+            if any(c for c in column_type if c.islower()):
                 continue
             elif column_type == "INT":
                 assert (

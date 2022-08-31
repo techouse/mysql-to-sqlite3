@@ -412,7 +412,7 @@ class MySQLtoSQLite:
             if err.errno == errorcode.CR_SERVER_LOST:
                 if not attempting_reconnect:
                     self._logger.warning(
-                        "Connection to MySQL server lost." "\nAttempting to reconnect."
+                        "Connection to MySQL server lost.\nAttempting to reconnect."
                     )
                     self._create_table(table_name, True)
                 else:
@@ -474,7 +474,7 @@ class MySQLtoSQLite:
             if err.errno == errorcode.CR_SERVER_LOST:
                 if not attempting_reconnect:
                     self._logger.warning(
-                        "Connection to MySQL server lost." "\nAttempting to reconnect."
+                        "Connection to MySQL server lost.\nAttempting to reconnect."
                     )
                     self._transfer_table_data(
                         table_name=table_name,
