@@ -255,7 +255,13 @@ class MySQLtoSQLite:
     ):
         if isinstance(column_default, bytes):
             if column_type == "BLOB":
-                return "DEFAULT x'{}'".format(column_default.hex())
+                if six.PY2:
+                    try:
+                        column_default.decode("utf-8")
+                    except (UnicodeDecodeError, AttributeError):
+                        return "DEFAULT x'{}'".format(column_default.hex())
+                else:
+                    return "DEFAULT x'{}'".format(column_default.hex())
 
         try:
             column_default = column_default.decode()
