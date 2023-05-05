@@ -226,6 +226,33 @@ class TestMySQLtoSQLiteClassmethods:
         )
 
     @pytest.mark.parametrize(
+        "column_default, sqlite_default_translation",
+        [
+            pytest.param(bytes(0), "DEFAULT x''", id="bytes(0)"),
+            pytest.param(bytes(1), "DEFAULT x'00'", id="bytes(1)"),
+            pytest.param(b"0", "DEFAULT x'30'", id="b'0'"),
+            pytest.param(b"1", "DEFAULT x'31'", id="b'1'"),
+            pytest.param(
+                b"1234567890", "DEFAULT x'31323334353637383930'", id="b'1234567890'"
+            ),
+            pytest.param(
+                b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam pretium, purus vitae sollicitudin varius, nisi lectus vehicula dui, ut dignissim felis dolor blandit justo. Donec eleifend lectus ut feugiat rhoncus. Donec erat nibh, dapibus nec diam id, lacinia lacinia nisl. Mauris sagittis efficitur nisl. Ut tincidunt elementum rhoncus. Cras suscipit dolor sed est ultricies, quis dapibus neque suscipit. Etiam ac enim eu ligula bibendum blandit quis sit amet felis. Praesent mi nisi, luctus sit amet nunc ut, fermentum tempus purus. Suspendisse vel purus a nibh aliquam hendrerit. Aliquam sit amet tristique lorem. Sed elementum congue ante id mollis. Donec vitae pretium neque.",
+                "DEFAULT x'4c6f72656d20697073756d20646f6c6f722073697420616d65742c20636f6e73656374657475722061646970697363696e6720656c69742e204e616d207072657469756d2c20707572757320766974616520736f6c6c696369747564696e207661726975732c206e697369206c6563747573207665686963756c61206475692c207574206469676e697373696d2066656c697320646f6c6f7220626c616e646974206a7573746f2e20446f6e656320656c656966656e64206c656374757320757420666575676961742072686f6e6375732e20446f6e65632065726174206e6962682c2064617069627573206e6563206469616d2069642c206c6163696e6961206c6163696e6961206e69736c2e204d617572697320736167697474697320656666696369747572206e69736c2e2055742074696e636964756e7420656c656d656e74756d2072686f6e6375732e204372617320737573636970697420646f6c6f72207365642065737420756c747269636965732c20717569732064617069627573206e657175652073757363697069742e20457469616d20616320656e696d206575206c6967756c6120626962656e64756d20626c616e64697420717569732073697420616d65742066656c69732e205072616573656e74206d69206e6973692c206c75637475732073697420616d6574206e756e632075742c206665726d656e74756d2074656d7075732070757275732e2053757370656e64697373652076656c2070757275732061206e69626820616c697175616d2068656e6472657269742e20416c697175616d2073697420616d657420747269737469717565206c6f72656d2e2053656420656c656d656e74756d20636f6e67756520616e7465206964206d6f6c6c69732e20446f6e6563207669746165207072657469756d206e657175652e'",
+                id="b'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam pretium, purus vitae sollicitudin varius, nisi lectus vehicula dui, ut dignissim felis dolor blandit justo. Donec eleifend lectus ut feugiat rhoncus. Donec erat nibh, dapibus nec diam id, lacinia lacinia nisl. Mauris sagittis efficitur nisl. Ut tincidunt elementum rhoncus. Cras suscipit dolor sed est ultricies, quis dapibus neque suscipit. Etiam ac enim eu ligula bibendum blandit quis sit amet felis. Praesent mi nisi, luctus sit amet nunc ut, fermentum tempus purus. Suspendisse vel purus a nibh aliquam hendrerit. Aliquam sit amet tristique lorem. Sed elementum congue ante id mollis. Donec vitae pretium neque.'",
+            ),
+        ],
+    )
+    def test_translate_default_blob_bytes_from_mysql_to_sqlite(
+        self, column_default, sqlite_default_translation
+    ):
+        assert (
+            MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
+                column_default, "BLOB"
+            )
+            == sqlite_default_translation
+        )
+
+    @pytest.mark.parametrize(
         "collation, resulting_column_collation, column_type",
         [
             pytest.param(
