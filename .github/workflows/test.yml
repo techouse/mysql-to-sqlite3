@@ -18,12 +18,6 @@ jobs:
             experimental: false
             py: "2.7"
 
-          - toxenv: "py36"
-            db: "mariadb:5.5"
-            legacy_db: 1
-            experimental: false
-            py: "3.6"
-
           - toxenv: "py37"
             db: "mariadb:5.5"
             legacy_db: 1
@@ -60,12 +54,6 @@ jobs:
             experimental: false
             py: "2.7"
 
-          - toxenv: "py36"
-            db: "mariadb:10.0"
-            legacy_db: 1
-            experimental: false
-            py: "3.6"
-
           - toxenv: "py37"
             db: "mariadb:10.0"
             legacy_db: 1
@@ -101,12 +89,6 @@ jobs:
             legacy_db: 1
             experimental: false
             py: "2.7"
-
-          - toxenv: "py36"
-            db: "mariadb:10.1"
-            legacy_db: 1
-            experimental: false
-            py: "3.6"
 
           - toxenv: "py37"
             db: "mariadb:10.1"
@@ -144,12 +126,6 @@ jobs:
             experimental: false
             py: "2.7"
 
-          - toxenv: "py36"
-            db: "mariadb:10.2"
-            legacy_db: 0
-            experimental: false
-            py: "3.6"
-
           - toxenv: "py37"
             db: "mariadb:10.2"
             legacy_db: 0
@@ -185,12 +161,6 @@ jobs:
             legacy_db: 0
             experimental: false
             py: "2.7"
-
-          - toxenv: "py36"
-            db: "mariadb:10.3"
-            legacy_db: 0
-            experimental: false
-            py: "3.6"
 
           - toxenv: "py37"
             db: "mariadb:10.3"
@@ -228,12 +198,6 @@ jobs:
             experimental: false
             py: "2.7"
 
-          - toxenv: "py36"
-            db: "mariadb:10.4"
-            legacy_db: 0
-            experimental: false
-            py: "3.6"
-
           - toxenv: "py37"
             db: "mariadb:10.4"
             legacy_db: 0
@@ -270,12 +234,6 @@ jobs:
             experimental: false
             py: "2.7"
 
-          - toxenv: "py36"
-            db: "mariadb:10.5"
-            legacy_db: 0
-            experimental: false
-            py: "3.6"
-
           - toxenv: "py37"
             db: "mariadb:10.5"
             legacy_db: 0
@@ -311,12 +269,6 @@ jobs:
             legacy_db: 0
             experimental: false
             py: "2.7"
-
-          - toxenv: "py36"
-            db: "mariadb:10.6"
-            legacy_db: 0
-            experimental: false
-            py: "3.6"
 
           - toxenv: "py37"
             db: "mariadb:10.6"
@@ -353,12 +305,6 @@ jobs:
             legacy_db: 1
             experimental: false
             py: "2.7"
-
-          - toxenv: "py36"
-            db: "mysql:5.5"
-            legacy_db: 1
-            experimental: false
-            py: "3.6"
 
           - toxenv: "py37"
             db: "mysql:5.5"
@@ -395,12 +341,6 @@ jobs:
             legacy_db: 1
             experimental: false
             py: "2.7"
-
-          - toxenv: "py36"
-            db: "mysql:5.6"
-            legacy_db: 1
-            experimental: false
-            py: "3.6"
 
           - toxenv: "py37"
             db: "mysql:5.6"
@@ -437,12 +377,6 @@ jobs:
             legacy_db: 0
             experimental: false
             py: "2.7"
-
-          - toxenv: "py36"
-            db: "mysql:5.7"
-            legacy_db: 0
-            experimental: false
-            py: "3.6"
 
           - toxenv: "py37"
             db: "mysql:5.7"
@@ -479,12 +413,6 @@ jobs:
             legacy_db: 0
             experimental: false
             py: "2.7"
-
-          - toxenv: "py36"
-            db: "mysql:8.0"
-            legacy_db: 0
-            experimental: false
-            py: "3.6"
 
           - toxenv: "py37"
             db: "mysql:8.0"
