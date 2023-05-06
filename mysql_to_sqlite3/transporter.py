@@ -254,7 +254,15 @@ class MySQLtoSQLite:
         cls, column_default=None, column_type=None
     ):
         if isinstance(column_default, six.binary_type):
-            if column_type == "BLOB":
+            if column_type in {
+                "BIT",
+                "BINARY",
+                "BLOB",
+                "LONGBLOB",
+                "MEDIUMBLOB",
+                "TINYBLOB",
+                "VARBINARY",
+            }:
                 if six.PY2:
                     try:
                         return "DEFAULT x'{}'".format(column_default.encode("hex"))
