@@ -257,7 +257,7 @@ class MySQLtoSQLite:
             if column_type == "BLOB":
                 if six.PY2:
                     try:
-                        return "DEFAULT x'{}'".format(column_default.encode('hex'))
+                        return "DEFAULT x'{}'".format(column_default.encode("hex"))
                     except AttributeError:
                         pass
                 else:

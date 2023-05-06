@@ -97,7 +97,9 @@ class Misc(Base):
     big_integer_field = Column(BigInteger, default=0)
     big_integer_unsigned_field = Column(BIGINT(unsigned=True), default=0)
     if environ.get("LEGACY_DB", "0") == "0":
-        large_binary_field = Column(LargeBinary, nullable=True, default=b"Lorem ipsum dolor")
+        large_binary_field = Column(
+            LargeBinary, nullable=True, default=b"Lorem ipsum dolor"
+        )
     else:
         large_binary_field = Column(LargeBinary, nullable=True)
     boolean_field = Column(Boolean, default=False)
