@@ -253,13 +253,13 @@ class MySQLtoSQLite:
     def _translate_default_from_mysql_to_sqlite(
         cls, column_default=None, column_type=None
     ):
-        if isinstance(column_default, bytes):
+        if isinstance(column_default, six.binary_type):
             if column_type == "BLOB":
                 if six.PY2:
                     try:
-                        column_default.decode("utf-8")
-                    except (UnicodeDecodeError, AttributeError):
-                        return "DEFAULT x'{}'".format(column_default.hex())
+                        return "DEFAULT x'{}'".format(column_default.encode('hex'))
+                    except AttributeError:
+                        pass
                 else:
                     return "DEFAULT x'{}'".format(column_default.hex())
 
