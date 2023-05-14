@@ -265,7 +265,7 @@ jobs:
             py: "3.11"
 
           - toxenv: "py27"
-            db: "mariadb:10.5"
+            db: "mariadb:10.6"
             legacy_db: 0
             experimental: false
             py: "2.7"
@@ -296,6 +296,42 @@ jobs:
 
           - toxenv: "py311"
             db: "mariadb:10.6"
+            legacy_db: 0
+            experimental: false
+            py: "3.11"
+
+          - toxenv: "py27"
+            db: "mariadb:10.11"
+            legacy_db: 0
+            experimental: false
+            py: "2.7"
+
+          - toxenv: "py37"
+            db: "mariadb:10.11"
+            legacy_db: 0
+            experimental: false
+            py: "3.7"
+
+          - toxenv: "py38"
+            db: "mariadb:10.11"
+            legacy_db: 0
+            experimental: false
+            py: "3.8"
+
+          - toxenv: "py39"
+            db: "mariadb:10.11"
+            legacy_db: 0
+            experimental: false
+            py: "3.9"
+
+          - toxenv: "py310"
+            db: "mariadb:10.11"
+            legacy_db: 0
+            experimental: false
+            py: "3.10"
+
+          - toxenv: "py311"
+            db: "mariadb:10.11"
             legacy_db: 0
             experimental: false
             py: "3.11"
