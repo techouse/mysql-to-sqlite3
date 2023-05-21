@@ -451,6 +451,8 @@ class TestMySQLtoSQLite:
         assert result.exit_code == 0
 
     def test_version(self, cli_runner):
+        if six.PY2:
+            pytest.xfail("Version test is not supported on Python 2")
         result = cli_runner.invoke(mysql2sqlite, ["--version"])
         assert result.exit_code == 0
         assert all(
