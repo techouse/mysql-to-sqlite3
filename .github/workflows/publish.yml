@@ -23,7 +23,7 @@ jobs:
         id: compare
         run: |
           set -e
-          VERSION=$(awk -F'"' '/__version__/ {print $2}' mysql-to-sqlite3/__init__.py)
+          VERSION=$(awk -F'"' '/__version__/ {print $2}' mysql_to_sqlite3/__init__.py)
           TAG=${GITHUB_REF_NAME#v}
           if [[ "$VERSION" != "$TAG" ]]; then
             echo "Version in mysql-to-sqlite3/__version__.py ($VERSION) does not match tag ($TAG)"
@@ -41,7 +41,7 @@ jobs:
           pip install build setuptools wheel
       - name: Build a binary wheel and a source tarball
         id: build
-        run: python3 build --sdist --wheel --outdir dist/ .
+        run: python3 -m build --sdist --wheel --outdir dist/ .
       - name: Publish distribution package to Test PyPI
         id: publish_test
         uses: pypa/gh-action-pypi-publish@release/v1
