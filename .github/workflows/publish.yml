@@ -19,6 +19,16 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v3
+      - name: Compare package version with ref/tag
+        id: compare
+        run: |
+          set -e
+          VERSION=$(awk -F'"' '/__version__/ {print $2}' mysql-to-sqlite3/__version__.py)
+          TAG=${GITHUB_REF_NAME#v}
+          if [[ "$VERSION" != "$TAG" ]]; then
+            echo "Version in mysql-to-sqlite3/__version__.py ($VERSION) does not match tag ($TAG)"
+            exit 1
+          fi
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
