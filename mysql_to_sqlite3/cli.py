@@ -19,9 +19,7 @@ from .sqlite_utils import CollatingSequences
     help="SQLite3 database file",
     required=True,
 )
-@click.option(
-    "-d", "--mysql-database", default=None, help="MySQL database name", required=True
-)
+@click.option("-d", "--mysql-database", default=None, help="MySQL database name", required=True)
 @click.option("-u", "--mysql-user", default=None, help="MySQL user", required=True)
 @click.option(
     "-p",
@@ -80,24 +78,16 @@ from .sqlite_utils import CollatingSequences
     help="Prefix indices with their corresponding tables. "
     "This ensures that their names remain unique across the SQLite database.",
 )
-@click.option(
-    "-X", "--without-foreign-keys", is_flag=True, help="Do not transfer foreign keys."
-)
+@click.option("-X", "--without-foreign-keys", is_flag=True, help="Do not transfer foreign keys.")
 @click.option(
     "-W",
     "--without-data",
     is_flag=True,
     help="Do not transfer table data, DDL only.",
 )
-@click.option(
-    "-h", "--mysql-host", default="localhost", help="MySQL host. Defaults to localhost."
-)
-@click.option(
-    "-P", "--mysql-port", type=int, default=3306, help="MySQL port. Defaults to 3306."
-)
-@click.option(
-    "-S", "--skip-ssl", is_flag=True, help="Disable MySQL connection encryption."
-)
+@click.option("-h", "--mysql-host", default="localhost", help="MySQL host. Defaults to localhost.")
+@click.option("-P", "--mysql-port", type=int, default=3306, help="MySQL port. Defaults to 3306.")
+@click.option("-S", "--skip-ssl", is_flag=True, help="Disable MySQL connection encryption.")
 @click.option(
     "-c",
     "--chunk",
@@ -123,9 +113,7 @@ from .sqlite_utils import CollatingSequences
 )
 @click.option("-q", "--quiet", is_flag=True, help="Quiet. Display only errors.")
 @click.option("--debug", is_flag=True, help="Debug mode. Will throw exceptions.")
-@click.version_option(
-    message=tabulate(info(), headers=["software", "version"], tablefmt="github")
-)
+@click.version_option(message=tabulate(info(), headers=["software", "version"], tablefmt="github"))
 def cli(
     sqlite_file,
     mysql_user,
@@ -153,9 +141,7 @@ def cli(
     """Transfer MySQL to SQLite using the provided CLI options."""
     try:
         if mysql_tables and exclude_mysql_tables:
-            raise click.UsageError(
-                "Illegal usage: --mysql-tables and --exclude-mysql-tables are mutually exclusive!"
-            )
+            raise click.UsageError("Illegal usage: --mysql-tables and --exclude-mysql-tables are mutually exclusive!")
 
         converter = MySQLtoSQLite(
             sqlite_file=sqlite_file,
@@ -167,8 +153,7 @@ def cli(
             limit_rows=limit_rows,
             collation=collation,
             prefix_indices=prefix_indices,
-            without_foreign_keys=without_foreign_keys
-            or (mysql_tables is not None and len(mysql_tables) > 0),
+            without_foreign_keys=without_foreign_keys or (mysql_tables is not None and len(mysql_tables) > 0),
             without_data=without_data,
             mysql_host=mysql_host,
             mysql_port=mysql_port,

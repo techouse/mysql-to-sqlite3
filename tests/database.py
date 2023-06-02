@@ -4,7 +4,7 @@ from decimal import Decimal
 import simplejson as json
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy_utils import database_exists, create_database
+from sqlalchemy_utils import create_database, database_exists
 
 from .models import Base
 
@@ -15,9 +15,7 @@ class Database:
 
     def __init__(self, database_uri):
         self.Session = sessionmaker()
-        self.engine = create_engine(
-            database_uri, json_serializer=self.dumps, json_deserializer=json.loads
-        )
+        self.engine = create_engine(database_uri, json_serializer=self.dumps, json_deserializer=json.loads)
         if not database_exists(self.engine.url):
             create_database(self.engine.url)
         self._create_db_tables()

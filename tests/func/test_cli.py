@@ -23,9 +23,7 @@ class TestMySQLtoSQLite:
         )
 
     def test_non_existing_sqlite_file(self, cli_runner, faker):
-        result = cli_runner.invoke(
-            mysql2sqlite, ["-f", faker.file_path(depth=1, extension=".sqlite3")]
-        )
+        result = cli_runner.invoke(mysql2sqlite, ["-f", faker.file_path(depth=1, extension=".sqlite3")])
         assert result.exit_code > 0
         assert any(
             message in result.output
@@ -47,9 +45,7 @@ class TestMySQLtoSQLite:
         )
 
     def test_no_database_user(self, cli_runner, sqlite_database, mysql_credentials):
-        result = cli_runner.invoke(
-            mysql2sqlite, ["-f", sqlite_database, "-d", mysql_credentials.database]
-        )
+        result = cli_runner.invoke(mysql2sqlite, ["-f", sqlite_database, "-d", mysql_credentials.database])
         assert result.exit_code > 0
         assert any(
             message in result.output
@@ -59,9 +55,7 @@ class TestMySQLtoSQLite:
             }
         )
 
-    def test_invalid_database_name(
-        self, cli_runner, sqlite_database, mysql_database, mysql_credentials, faker
-    ):
+    def test_invalid_database_name(self, cli_runner, sqlite_database, mysql_database, mysql_credentials, faker):
         result = cli_runner.invoke(
             mysql2sqlite,
             [
@@ -76,9 +70,7 @@ class TestMySQLtoSQLite:
         assert result.exit_code > 0
         assert "1045 (28000): Access denied" in result.output
 
-    def test_invalid_database_user(
-        self, cli_runner, sqlite_database, mysql_database, mysql_credentials, faker
-    ):
+    def test_invalid_database_user(self, cli_runner, sqlite_database, mysql_database, mysql_credentials, faker):
         result = cli_runner.invoke(
             mysql2sqlite,
             [
@@ -93,9 +85,7 @@ class TestMySQLtoSQLite:
         assert result.exit_code > 0
         assert "1045 (28000): Access denied" in result.output
 
-    def test_invalid_database_password(
-        self, cli_runner, sqlite_database, mysql_database, mysql_credentials, faker
-    ):
+    def test_invalid_database_password(self, cli_runner, sqlite_database, mysql_database, mysql_credentials, faker):
         result = cli_runner.invoke(
             mysql2sqlite,
             [
@@ -158,9 +148,7 @@ class TestMySQLtoSQLite:
         assert result.exit_code > 0
         assert "1045 (28000): Access denied" in result.output
 
-    def test_invalid_database_port(
-        self, cli_runner, sqlite_database, mysql_database, mysql_credentials, faker
-    ):
+    def test_invalid_database_port(self, cli_runner, sqlite_database, mysql_database, mysql_credentials, faker):
         if six.PY2:
             port = choice(xrange(2, 2**16 - 1))
         else:
@@ -205,17 +193,11 @@ class TestMySQLtoSQLite:
                 id="no chunk, no vacuum, no buffered cursor, verbose",
             ),
             # 1110
-            pytest.param(
-                10, True, True, False, id="chunk, vacuum, buffered cursor, verbose"
-            ),
+            pytest.param(10, True, True, False, id="chunk, vacuum, buffered cursor, verbose"),
             # 1100
-            pytest.param(
-                10, True, False, False, id="chunk, vacuum, no buffered cursor, verbose"
-            ),
+            pytest.param(10, True, False, False, id="chunk, vacuum, no buffered cursor, verbose"),
             # 0110
-            pytest.param(
-                None, True, True, False, id="no chunk, vacuum, buffered cursor, verbose"
-            ),
+            pytest.param(None, True, True, False, id="no chunk, vacuum, buffered cursor, verbose"),
             # 0100
             pytest.param(
                 None,
@@ -241,9 +223,7 @@ class TestMySQLtoSQLite:
                 id="no chunk, no vacuum, buffered cursor, verbose",
             ),
             # 1010
-            pytest.param(
-                10, False, True, False, id="chunk, no vacuum, buffered cursor, verbose"
-            ),
+            pytest.param(10, False, True, False, id="chunk, no vacuum, buffered cursor, verbose"),
             # 0001
             pytest.param(
                 None,
@@ -253,17 +233,11 @@ class TestMySQLtoSQLite:
                 id="no chunk, no vacuum, no buffered cursor, quiet",
             ),
             # 1111
-            pytest.param(
-                10, True, True, True, id="chunk, vacuum, buffered cursor, quiet"
-            ),
+            pytest.param(10, True, True, True, id="chunk, vacuum, buffered cursor, quiet"),
             # 1101
-            pytest.param(
-                10, True, False, True, id="chunk, vacuum, no buffered cursor, quiet"
-            ),
+            pytest.param(10, True, False, True, id="chunk, vacuum, no buffered cursor, quiet"),
             # 0111
-            pytest.param(
-                None, True, True, True, id="no chunk, vacuum, buffered cursor, quiet"
-            ),
+            pytest.param(None, True, True, True, id="no chunk, vacuum, buffered cursor, quiet"),
             # 0101
             pytest.param(
                 None,
@@ -273,9 +247,7 @@ class TestMySQLtoSQLite:
                 id="no chunk, vacuum, no buffered cursor, quiet",
             ),
             # 1001
-            pytest.param(
-                10, False, False, True, id="chunk, no vacuum, no buffered cursor, quiet"
-            ),
+            pytest.param(10, False, False, True, id="chunk, no vacuum, no buffered cursor, quiet"),
             # 0011
             pytest.param(
                 None,
@@ -285,9 +257,7 @@ class TestMySQLtoSQLite:
                 id="no chunk, no vacuum, buffered cursor, quiet",
             ),
             # 1011
-            pytest.param(
-                10, False, True, True, id="chunk, no vacuum, buffered cursor, quiet"
-            ),
+            pytest.param(10, False, True, True, id="chunk, no vacuum, buffered cursor, quiet"),
         ],
     )
     def test_minimum_valid_parameters(
@@ -330,9 +300,7 @@ class TestMySQLtoSQLite:
         else:
             assert result.output != ""
 
-    def test_keyboard_interrupt(
-        self, cli_runner, sqlite_database, mysql_credentials, mysql_database, mocker
-    ):
+    def test_keyboard_interrupt(self, cli_runner, sqlite_database, mysql_credentials, mysql_database, mocker):
         mocker.patch.object(MySQLtoSQLite, "transfer", side_effect=KeyboardInterrupt())
         result = cli_runner.invoke(
             mysql2sqlite,
@@ -377,9 +345,7 @@ class TestMySQLtoSQLite:
 
         include_mysql_tables = sample(mysql_tables, table_number)
         include_mysql_tables.sort()
-        exclude_mysql_tables = list(
-            set(sample(mysql_tables, table_number)) - set(include_mysql_tables)
-        )
+        exclude_mysql_tables = list(set(sample(mysql_tables, table_number)) - set(include_mysql_tables))
         exclude_mysql_tables.sort()
 
         result = cli_runner.invoke(
@@ -404,14 +370,9 @@ class TestMySQLtoSQLite:
             ],
         )
         assert result.exit_code > 0
-        assert (
-            "Illegal usage: --mysql-tables and --exclude-mysql-tables are mutually exclusive!"
-            in result.output
-        )
+        assert "Illegal usage: --mysql-tables and --exclude-mysql-tables are mutually exclusive!" in result.output
 
-    def test_transfer_specific_tables_only(
-        self, cli_runner, sqlite_database, mysql_credentials, mysql_database
-    ):
+    def test_transfer_specific_tables_only(self, cli_runner, sqlite_database, mysql_credentials, mysql_database):
         mysql_engine = create_engine(
             "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
                 user=mysql_credentials.user,

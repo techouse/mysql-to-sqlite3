@@ -8,10 +8,11 @@ import mysql.connector
 import pytest
 import simplejson as json
 import six
-from mysql.connector import errorcode, MySQLConnection
-from sqlalchemy import MetaData, Table, select, create_engine, inspect, text
+from mysql.connector import MySQLConnection, errorcode
+from sqlalchemy import MetaData, Table, create_engine, inspect, select, text
 
 from mysql_to_sqlite3 import MySQLtoSQLite
+
 
 if six.PY2:
     from ..sixeptions import *
@@ -76,9 +77,7 @@ class TestMySQLtoSQLite:
             pytest.param(True, id="quiet"),
         ],
     )
-    def test_bad_mysql_connection(
-        self, sqlite_database, mysql_credentials, mocker, quiet
-    ):
+    def test_bad_mysql_connection(self, sqlite_database, mysql_credentials, mocker, quiet):
         FakeConnector = namedtuple("FakeConnector", ["is_connected"])
         mocker.patch.object(
             mysql.connector,
@@ -103,25 +102,17 @@ class TestMySQLtoSQLite:
         "exception, quiet",
         [
             pytest.param(
-                mysql.connector.Error(
-                    msg="Unknown database 'test_db'", errno=errorcode.ER_BAD_DB_ERROR
-                ),
+                mysql.connector.Error(msg="Unknown database 'test_db'", errno=errorcode.ER_BAD_DB_ERROR),
                 False,
                 id="mysql.connector.Error verbose",
             ),
             pytest.param(
-                mysql.connector.Error(
-                    msg="Unknown database 'test_db'", errno=errorcode.ER_BAD_DB_ERROR
-                ),
+                mysql.connector.Error(msg="Unknown database 'test_db'", errno=errorcode.ER_BAD_DB_ERROR),
                 True,
                 id="mysql.connector.Error quiet",
             ),
-            pytest.param(
-                Exception("Unknown database 'test_db'"), False, id="Exception verbose"
-            ),
-            pytest.param(
-                Exception("Unknown database 'test_db'"), True, id="Exception quiet"
-            ),
+            pytest.param(Exception("Unknown database 'test_db'"), False, id="Exception verbose"),
+            pytest.param(Exception("Unknown database 'test_db'"), True, id="Exception quiet"),
         ],
     )
     def test_non_existing_mysql_database_raises_exception(
@@ -161,9 +152,7 @@ class TestMySQLtoSQLite:
                 return True
 
         caplog.set_level(logging.DEBUG)
-        mocker.patch.object(
-            mysql.connector, "connect", return_value=FakeMySQLConnection()
-        )
+        mocker.patch.object(mysql.connector, "connect", return_value=FakeMySQLConnection())
         with pytest.raises((mysql.connector.Error, Exception)) as excinfo:
             MySQLtoSQLite(
                 sqlite_file=sqlite_database,
@@ -174,10 +163,7 @@ class TestMySQLtoSQLite:
                 mysql_port=mysql_credentials.port,
                 quiet=quiet,
             )
-            assert any(
-                "MySQL Database does not exist!" in message
-                for message in caplog.messages
-            )
+            assert any("MySQL Database does not exist!" in message for message in caplog.messages)
         assert "Unknown database" in str(excinfo.value)
 
     @pytest.mark.xfail
@@ -219,10 +205,7 @@ class TestMySQLtoSQLite:
                 assert caplog.messages[1] in log
             else:
                 assert caplog.messages[0] in log
-            assert (
-                re.match(r"^\d{4,}-\d{2,}-\d{2,}\s+\d{2,}:\d{2,}:\d{2,}\s+\w+\s+", log)
-                is not None
-            )
+            assert re.match(r"^\d{4,}-\d{2,}-\d{2,}\s+\d{2,}:\d{2,}:\d{2,}\s+\w+\s+", log) is not None
 
     @pytest.mark.transfer
     @pytest.mark.parametrize(
@@ -438,9 +421,9 @@ class TestMySQLtoSQLite:
 
         """ Test if all the tables have the same column names """
         for table_name in sqlite_tables:
-            assert [
-                column["name"] for column in sqlite_inspect.get_columns(table_name)
-            ] == [column["name"] for column in mysql_inspect.get_columns(table_name)]
+            assert [column["name"] for column in sqlite_inspect.get_columns(table_name)] == [
+                column["name"] for column in mysql_inspect.get_columns(table_name)
+            ]
 
         """ Test if all the tables have the same indices """
         index_keys = {"name", "column_names", "unique"}
@@ -450,9 +433,7 @@ class TestMySQLtoSQLite:
                 mysql_index = {}
                 for key in index_keys:
                     if key == "name" and prefix_indices:
-                        mysql_index[key] = "{table}_{name}".format(
-                            table=table_name, name=index[key]
-                        )
+                        mysql_index[key] = "{table}_{name}".format(table=table_name, name=index[key])
                     else:
                         mysql_index[key] = index[key]
                 mysql_indices.append(mysql_index)
@@ -491,9 +472,7 @@ class TestMySQLtoSQLite:
             mysql_fk_result = mysql_cnx.execute(mysql_fk_stmt)
             mysql_foreign_keys = [dict(row) for row in mysql_fk_result]
 
-            sqlite_fk_stmt = 'PRAGMA foreign_key_list("{table}")'.format(
-                table=table_name
-            )
+            sqlite_fk_stmt = 'PRAGMA foreign_key_list("{table}")'.format(table=table_name)
             sqlite_fk_result = sqlite_cnx.execute(sqlite_fk_stmt)
             if sqlite_fk_result.returns_rows:
                 for row in sqlite_fk_result:
@@ -512,28 +491,22 @@ class TestMySQLtoSQLite:
 
         meta = MetaData(bind=None)
         for table_name in sqlite_tables:
-            sqlite_table = Table(
-                table_name, meta, autoload=True, autoload_with=sqlite_engine
-            )
+            sqlite_table = Table(table_name, meta, autoload=True, autoload_with=sqlite_engine)
             sqlite_stmt = select([sqlite_table])
             sqlite_result = sqlite_cnx.execute(sqlite_stmt).fetchall()
             sqlite_result.sort()
             sqlite_result = [
-                [float(data) if isinstance(data, Decimal) else data for data in row]
-                for row in sqlite_result
+                [float(data) if isinstance(data, Decimal) else data for data in row] for row in sqlite_result
             ]
             sqlite_results.append(sqlite_result)
 
         for table_name in mysql_tables:
-            mysql_table = Table(
-                table_name, meta, autoload=True, autoload_with=mysql_engine
-            )
+            mysql_table = Table(table_name, meta, autoload=True, autoload_with=mysql_engine)
             mysql_stmt = select([mysql_table])
             mysql_result = mysql_cnx.execute(mysql_stmt).fetchall()
             mysql_result.sort()
             mysql_result = [
-                [float(data) if isinstance(data, Decimal) else data for data in row]
-                for row in mysql_result
+                [float(data) if isinstance(data, Decimal) else data for data in row] for row in mysql_result
             ]
             mysql_results.append(mysql_result)
 
@@ -558,9 +531,7 @@ class TestMySQLtoSQLite:
                 mysql_host=mysql_credentials.host,
                 mysql_port=mysql_credentials.port,
             )
-        assert "mysql_tables and exclude_mysql_tables are mutually exclusive" in str(
-            excinfo.value
-        )
+        assert "mysql_tables and exclude_mysql_tables are mutually exclusive" in str(excinfo.value)
 
     @pytest.mark.transfer
     @pytest.mark.parametrize(
@@ -911,9 +882,7 @@ class TestMySQLtoSQLite:
             for message in set(
                 [
                     "Transferring table {}".format(table)
-                    for table in (
-                        remaining_tables if exclude_tables else random_mysql_tables
-                    )
+                    for table in (remaining_tables if exclude_tables else random_mysql_tables)
                 ]
                 + ["Done!"]
             )
@@ -940,9 +909,9 @@ class TestMySQLtoSQLite:
 
         """ Test if all the tables have the same column names """
         for table_name in sqlite_tables:
-            assert [
-                column["name"] for column in sqlite_inspect.get_columns(table_name)
-            ] == [column["name"] for column in mysql_inspect.get_columns(table_name)]
+            assert [column["name"] for column in sqlite_inspect.get_columns(table_name)] == [
+                column["name"] for column in mysql_inspect.get_columns(table_name)
+            ]
 
         """ Test if all the tables have the same indices """
         index_keys = {"name", "column_names", "unique"}
@@ -952,9 +921,7 @@ class TestMySQLtoSQLite:
                 mysql_index = {}
                 for key in index_keys:
                     if key == "name" and prefix_indices:
-                        mysql_index[key] = "{table}_{name}".format(
-                            table=table_name, name=index[key]
-                        )
+                        mysql_index[key] = "{table}_{name}".format(table=table_name, name=index[key])
                     else:
                         mysql_index[key] = index[key]
                 mysql_indices.append(mysql_index)
@@ -970,28 +937,22 @@ class TestMySQLtoSQLite:
 
         meta = MetaData(bind=None)
         for table_name in sqlite_tables:
-            sqlite_table = Table(
-                table_name, meta, autoload=True, autoload_with=sqlite_engine
-            )
+            sqlite_table = Table(table_name, meta, autoload=True, autoload_with=sqlite_engine)
             sqlite_stmt = select([sqlite_table])
             sqlite_result = sqlite_cnx.execute(sqlite_stmt).fetchall()
             sqlite_result.sort()
             sqlite_result = [
-                [float(data) if isinstance(data, Decimal) else data for data in row]
-                for row in sqlite_result
+                [float(data) if isinstance(data, Decimal) else data for data in row] for row in sqlite_result
             ]
             sqlite_results.append(sqlite_result)
 
         for table_name in remaining_tables if exclude_tables else random_mysql_tables:
-            mysql_table = Table(
-                table_name, meta, autoload=True, autoload_with=mysql_engine
-            )
+            mysql_table = Table(table_name, meta, autoload=True, autoload_with=mysql_engine)
             mysql_stmt = select([mysql_table])
             mysql_result = mysql_cnx.execute(mysql_stmt).fetchall()
             mysql_result.sort()
             mysql_result = [
-                [float(data) if isinstance(data, Decimal) else data for data in row]
-                for row in mysql_result
+                [float(data) if isinstance(data, Decimal) else data for data in row] for row in mysql_result
             ]
             mysql_results.append(mysql_result)
 
@@ -1214,9 +1175,9 @@ class TestMySQLtoSQLite:
 
         """ Test if all the tables have the same column names """
         for table_name in sqlite_tables:
-            assert [
-                column["name"] for column in sqlite_inspect.get_columns(table_name)
-            ] == [column["name"] for column in mysql_inspect.get_columns(table_name)]
+            assert [column["name"] for column in sqlite_inspect.get_columns(table_name)] == [
+                column["name"] for column in mysql_inspect.get_columns(table_name)
+            ]
 
         """ Test if all the tables have the same indices """
         index_keys = {"name", "column_names", "unique"}
@@ -1226,9 +1187,7 @@ class TestMySQLtoSQLite:
                 mysql_index = {}
                 for key in index_keys:
                     if key == "name" and prefix_indices:
-                        mysql_index[key] = "{table}_{name}".format(
-                            table=table_name, name=index[key]
-                        )
+                        mysql_index[key] = "{table}_{name}".format(table=table_name, name=index[key])
                     else:
                         mysql_index[key] = index[key]
                 mysql_indices.append(mysql_index)
@@ -1267,9 +1226,7 @@ class TestMySQLtoSQLite:
             mysql_fk_result = mysql_cnx.execute(mysql_fk_stmt)
             mysql_foreign_keys = [dict(row) for row in mysql_fk_result]
 
-            sqlite_fk_stmt = 'PRAGMA foreign_key_list("{table}")'.format(
-                table=table_name
-            )
+            sqlite_fk_stmt = 'PRAGMA foreign_key_list("{table}")'.format(table=table_name)
             sqlite_fk_result = sqlite_cnx.execute(sqlite_fk_stmt)
             if sqlite_fk_result.returns_rows:
                 for row in sqlite_fk_result:
@@ -1288,28 +1245,22 @@ class TestMySQLtoSQLite:
 
         meta = MetaData(bind=None)
         for table_name in sqlite_tables:
-            sqlite_table = Table(
-                table_name, meta, autoload=True, autoload_with=sqlite_engine
-            )
+            sqlite_table = Table(table_name, meta, autoload=True, autoload_with=sqlite_engine)
             sqlite_stmt = select([sqlite_table])
             sqlite_result = sqlite_cnx.execute(sqlite_stmt).fetchall()
             sqlite_result.sort()
             sqlite_result = [
-                [float(data) if isinstance(data, Decimal) else data for data in row]
-                for row in sqlite_result
+                [float(data) if isinstance(data, Decimal) else data for data in row] for row in sqlite_result
             ]
             sqlite_results.append(sqlite_result)
 
         for table_name in mysql_tables:
-            mysql_table = Table(
-                table_name, meta, autoload=True, autoload_with=mysql_engine
-            )
+            mysql_table = Table(table_name, meta, autoload=True, autoload_with=mysql_engine)
             mysql_stmt = select([mysql_table]).limit(limit_rows)
             mysql_result = mysql_cnx.execute(mysql_stmt).fetchall()
             mysql_result.sort()
             mysql_result = [
-                [float(data) if isinstance(data, Decimal) else data for data in row]
-                for row in mysql_result
+                [float(data) if isinstance(data, Decimal) else data for data in row] for row in mysql_result
             ]
             mysql_results.append(mysql_result)
 

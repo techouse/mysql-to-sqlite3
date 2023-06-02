@@ -10,6 +10,7 @@ from sys import version_info
 import six
 from pytimeparse.timeparse import timeparse
 
+
 if version_info.major == 3 and 4 <= version_info.minor <= 6:
     from backports.datetime_fromisoformat import MonkeyPatch  # pylint: disable=E0401
 
@@ -60,12 +61,8 @@ def convert_date(value):
         try:
             return date.fromisoformat(value.decode())
         except ValueError as err:
-            raise ValueError(  # pylint: disable=W0707
-                "DATE field contains {}".format(err)
-            )
+            raise ValueError("DATE field contains {}".format(err))  # pylint: disable=W0707
     try:
         return datetime.strptime(value.decode(), "%Y-%m-%d").date()
     except ValueError as err:
-        raise ValueError(  # pylint: disable=W0707
-            "DATE field contains Invalid isoformat string: {}".format(err)
-        )
+        raise ValueError("DATE field contains Invalid isoformat string: {}".format(err))  # pylint: disable=W0707
