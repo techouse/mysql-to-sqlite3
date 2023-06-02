@@ -1,33 +1,27 @@
+import json
 import socket
 from codecs import open
 from collections import namedtuple
-from contextlib import contextmanager, closing
-from os.path import join, abspath, dirname, isfile
+from contextlib import closing, contextmanager
+from os.path import abspath, dirname, isfile, join
 from random import choice
-from string import ascii_uppercase, digits, ascii_lowercase
+from string import ascii_lowercase, ascii_uppercase, digits
 from time import sleep
 
 import docker
 import mysql.connector
 import pytest
 import six
-import json
 from click.testing import CliRunner
 from docker.errors import NotFound
 from mysql.connector import errorcode
 from requests import HTTPError
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy_utils import drop_database, database_exists
+from sqlalchemy_utils import database_exists, drop_database
 
 from .database import Database
-from .factories import (
-    AuthorFactory,
-    ArticleFactory,
-    ImageFactory,
-    MiscFactory,
-    TagFactory,
-    CrazyNameFactory,
-)
+from .factories import ArticleFactory, AuthorFactory, CrazyNameFactory, ImageFactory, MiscFactory, TagFactory
+
 
 if six.PY2:
     from .sixeptions import *
@@ -143,13 +137,9 @@ def helpers():
 @pytest.fixture()
 def sqlite_database(tmpdir):
     if six.PY2:
-        db_name = "".join(
-            choice(ascii_uppercase + ascii_lowercase + digits) for _ in xrange(32)
-        )
+        db_name = "".join(choice(ascii_uppercase + ascii_lowercase + digits) for _ in xrange(32))
     else:
-        db_name = "".join(
-            choice(ascii_uppercase + ascii_lowercase + digits) for _ in range(32)
-        )
+        db_name = "".join(choice(ascii_uppercase + ascii_lowercase + digits) for _ in range(32))
     return str(tmpdir.join("{}.sqlite3".format(db_name)))
 
 
@@ -164,9 +154,7 @@ def is_port_in_use(port, host="0.0.0.0"):
 
 @pytest.fixture(scope="session")
 def mysql_credentials(pytestconfig):
-    MySQLCredentials = namedtuple(
-        "MySQLCredentials", ["user", "password", "host", "port", "database"]
-    )
+    MySQLCredentials = namedtuple("MySQLCredentials", ["user", "password", "host", "port", "database"])
 
     db_credentials_file = abspath(join(dirname(__file__), "db_credentials.json"))
     if isfile(db_credentials_file):
@@ -185,14 +173,10 @@ def mysql_credentials(pytestconfig):
         while is_port_in_use(port, pytestconfig.getoption("mysql_host")):
             if port >= 2**16 - 1:
                 pytest.fail(
-                    "No ports appear to be available on the host {}".format(
-                        pytestconfig.getoption("mysql_host")
-                    )
+                    "No ports appear to be available on the host {}".format(pytestconfig.getoption("mysql_host"))
                 )
                 raise ConnectionError(
-                    "No ports appear to be available on the host {}".format(
-                        pytestconfig.getoption("mysql_host")
-                    )
+                    "No ports appear to be available on the host {}".format(pytestconfig.getoption("mysql_host"))
                 )
             port += 1
 
@@ -228,9 +212,7 @@ def mysql_instance(mysql_credentials, pytestconfig):
             pytest.fail(str(err))
             raise
 
-        docker_mysql_image = (
-            pytestconfig.getoption("docker_mysql_image") or "mysql:latest"
-        )
+        docker_mysql_image = pytestconfig.getoption("docker_mysql_image") or "mysql:latest"
 
         if not any(docker_mysql_image in image.tags for image in client.images.list()):
             print("Attempting to download Docker image {}'".format(docker_mysql_image))
@@ -284,9 +266,7 @@ def mysql_instance(mysql_credentials, pytestconfig):
                 mysql_connection.close()
     else:
         if not mysql_available and mysql_connection_retries <= 0:
-            raise ConnectionAbortedError(
-                "Maximum MySQL connection retries exhausted! Are you sure MySQL is running?"
-            )
+            raise ConnectionAbortedError("Maximum MySQL connection retries exhausted! Are you sure MySQL is running?")
 
     yield
 
@@ -345,9 +325,7 @@ if six.PY2:
 else:
 
     @pytest.fixture(scope="session")
-    def mysql_database(
-        tmpdir_factory, mysql_instance, mysql_credentials, _session_faker
-    ):
+    def mysql_database(tmpdir_factory, mysql_instance, mysql_credentials, _session_faker):
         temp_image_dir = tmpdir_factory.mktemp("images")
 
         db = Database(

@@ -26,6 +26,7 @@ from mysql_to_sqlite3.sqlite_utils import (
     encode_data_for_sqlite,
 )
 
+
 if six.PY2:
     from .sixeptions import *  # pylint: disable=W0401
 
@@ -46,22 +47,14 @@ class MySQLtoSQLite:
 
         self._mysql_database = str(kwargs.get("mysql_database"))
 
-        self._mysql_tables = (
-            tuple(kwargs.get("mysql_tables"))
-            if kwargs.get("mysql_tables") is not None
-            else tuple()
-        )
+        self._mysql_tables = tuple(kwargs.get("mysql_tables")) if kwargs.get("mysql_tables") is not None else tuple()
 
         self._exclude_mysql_tables = (
-            tuple(kwargs.get("exclude_mysql_tables"))
-            if kwargs.get("exclude_mysql_tables") is not None
-            else tuple()
+            tuple(kwargs.get("exclude_mysql_tables")) if kwargs.get("exclude_mysql_tables") is not None else tuple()
         )
 
         if len(self._mysql_tables) > 0 and len(self._exclude_mysql_tables) > 0:
-            raise ValueError(
-                "mysql_tables and exclude_mysql_tables are mutually exclusive"
-            )
+            raise ValueError("mysql_tables and exclude_mysql_tables are mutually exclusive")
 
         self._limit_rows = int(kwargs.get("limit_rows") or 0)
 
@@ -86,9 +79,7 @@ class MySQLtoSQLite:
 
         self._mysql_user = str(kwargs.get("mysql_user"))
 
-        self._mysql_password = (
-            str(kwargs.get("mysql_password")) if kwargs.get("mysql_password") else None
-        )
+        self._mysql_password = str(kwargs.get("mysql_password")) if kwargs.get("mysql_password") else None
 
         self._mysql_host = str(kwargs.get("mysql_host") or "localhost")
 
@@ -107,9 +98,7 @@ class MySQLtoSQLite:
 
         self._quiet = kwargs.get("quiet") or False
 
-        self._logger = self._setup_logger(
-            log_file=kwargs.get("log_file") or None, quiet=self._quiet
-        )
+        self._logger = self._setup_logger(log_file=kwargs.get("log_file") or None, quiet=self._quiet)
 
         sqlite3.register_adapter(Decimal, adapt_decimal)
         sqlite3.register_converter("DECIMAL", convert_decimal)
@@ -117,17 +106,13 @@ class MySQLtoSQLite:
         sqlite3.register_converter("DATE", convert_date)
         sqlite3.register_converter("TIME", convert_timedelta)
 
-        self._sqlite = sqlite3.connect(
-            realpath(self._sqlite_file), detect_types=sqlite3.PARSE_DECLTYPES
-        )
+        self._sqlite = sqlite3.connect(realpath(self._sqlite_file), detect_types=sqlite3.PARSE_DECLTYPES)
         self._sqlite.row_factory = sqlite3.Row
 
         self._sqlite_cur = self._sqlite.cursor()
 
         self._json_as_text = kwargs.get("json_as_text") or False
-        self._sqlite_json1_extension_enabled = (
-            not self._json_as_text and self._check_sqlite_json1_extension_enabled()
-        )
+        self._sqlite_json1_extension_enabled = not self._json_as_text and self._check_sqlite_json1_extension_enabled()
 
         try:
             self._mysql = mysql.connector.connect(
@@ -160,9 +145,7 @@ class MySQLtoSQLite:
 
     @classmethod
     def _setup_logger(cls, log_file=None, quiet=False):
-        formatter = logging.Formatter(
-            fmt="%(asctime)s %(levelname)-8s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
-        )
+        formatter = logging.Formatter(fmt="%(asctime)s %(levelname)-8s %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
         logger = logging.getLogger(cls.__name__)
         logger.setLevel(logging.DEBUG)
 
@@ -190,9 +173,7 @@ class MySQLtoSQLite:
         return ""
 
     @classmethod
-    def _translate_type_from_mysql_to_sqlite(
-        cls, column_type, sqlite_json1_extension_enabled=False
-    ):
+    def _translate_type_from_mysql_to_sqlite(cls, column_type, sqlite_json1_extension_enabled=False):
         """Handle MySQL 8."""
         try:
             column_type = column_type.decode()
@@ -250,9 +231,7 @@ class MySQLtoSQLite:
         return "TEXT"
 
     @classmethod
-    def _translate_default_from_mysql_to_sqlite(
-        cls, column_default=None, column_type=None
-    ):
+    def _translate_default_from_mysql_to_sqlite(cls, column_default=None, column_type=None):
         if isinstance(column_default, six.binary_type):
             if column_type in {
                 "BIT",
@@ -284,12 +263,9 @@ class MySQLtoSQLite:
                     return "DEFAULT(TRUE)"
                 return "DEFAULT(FALSE)"
             return "DEFAULT '{}'".format(int(column_default))
-        if (
-            six.PY2
-            and isinstance(
-                column_default, unicode  # noqa: ignore=F405 pylint: disable=E0602
-            )
-        ) or isinstance(column_default, str):
+        if (six.PY2 and isinstance(column_default, unicode)) or isinstance(  # noqa: ignore=F405 pylint: disable=E0602
+            column_default, str
+        ):
             if column_default.upper() in {
                 "CURRENT_TIME",
                 "CURRENT_DATE",
@@ -299,9 +275,7 @@ class MySQLtoSQLite:
         return "DEFAULT '{}'".format(column_default)
 
     @classmethod
-    def _data_type_collation_sequence(
-        cls, collation=CollatingSequences.BINARY, column_type=None
-    ):
+    def _data_type_collation_sequence(cls, collation=CollatingSequences.BINARY, column_type=None):
         if column_type and collation != CollatingSequences.BINARY:
             if column_type.startswith(
                 (
@@ -338,12 +312,8 @@ class MySQLtoSQLite:
                 name=row["Field"],
                 type=column_type,
                 notnull="NULL" if row["Null"] == "YES" else "NOT NULL",
-                default=self._translate_default_from_mysql_to_sqlite(
-                    row["Default"], column_type
-                ),
-                collation=self._data_type_collation_sequence(
-                    self._collation, column_type
-                ),
+                default=self._translate_default_from_mysql_to_sqlite(row["Default"], column_type),
+                collation=self._data_type_collation_sequence(self._collation, column_type),
             )
 
         self._mysql_cur_dict.execute(
@@ -362,9 +332,7 @@ class MySQLtoSQLite:
         for index in self._mysql_cur_dict.fetchall():
             if int(index["primary"]) == 1:
                 primary += "\n\tPRIMARY KEY ({columns})".format(
-                    columns=", ".join(
-                        '"{}"'.format(column) for column in index["columns"].split(",")
-                    )
+                    columns=", ".join('"{}"'.format(column) for column in index["columns"].split(","))
                 )
             else:
                 indices += """CREATE {unique} INDEX IF NOT EXISTS "{name}" ON "{table}" ({columns});""".format(
@@ -373,9 +341,7 @@ class MySQLtoSQLite:
                     if self._prefix_indices
                     else index["name"],
                     table=table_name,
-                    columns=", ".join(
-                        '"{}"'.format(column) for column in index["columns"].split(",")
-                    ),
+                    columns=", ".join('"{}"'.format(column) for column in index["columns"].split(",")),
                 )
 
         sql += primary
@@ -405,9 +371,7 @@ class MySQLtoSQLite:
                          c.UPDATE_RULE,
                          c.DELETE_RULE
                 """.format(
-                    JOIN="JOIN"
-                    if (server_version[0] == 8 and server_version[2] > 19)
-                    else "LEFT JOIN"
+                    JOIN="JOIN" if (server_version[0] == 8 and server_version[2] > 19) else "LEFT JOIN"
                 ),
                 (self._mysql_database, table_name, "FOREIGN KEY"),
             )
@@ -429,15 +393,10 @@ class MySQLtoSQLite:
         except mysql.connector.Error as err:
             if err.errno == errorcode.CR_SERVER_LOST:
                 if not attempting_reconnect:
-                    self._logger.warning(
-                        "Connection to MySQL server lost.\nAttempting to reconnect."
-                    )
+                    self._logger.warning("Connection to MySQL server lost.\nAttempting to reconnect.")
                     self._create_table(table_name, True)
                 else:
-                    self._logger.warning(
-                        "Connection to MySQL server lost."
-                        "\nReconnection attempt aborted."
-                    )
+                    self._logger.warning("Connection to MySQL server lost.\nReconnection attempt aborted.")
                     raise
             self._logger.error(
                 "MySQL failed reading table definition from table %s: %s",
@@ -449,9 +408,7 @@ class MySQLtoSQLite:
             self._logger.error("SQLite failed creating table %s: %s", table_name, err)
             raise
 
-    def _transfer_table_data(
-        self, table_name, sql, total_records=0, attempting_reconnect=False
-    ):
+    def _transfer_table_data(self, table_name, sql, total_records=0, attempting_reconnect=False):
         if attempting_reconnect:
             self._mysql.reconnect()
         try:
@@ -465,10 +422,7 @@ class MySQLtoSQLite:
                     self._sqlite_cur.executemany(
                         sql,
                         (
-                            tuple(
-                                encode_data_for_sqlite(col) if col is not None else None
-                                for col in row
-                            )
+                            tuple(encode_data_for_sqlite(col) if col is not None else None for col in row)
                             for row in self._mysql_cur.fetchmany(self._chunk_size)
                         ),
                     )
@@ -476,10 +430,7 @@ class MySQLtoSQLite:
                 self._sqlite_cur.executemany(
                     sql,
                     (
-                        tuple(
-                            encode_data_for_sqlite(col) if col is not None else None
-                            for col in row
-                        )
+                        tuple(encode_data_for_sqlite(col) if col is not None else None for col in row)
                         for row in tqdm(
                             self._mysql_cur.fetchall(),
                             total=total_records,
@@ -491,9 +442,7 @@ class MySQLtoSQLite:
         except mysql.connector.Error as err:
             if err.errno == errorcode.CR_SERVER_LOST:
                 if not attempting_reconnect:
-                    self._logger.warning(
-                        "Connection to MySQL server lost.\nAttempting to reconnect."
-                    )
+                    self._logger.warning("Connection to MySQL server lost.\nAttempting to reconnect.")
                     self._transfer_table_data(
                         table_name=table_name,
                         sql=sql,
@@ -501,10 +450,7 @@ class MySQLtoSQLite:
                         attempting_reconnect=True,
                     )
                 else:
-                    self._logger.warning(
-                        "Connection to MySQL server lost."
-                        "\nReconnection attempt aborted."
-                    )
+                    self._logger.warning("Connection to MySQL server lost.\nReconnection attempt aborted.")
                     raise
             self._logger.error(
                 "MySQL transfer failed reading table data from table %s: %s",
@@ -524,11 +470,7 @@ class MySQLtoSQLite:
         """The primary and only method with which we transfer all the data."""
         if len(self._mysql_tables) > 0 or len(self._exclude_mysql_tables) > 0:
             # transfer only specific tables
-            specific_tables = (
-                self._exclude_mysql_tables
-                if len(self._exclude_mysql_tables) > 0
-                else self._mysql_tables
-            )
+            specific_tables = self._exclude_mysql_tables if len(self._exclude_mysql_tables) > 0 else self._mysql_tables
 
             self._mysql_cur_prepared.execute(
                 """
@@ -586,13 +528,9 @@ class MySQLtoSQLite:
                     else:
                         # get all rows
                         self._mysql_cur_dict.execute(
-                            "SELECT COUNT(*) AS `total_records` FROM `{table_name}`".format(
-                                table_name=table_name
-                            )
+                            "SELECT COUNT(*) AS `total_records` FROM `{table_name}`".format(table_name=table_name)
                         )
-                    total_records = int(
-                        self._mysql_cur_dict.fetchone()["total_records"]
-                    )
+                    total_records = int(self._mysql_cur_dict.fetchone()["total_records"])
 
                     # only continue if there is anything to transfer
                     if total_records > 0:
@@ -600,9 +538,7 @@ class MySQLtoSQLite:
                         self._mysql_cur.execute(
                             "SELECT * FROM `{table_name}` {limit}".format(
                                 table_name=table_name,
-                                limit="LIMIT {}".format(self._limit_rows)
-                                if self._limit_rows > 0
-                                else "",
+                                limit="LIMIT {}".format(self._limit_rows) if self._limit_rows > 0 else "",
                             )
                         )
                         columns = [column[0] for column in self._mysql_cur.description]
@@ -613,14 +549,10 @@ class MySQLtoSQLite:
                             VALUES ({placeholders})
                         """.format(
                             table=table_name,
-                            fields=('"{}", ' * len(columns))
-                            .rstrip(" ,")
-                            .format(*columns),
+                            fields=('"{}", ' * len(columns)).rstrip(" ,").format(*columns),
                             placeholders=("?, " * len(columns)).rstrip(" ,"),
                         )
-                        self._transfer_table_data(
-                            table_name=table_name, sql=sql, total_records=total_records
-                        )
+                        self._transfer_table_data(table_name=table_name, sql=sql, total_records=total_records)
         except Exception:  # pylint: disable=W0706
             raise
         finally:
@@ -628,9 +560,7 @@ class MySQLtoSQLite:
             self._sqlite_cur.execute("PRAGMA foreign_keys=ON")
 
         if self._vacuum:
-            self._logger.info(
-                "Vacuuming created SQLite database file.\nThis might take a while."
-            )
+            self._logger.info("Vacuuming created SQLite database file.\nThis might take a while.")
             self._sqlite_cur.execute("VACUUM")
 
         self._logger.info("Done!")

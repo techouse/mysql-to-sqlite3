@@ -1,35 +1,36 @@
 from os import environ
 
 from sqlalchemy import (
-    Table,
-    Column,
-    ForeignKey,
-    BigInteger,
-    LargeBinary,
-    Boolean,
     CHAR,
-    Date,
-    DateTime,
     DECIMAL,
-    Float,
-    Integer,
     JSON,
     NCHAR,
-    Numeric,
-    Unicode,
     REAL,
-    SmallInteger,
-    String,
-    Text,
-    Time,
     TIMESTAMP,
     VARBINARY,
     VARCHAR,
+    BigInteger,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    LargeBinary,
+    Numeric,
+    SmallInteger,
+    String,
+    Table,
+    Text,
+    Time,
+    Unicode,
 )
 from sqlalchemy.dialects.mysql import BIGINT, INTEGER, MEDIUMINT, SMALLINT, TINYINT
-from sqlalchemy.sql.functions import current_timestamp
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import backref, relationship
+from sqlalchemy.sql.functions import current_timestamp
+
 
 Base = declarative_base()
 
@@ -97,9 +98,7 @@ class Misc(Base):
     big_integer_field = Column(BigInteger, default=0)
     big_integer_unsigned_field = Column(BIGINT(unsigned=True), default=0)
     if environ.get("LEGACY_DB", "0") == "0":
-        large_binary_field = Column(
-            LargeBinary, nullable=True, default=b"Lorem ipsum dolor"
-        )
+        large_binary_field = Column(LargeBinary, nullable=True, default=b"Lorem ipsum dolor")
     else:
         large_binary_field = Column(LargeBinary, nullable=True)
     boolean_field = Column(Boolean, default=False)
@@ -176,9 +175,7 @@ class Article(Base):
     )
 
     def __repr__(self):
-        return "<Article(id='{id}', title='{title}')>".format(
-            id=self.id, title=self.title
-        )
+        return "<Article(id='{id}', title='{title}')>".format(id=self.id, title=self.title)
 
 
 class CrazyName(Base):
@@ -188,6 +185,4 @@ class CrazyName(Base):
     dupe = Column(Boolean, index=True, default=False)
 
     def __repr__(self):
-        return "<CrazyName(id='{id}', name='{name}')>".format(
-            id=self.id, name=self.name
-        )
+        return "<CrazyName(id='{id}', name='{name}')>".format(id=self.id, name=self.name)

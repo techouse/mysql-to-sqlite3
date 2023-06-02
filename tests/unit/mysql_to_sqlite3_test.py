@@ -36,30 +36,15 @@ class TestMySQLtoSQLiteClassmethods:
             if any(c for c in column_type if c.islower()):
                 continue
             elif column_type == "INT":
-                assert (
-                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
-                    == "INTEGER"
-                )
+                assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type) == "INTEGER"
             elif column_type == "DECIMAL":
-                assert (
-                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
-                    == "DECIMAL"
-                )
+                assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type) == "DECIMAL"
             elif column_type == "YEAR":
-                assert (
-                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
-                    == "YEAR"
-                )
+                assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type) == "YEAR"
             elif column_type == "TIME":
-                assert (
-                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
-                    == "TIME"
-                )
+                assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type) == "TIME"
             elif column_type == "TIMESTAMP":
-                assert (
-                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
-                    == "DATETIME"
-                )
+                assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type) == "DATETIME"
             elif column_type in {
                 "BINARY",
                 "BIT",
@@ -68,35 +53,17 @@ class TestMySQLtoSQLiteClassmethods:
                 "TINYBLOB",
                 "VARBINARY",
             }:
-                assert (
-                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
-                    == "BLOB"
-                )
+                assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type) == "BLOB"
             elif column_type == "CHAR":
-                assert (
-                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
-                    == "CHARACTER"
-                )
+                assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type) == "CHARACTER"
             elif column_type == "CHAR(2)":
-                assert (
-                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
-                    == "CHARACTER(2)"
-                )
+                assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type) == "CHARACTER(2)"
             elif column_type == "NCHAR(7)":
-                assert (
-                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
-                    == "NCHAR(7)"
-                )
+                assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type) == "NCHAR(7)"
             elif column_type == "NVARCHAR(17)":
-                assert (
-                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
-                    == "NVARCHAR(17)"
-                )
+                assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type) == "NVARCHAR(17)"
             elif column_type == "VARCHAR(123)":
-                assert (
-                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
-                    == "VARCHAR(123)"
-                )
+                assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type) == "VARCHAR(123)"
             elif column_type in {
                 "ENUM",
                 "LONGTEXT",
@@ -104,36 +71,22 @@ class TestMySQLtoSQLiteClassmethods:
                 "SET",
                 "TINYTEXT",
             }:
-                assert (
-                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
-                    == "TEXT"
-                )
+                assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type) == "TEXT"
             elif column_type == "JSON":
+                assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type) == "TEXT"
                 assert (
-                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
-                    == "TEXT"
-                )
-                assert (
-                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(
-                        column_type, sqlite_json1_extension_enabled=True
-                    )
+                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type, sqlite_json1_extension_enabled=True)
                     == "JSON"
                 )
             elif column_type.endswith(" UNSIGNED"):
                 if column_type.startswith("INT "):
-                    assert (
-                        MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
-                        == "INTEGER"
-                    )
+                    assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type) == "INTEGER"
                 else:
-                    assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(
-                        column_type
-                    ) == column_type.replace(" UNSIGNED", "")
+                    assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type) == column_type.replace(
+                        " UNSIGNED", ""
+                    )
             else:
-                assert (
-                    MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type)
-                    == column_type
-                )
+                assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type) == column_type
 
     @pytest.mark.parametrize(
         "column_default, sqlite_default_translation",
@@ -162,13 +115,8 @@ class TestMySQLtoSQLiteClassmethods:
             ),
         ],
     )
-    def test_translate_default_from_mysql_to_sqlite(
-        self, column_default, sqlite_default_translation
-    ):
-        assert (
-            MySQLtoSQLite._translate_default_from_mysql_to_sqlite(column_default)
-            == sqlite_default_translation
-        )
+    def test_translate_default_from_mysql_to_sqlite(self, column_default, sqlite_default_translation):
+        assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(column_default) == sqlite_default_translation
 
     @pytest.mark.parametrize(
         "column_default, sqlite_default_translation, sqlite_version",
@@ -184,9 +132,7 @@ class TestMySQLtoSQLiteClassmethods:
     ):
         mocker.patch.object(sqlite3, "sqlite_version", sqlite_version)
         assert (
-            MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
-                column_default, "BOOLEAN"
-            )
+            MySQLtoSQLite._translate_default_from_mysql_to_sqlite(column_default, "BOOLEAN")
             == sqlite_default_translation
         )
 
@@ -201,27 +147,17 @@ class TestMySQLtoSQLiteClassmethods:
             pytest.param(1, "DEFAULT '1'", "NUMERIC", id="1 (NUMERIC)"),
             pytest.param(0, "DEFAULT '0'", "TEXT", id="0 (TEXT)"),
             pytest.param(1, "DEFAULT '1'", "TEXT", id="1 (TEXT)"),
-            pytest.param(
-                123456789, "DEFAULT '123456789'", "NUMERIC", id="123456789 (NUMERIC)"
-            ),
-            pytest.param(
-                1234.56789, "DEFAULT '1234.56789'", "NUMERIC", id="1234.56789 (NUMERIC)"
-            ),
-            pytest.param(
-                123456789, "DEFAULT '123456789'", "TEXT", id="123456789 (TEXT)"
-            ),
-            pytest.param(
-                1234.56789, "DEFAULT '1234.56789'", "TEXT", id="1234.56789 (TEXT)"
-            ),
+            pytest.param(123456789, "DEFAULT '123456789'", "NUMERIC", id="123456789 (NUMERIC)"),
+            pytest.param(1234.56789, "DEFAULT '1234.56789'", "NUMERIC", id="1234.56789 (NUMERIC)"),
+            pytest.param(123456789, "DEFAULT '123456789'", "TEXT", id="123456789 (TEXT)"),
+            pytest.param(1234.56789, "DEFAULT '1234.56789'", "TEXT", id="1234.56789 (TEXT)"),
         ],
     )
     def test_translate_default_numbers_from_mysql_to_sqlite(
         self, column_default, sqlite_default_translation, column_type
     ):
         assert (
-            MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
-                column_default, column_type
-            )
+            MySQLtoSQLite._translate_default_from_mysql_to_sqlite(column_default, column_type)
             == sqlite_default_translation
         )
 
@@ -232,12 +168,8 @@ class TestMySQLtoSQLiteClassmethods:
             pytest.param(b"-1", "DEFAULT x'2d31'", id="b'-1'"),
             pytest.param(b"0", "DEFAULT x'30'", id="b'0'"),
             pytest.param(b"1", "DEFAULT x'31'", id="b'1'"),
-            pytest.param(
-                b"-1234567890", "DEFAULT x'2d31323334353637383930'", id="b'-1234567890'"
-            ),
-            pytest.param(
-                b"1234567890", "DEFAULT x'31323334353637383930'", id="b'1234567890'"
-            ),
+            pytest.param(b"-1234567890", "DEFAULT x'2d31323334353637383930'", id="b'-1234567890'"),
+            pytest.param(b"1234567890", "DEFAULT x'31323334353637383930'", id="b'1234567890'"),
             pytest.param(b"SQLite", "DEFAULT x'53514c697465'", id="b'SQLite'"),
             pytest.param(
                 b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam pretium, purus vitae sollicitudin varius, nisi lectus vehicula dui, ut dignissim felis dolor blandit justo. Donec eleifend lectus ut feugiat rhoncus. Donec erat nibh, dapibus nec diam id, lacinia lacinia nisl. Mauris sagittis efficitur nisl. Ut tincidunt elementum rhoncus. Cras suscipit dolor sed est ultricies, quis dapibus neque suscipit. Etiam ac enim eu ligula bibendum blandit quis sit amet felis. Praesent mi nisi, luctus sit amet nunc ut, fermentum tempus purus. Suspendisse vel purus a nibh aliquam hendrerit. Aliquam sit amet tristique lorem. Sed elementum congue ante id mollis. Donec vitae pretium neque.",
@@ -246,14 +178,9 @@ class TestMySQLtoSQLiteClassmethods:
             ),
         ],
     )
-    def test_translate_default_blob_bytes_from_mysql_to_sqlite(
-        self, column_default, sqlite_default_translation
-    ):
+    def test_translate_default_blob_bytes_from_mysql_to_sqlite(self, column_default, sqlite_default_translation):
         assert (
-            MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
-                column_default, "BLOB"
-            )
-            == sqlite_default_translation
+            MySQLtoSQLite._translate_default_from_mysql_to_sqlite(column_default, "BLOB") == sqlite_default_translation
         )
 
     @pytest.mark.parametrize(
@@ -357,10 +284,7 @@ class TestMySQLtoSQLiteClassmethods:
         resulting_column_collation,
         column_type,
     ):
-        assert (
-            MySQLtoSQLite._data_type_collation_sequence(collation, column_type)
-            == resulting_column_collation
-        )
+        assert MySQLtoSQLite._data_type_collation_sequence(collation, column_type) == resulting_column_collation
 
     def test_data_type_collation_sequence_is_not_applied_on_non_textual_data_types(
         self,
@@ -396,10 +320,7 @@ class TestMySQLtoSQLiteClassmethods:
                 CollatingSequences.NOCASE,
                 CollatingSequences.RTRIM,
             ):
-                assert (
-                    MySQLtoSQLite._data_type_collation_sequence(collation, column_type)
-                    == ""
-                )
+                assert MySQLtoSQLite._data_type_collation_sequence(collation, column_type) == ""
 
 
 @pytest.mark.exceptions
@@ -546,12 +467,8 @@ class TestMySQLtoSQLiteSQLExceptions:
                 True,
                 id="errorcode.CR_UNKNOWN_ERROR quiet",
             ),
-            pytest.param(
-                sqlite3.Error("Unknown SQLite error"), False, id="sqlite3.Error verbose"
-            ),
-            pytest.param(
-                sqlite3.Error("Unknown SQLite error"), True, id="sqlite3.Error quiet"
-            ),
+            pytest.param(sqlite3.Error("Unknown SQLite error"), False, id="sqlite3.Error verbose"),
+            pytest.param(sqlite3.Error("Unknown SQLite error"), True, id="sqlite3.Error quiet"),
         ],
     )
     def test_transfer_table_data_exceptions(
@@ -587,12 +504,10 @@ class TestMySQLtoSQLiteSQLExceptions:
         table_name = choice(mysql_tables)
         columns = [column["name"] for column in mysql_inspect.get_columns(table_name)]
 
-        sql = (
-            'INSERT OR IGNORE INTO "{table}" ({fields}) VALUES ({placeholders})'.format(
-                table=table_name,
-                fields=('"{}", ' * len(columns)).rstrip(" ,").format(*columns),
-                placeholders=("?, " * len(columns)).rstrip(" ,"),
-            )
+        sql = 'INSERT OR IGNORE INTO "{table}" ({fields}) VALUES ({placeholders})'.format(
+            table=table_name,
+            fields=('"{}", ' * len(columns)).rstrip(" ,").format(*columns),
+            placeholders=("?, " * len(columns)).rstrip(" ,"),
         )
 
         mocker.patch.object(proc, "_mysql_cur", FakeMySQLCursor())
