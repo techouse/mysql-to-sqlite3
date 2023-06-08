@@ -8,8 +8,12 @@ from decimal import Decimal
 from sys import version_info
 
 import six
-from pytimeparse.timeparse import timeparse
 
+
+if six.PY2 or (version_info.major == 3 and 4 <= version_info.minor <= 6):
+    from pytimeparse.timeparse import timeparse  # pylint: disable=E0401
+else:
+    from pytimeparse2 import parse as timeparse
 
 if version_info.major == 3 and 4 <= version_info.minor <= 6:
     from backports.datetime_fromisoformat import MonkeyPatch  # pylint: disable=E0401
