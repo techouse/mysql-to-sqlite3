@@ -46,6 +46,7 @@ dependencies = [
     "simplejson>=3.19.0",
     "tqdm>=4.65.0",
     "tabulate",
+    "typing_extensions",
 ]
 dynamic = ["version"]
 
@@ -106,3 +107,19 @@ markers = [
     "exceptions: Run SQL exception test functions",
     "cli: Run the cli test functions",
 ]
+
+[tool.mypy]
+python_version = "3.7"
+exclude = [
+    "tests",
+    "build",
+    "dist",
+    "venv",
+    "env",
+]
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = "pytimeparse2.*,factory.*,docker.*"
+ignore_missing_imports = true

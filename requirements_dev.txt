@@ -10,10 +10,15 @@ pytest-mock
 pytest-timeout
 pytimeparse2
 python-slugify>=7.0.0
+types-python-slugify
 simplejson>=3.19.1
+types-simplejson
 sqlalchemy<2.0.0
 sqlalchemy-utils
 tox
 tqdm>=4.65.0
+types-tqdm
 packaging>=23.1
 tabulate
+types-tabulate
+typing_extensions

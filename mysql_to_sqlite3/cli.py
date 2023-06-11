@@ -1,5 +1,7 @@
 """The command line interface of MySQLtoSQLite."""
+import os
 import sys
+import typing as t
 
 import click
 from tabulate import tabulate
@@ -115,29 +117,29 @@ from .sqlite_utils import CollatingSequences
 @click.option("--debug", is_flag=True, help="Debug mode. Will throw exceptions.")
 @click.version_option(message=tabulate(info(), headers=["software", "version"], tablefmt="github"))
 def cli(
-    sqlite_file,
-    mysql_user,
-    prompt_mysql_password,
-    mysql_password,
-    mysql_database,
-    mysql_tables,
-    exclude_mysql_tables,
-    limit_rows,
-    collation,
-    prefix_indices,
-    without_foreign_keys,
-    without_data,
-    mysql_host,
-    mysql_port,
-    skip_ssl,
-    chunk,
-    log_file,
-    json_as_text,
-    vacuum,
-    use_buffered_cursors,
-    quiet,
-    debug,
-):
+    sqlite_file: t.Union[str, "os.PathLike[t.Any]"],
+    mysql_user: str,
+    prompt_mysql_password: bool,
+    mysql_password: str,
+    mysql_database: str,
+    mysql_tables: t.Optional[t.Sequence[str]],
+    exclude_mysql_tables: t.Optional[t.Sequence[str]],
+    limit_rows: int,
+    collation: t.Optional[str],
+    prefix_indices: bool,
+    without_foreign_keys: bool,
+    without_data: bool,
+    mysql_host: str,
+    mysql_port: int,
+    skip_ssl: bool,
+    chunk: int,
+    log_file: t.Union[str, "os.PathLike[t.Any]"],
+    json_as_text: bool,
+    vacuum: bool,
+    use_buffered_cursors: bool,
+    quiet: bool,
+    debug: bool,
+) -> None:
     """Transfer MySQL to SQLite using the provided CLI options."""
     try:
         if mysql_tables and exclude_mysql_tables:
