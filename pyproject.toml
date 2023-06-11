@@ -1,10 +1,11 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "mysql-to-sqlite3"
 description = "A simple Python tool to transfer data from MySQL to SQLite 3"
+readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.7"
 authors = [
@@ -46,20 +47,20 @@ dependencies = [
     "tqdm>=4.65.0",
     "tabulate",
 ]
-dynamic = ["version", "readme"]
+dynamic = ["version"]
 
-[tool.setuptools.dynamic]
-version = { attr = "mysql_to_sqlite3.__version__" }
-readme = { file = "README.md", content-type = "text/markdown" }
+[tool.hatch.version]
+path = "mysql_to_sqlite3/__init__.py"
 
-[tool.setuptools]
-packages = ["mysql_to_sqlite3"]
-include-package-data = true
-zip-safe = false
-license-files = ["LICENSE"]
-
-[tool.distutils.bdist_wheel]
-universal = true
+[tool.hatch.build.targets.sdist]
+include = [
+    "mysql_to_sqlite3",
+    "tests",
+    "README.md",
+    "CODE-OF-CONDUCT.md",
+    "LICENSE",
+    "requirements_dev.txt",
+]
 
 [project.scripts]
 mysql2sqlite = "mysql_to_sqlite3.cli:cli"
