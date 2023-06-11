@@ -3,8 +3,6 @@
 Adapted from https://github.com/psf/requests/blob/master/requests/help.py
 """
 
-from __future__ import print_function
-
 import platform
 import sqlite3
 import sys
@@ -13,19 +11,13 @@ from subprocess import check_output
 
 import click
 import mysql.connector
+import pytimeparse2
 import simplejson
-import six
 import slugify
 import tabulate
 import tqdm
 
 from . import __version__ as package_version
-
-
-if six.PY2 or (sys.version_info.major == 3 and 4 <= sys.version_info.minor <= 6):
-    import pytimeparse  # pylint: disable=E0401
-else:
-    import pytimeparse2 as pytimeparse
 
 
 def _implementation():
@@ -98,9 +90,8 @@ def info():
         ["click", click.__version__],
         ["mysql-connector-python", mysql.connector.__version__],
         ["python-slugify", slugify.__version__],
-        ["pytimeparse", pytimeparse.__version__],
+        ["pytimeparse2", pytimeparse2.__version__],
         ["simplejson", simplejson.__version__],
-        ["six", six.__version__],
         ["tabulate", tabulate.__version__],
         ["tqdm", tqdm.__version__],
     ]

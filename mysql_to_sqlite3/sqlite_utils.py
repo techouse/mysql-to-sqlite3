@@ -1,24 +1,10 @@
 """SQLite adapters and converters for unsupported data types."""
 
-from __future__ import division
-
 import sqlite3
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
-from sys import version_info
 
-import six
-
-
-if six.PY2 or (version_info.major == 3 and 4 <= version_info.minor <= 6):
-    from pytimeparse.timeparse import timeparse  # pylint: disable=E0401
-else:
-    from pytimeparse2 import parse as timeparse
-
-if version_info.major == 3 and 4 <= version_info.minor <= 6:
-    from backports.datetime_fromisoformat import MonkeyPatch  # pylint: disable=E0401
-
-    MonkeyPatch.patch_fromisoformat()
+from pytimeparse2 import parse
 
 
 def adapt_decimal(value):
@@ -40,7 +26,7 @@ def adapt_timedelta(value):
 
 def convert_timedelta(value):
     """Convert %H:%M:%S string to datetime.timedelta."""
-    return timedelta(seconds=timeparse(value))
+    return timedelta(seconds=parse(value))
 
 
 def encode_data_for_sqlite(value):
@@ -61,12 +47,7 @@ class CollatingSequences:
 
 def convert_date(value):
     """Handle SQLite date conversion."""
-    if six.PY3:
-        try:
-            return date.fromisoformat(value.decode())
-        except ValueError as err:
-            raise ValueError("DATE field contains {}".format(err))  # pylint: disable=W0707
     try:
-        return datetime.strptime(value.decode(), "%Y-%m-%d").date()
+        return date.fromisoformat(value.decode())
     except ValueError as err:
-        raise ValueError("DATE field contains Invalid isoformat string: {}".format(err))  # pylint: disable=W0707
+        raise ValueError("DATE field contains {}".format(err))  # pylint: disable=W0707

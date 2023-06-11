@@ -1,7 +1,6 @@
 from random import choice, sample
 
 import pytest
-import six
 from sqlalchemy import create_engine, inspect
 
 from mysql_to_sqlite3 import MySQLtoSQLite
@@ -149,10 +148,7 @@ class TestMySQLtoSQLite:
         assert "1045 (28000): Access denied" in result.output
 
     def test_invalid_database_port(self, cli_runner, sqlite_database, mysql_database, mysql_credentials, faker):
-        if six.PY2:
-            port = choice(xrange(2, 2**16 - 1))
-        else:
-            port = choice(range(2, 2**16 - 1))
+        port = choice(range(2, 2**16 - 1))
         if port == mysql_credentials.port:
             port -= 1
         result = cli_runner.invoke(
@@ -338,10 +334,7 @@ class TestMySQLtoSQLite:
         mysql_inspect = inspect(mysql_engine)
         mysql_tables = mysql_inspect.get_table_names()
 
-        if six.PY2:
-            table_number = choice(xrange(1, len(mysql_tables) // 2))
-        else:
-            table_number = choice(range(1, len(mysql_tables) // 2))
+        table_number = choice(range(1, len(mysql_tables) // 2))
 
         include_mysql_tables = sample(mysql_tables, table_number)
         include_mysql_tables.sort()
@@ -385,10 +378,7 @@ class TestMySQLtoSQLite:
         mysql_inspect = inspect(mysql_engine)
         mysql_tables = mysql_inspect.get_table_names()
 
-        if six.PY2:
-            table_number = choice(xrange(1, len(mysql_tables)))
-        else:
-            table_number = choice(range(1, len(mysql_tables)))
+        table_number = choice(range(1, len(mysql_tables)))
 
         result = cli_runner.invoke(
             mysql2sqlite,
@@ -412,8 +402,6 @@ class TestMySQLtoSQLite:
         assert result.exit_code == 0
 
     def test_version(self, cli_runner):
-        if six.PY2:
-            pytest.xfail("Version test is not supported on Python 2")
         result = cli_runner.invoke(mysql2sqlite, ["--version"])
         assert result.exit_code == 0
         assert all(
@@ -428,9 +416,8 @@ class TestMySQLtoSQLite:
                 "click",
                 "mysql-connector-python",
                 "python-slugify",
-                "pytimeparse",
+                "pytimeparse2",
                 "simplejson",
-                "six",
                 "tabulate",
                 "tqdm",
             }

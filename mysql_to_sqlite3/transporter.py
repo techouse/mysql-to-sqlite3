@@ -1,7 +1,5 @@
 """Use to transfer a MySQL database to SQLite."""
 
-from __future__ import division
-
 import logging
 import re
 import sqlite3
@@ -12,7 +10,6 @@ from os.path import realpath
 from sys import stdout
 
 import mysql.connector
-import six
 from mysql.connector import errorcode
 from tqdm import tqdm, trange
 
@@ -25,10 +22,6 @@ from mysql_to_sqlite3.sqlite_utils import (
     convert_timedelta,
     encode_data_for_sqlite,
 )
-
-
-if six.PY2:
-    from .sixeptions import *  # pylint: disable=W0401
 
 
 class MySQLtoSQLite:
@@ -232,7 +225,7 @@ class MySQLtoSQLite:
 
     @classmethod
     def _translate_default_from_mysql_to_sqlite(cls, column_default=None, column_type=None):
-        if isinstance(column_default, six.binary_type):
+        if isinstance(column_default, bytes):
             if column_type in {
                 "BIT",
                 "BINARY",
@@ -242,13 +235,7 @@ class MySQLtoSQLite:
                 "TINYBLOB",
                 "VARBINARY",
             }:
-                if six.PY2:
-                    try:
-                        return "DEFAULT x'{}'".format(column_default.encode("hex"))
-                    except AttributeError:
-                        pass
-                else:
-                    return "DEFAULT x'{}'".format(column_default.hex())
+                return "DEFAULT x'{}'".format(column_default.hex())
 
         try:
             column_default = column_default.decode()
@@ -263,9 +250,7 @@ class MySQLtoSQLite:
                     return "DEFAULT(TRUE)"
                 return "DEFAULT(FALSE)"
             return "DEFAULT '{}'".format(int(column_default))
-        if (six.PY2 and isinstance(column_default, unicode)) or isinstance(  # noqa: ignore=F405 pylint: disable=E0602
-            column_default, str
-        ):
+        if isinstance(column_default, str):
             if column_default.upper() in {
                 "CURRENT_TIME",
                 "CURRENT_DATE",
