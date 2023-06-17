@@ -117,7 +117,7 @@ class Helpers:
         try:
             yield
         except exception:
-            raise pytest.fail("DID RAISE {0}".format(exception))
+            raise pytest.fail(f"DID RAISE {exception}")
 
     @staticmethod
     @contextmanager
@@ -142,7 +142,7 @@ def helpers() -> t.Type[Helpers]:
 @pytest.fixture()
 def sqlite_database(tmpdir: LocalPath) -> t.Union[str, Path, "os.PathLike[t.Any]"]:
     db_name: str = "".join(choice(ascii_uppercase + ascii_lowercase + digits) for _ in range(32))
-    return Path(tmpdir.join(Path("{}.sqlite3".format(db_name))))
+    return Path(tmpdir.join(Path(f"{db_name}.sqlite3")))
 
 
 def is_port_in_use(port: int, host: str = "0.0.0.0") -> bool:
@@ -178,9 +178,7 @@ def mysql_credentials(pytestconfig: Config) -> MySQLCredentials:
     if pytestconfig.getoption("use_docker"):
         while is_port_in_use(port, pytestconfig.getoption("mysql_host")):
             if port >= 2**16 - 1:
-                pytest.fail(
-                    "No ports appear to be available on the host {}".format(pytestconfig.getoption("mysql_host"))
-                )
+                pytest.fail(f"No ports appear to be available on the host {pytestconfig.getoption('mysql_host')}")
             port += 1
 
     return MySQLCredentials(
@@ -217,7 +215,7 @@ def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) ->
         docker_mysql_image = pytestconfig.getoption("docker_mysql_image") or "mysql:latest"
 
         if not any(docker_mysql_image in image.tags for image in client.images.list()):
-            print("Attempting to download Docker image {}'".format(docker_mysql_image))
+            print(f"Attempting to download Docker image {docker_mysql_image}'")
             try:
                 client.images.pull(docker_mysql_image)
             except (HTTPError, NotFound) as err:
@@ -226,12 +224,7 @@ def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) ->
         container = client.containers.run(
             image=docker_mysql_image,
             name="pytest_mysql_to_sqlite3",
-            ports={
-                "3306/tcp": (
-                    mysql_credentials.host,
-                    "{}/tcp".format(mysql_credentials.port),
-                )
-            },
+            ports={"3306/tcp": (mysql_credentials.host, f"{mysql_credentials.port}/tcp")},
             environment={
                 "MYSQL_RANDOM_ROOT_PASSWORD": "yes",
                 "MYSQL_USER": mysql_credentials.user,
@@ -285,13 +278,7 @@ def mysql_database(
     temp_image_dir: LocalPath = tmpdir_factory.mktemp("images")
 
     db: database.Database = database.Database(
-        "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
-            user=mysql_credentials.user,
-            password=mysql_credentials.password,
-            host=mysql_credentials.host,
-            port=mysql_credentials.port,
-            database=mysql_credentials.database,
-        )
+        f"mysql+mysqldb://{mysql_credentials.user}:{mysql_credentials.password}@{mysql_credentials.host}:{mysql_credentials.port}/{mysql_credentials.database}"
     )
 
     with Helpers.session_scope(db) as session:

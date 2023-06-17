@@ -41,7 +41,7 @@ class Author(Base):
     dupe: Mapped[bool] = mapped_column(index=True, default=False)
 
     def __repr__(self):
-        return "<Author(id='{id}', name='{name}')>".format(id=self.id, name=self.name)
+        return f"<Author(id='{self.id}', name='{self.name}')>"
 
 
 article_authors = Table(
@@ -60,7 +60,7 @@ class Image(Base):
     dupe: Mapped[bool] = mapped_column(index=True, default=False)
 
     def __repr__(self):
-        return "<Image(id='{id}', path='{path}')>".format(id=self.id, path=self.path)
+        return f"<Image(id='{self.id}', path='{self.path}')>"
 
 
 article_images = Table(
@@ -78,7 +78,7 @@ class Tag(Base):
     dupe: Mapped[bool] = mapped_column(index=True, default=False)
 
     def __repr__(self):
-        return "<Tag(id='{id}', name='{name}')>".format(id=self.id, name=self.name)
+        return f"<Tag(id='{self.id}', name='{self.name}')>"
 
 
 article_tags = Table(
@@ -174,7 +174,7 @@ class Article(Base):
     )
 
     def __repr__(self):
-        return "<Article(id='{id}', title='{title}')>".format(id=self.id, title=self.title)
+        return f"<Article(id='{self.id}', title='{self.title}')>"
 
 
 class CrazyName(Base):
@@ -184,4 +184,4 @@ class CrazyName(Base):
     dupe: Mapped[bool] = mapped_column(index=True, default=False)
 
     def __repr__(self):
-        return "<CrazyName(id='{id}', name='{name}')>".format(id=self.id, name=self.name)
+        return f"<CrazyName(id='{self.id}', name='{self.name}')>"

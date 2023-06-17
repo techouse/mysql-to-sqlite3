@@ -374,13 +374,7 @@ class TestMySQLtoSQLite:
         mysql_database: Database,
     ) -> None:
         mysql_engine: Engine = create_engine(
-            "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
-                user=mysql_credentials.user,
-                password=mysql_credentials.password,
-                host=mysql_credentials.host,
-                port=mysql_credentials.port,
-                database=mysql_credentials.database,
-            )
+            f"mysql+mysqldb://{mysql_credentials.user}:{mysql_credentials.password}@{mysql_credentials.host}:{mysql_credentials.port}/{mysql_credentials.database}"
         )
         mysql_cnx: Connection = mysql_engine.connect()
         mysql_inspect: Inspector = inspect(mysql_engine)
@@ -428,13 +422,7 @@ class TestMySQLtoSQLite:
         mysql_database: Database,
     ) -> None:
         mysql_engine: Engine = create_engine(
-            "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
-                user=mysql_credentials.user,
-                password=mysql_credentials.password,
-                host=mysql_credentials.host,
-                port=mysql_credentials.port,
-                database=mysql_credentials.database,
-            )
+            f"mysql+mysqldb://{mysql_credentials.user}:{mysql_credentials.password}@{mysql_credentials.host}:{mysql_credentials.port}/{mysql_credentials.database}"
         )
         mysql_inspect: Inspector = inspect(mysql_engine)
         mysql_tables: t.List[str] = mysql_inspect.get_table_names()

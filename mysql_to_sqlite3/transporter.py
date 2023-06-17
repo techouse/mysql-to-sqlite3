@@ -261,7 +261,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 "TINYBLOB",
                 "VARBINARY",
             }:
-                return "DEFAULT x'{}'".format(column_default.hex())
+                return f"DEFAULT x'{column_default.hex()}'"
             try:
                 column_default = column_default.decode()
             except (UnicodeDecodeError, AttributeError):
@@ -273,15 +273,15 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 if column_default:
                     return "DEFAULT(TRUE)"
                 return "DEFAULT(FALSE)"
-            return "DEFAULT '{}'".format(int(column_default))
+            return f"DEFAULT '{int(column_default)}'"
         if isinstance(column_default, str):
             if column_default.upper() in {
                 "CURRENT_TIME",
                 "CURRENT_DATE",
                 "CURRENT_TIMESTAMP",
             }:
-                return "DEFAULT {}".format(column_default.upper())
-        return "DEFAULT '{}'".format(str(column_default))
+                return f"DEFAULT {column_default.upper()}"
+        return f"DEFAULT '{str(column_default)}'"
 
     @classmethod
     def _data_type_collation_sequence(
@@ -297,7 +297,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                     "VARCHAR",
                 )
             ):
-                return "COLLATE {collation}".format(collation=collation)
+                return f"COLLATE {collation}"
         return ""
 
     def _check_sqlite_json1_extension_enabled(self) -> bool:
@@ -308,11 +308,11 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             return False
 
     def _build_create_table_sql(self, table_name: str) -> str:
-        sql: str = 'CREATE TABLE IF NOT EXISTS "{}" ('.format(table_name)
+        sql: str = f'CREATE TABLE IF NOT EXISTS "{table_name}" ('
         primary: str = ""
         indices: str = ""
 
-        self._mysql_cur_dict.execute("SHOW COLUMNS FROM `{}`".format(table_name))
+        self._mysql_cur_dict.execute(f"SHOW COLUMNS FROM `{table_name}`")
 
         for row in self._mysql_cur_dict.fetchall():
             if row is not None:
@@ -351,8 +351,8 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
                 if len(columns) > 0:
                     if index["primary"] in {1, "1"}:
-                        primary += "\n\tPRIMARY KEY ({columns})".format(
-                            columns=", ".join('"{}"'.format(column) for column in columns.split(","))
+                        primary += "\n\tPRIMARY KEY ({})".format(
+                            ", ".join(f'"{column}"' for column in columns.split(","))
                         )
                     else:
                         indices += """CREATE {unique} INDEX IF NOT EXISTS "{name}" ON "{table}" ({columns});""".format(
@@ -366,7 +366,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                             if isinstance(index["name"], bytes)
                             else index["name"],
                             table=table_name,
-                            columns=", ".join('"{}"'.format(column) for column in columns.split(",")),
+                            columns=", ".join(f'"{column}"' for column in columns.split(",")),
                         )
 
         sql += primary
@@ -554,18 +554,12 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                     if self._limit_rows > 0:
                         # limit to the requested number of rows
                         self._mysql_cur_dict.execute(
-                            """
-                                SELECT COUNT(*) AS `total_records`
-                                FROM (SELECT * FROM `{table_name}` LIMIT {limit}) AS `table`
-                            """.format(
-                                table_name=table_name, limit=self._limit_rows
-                            )
+                            "SELECT COUNT(*) AS `total_records` "
+                            f"FROM (SELECT * FROM `{table_name}` LIMIT {self._limit_rows}) AS `table`"
                         )
                     else:
                         # get all rows
-                        self._mysql_cur_dict.execute(
-                            "SELECT COUNT(*) AS `total_records` FROM `{table_name}`".format(table_name=table_name)
-                        )
+                        self._mysql_cur_dict.execute(f"SELECT COUNT(*) AS `total_records` FROM `{table_name}`")
 
                     total_records: t.Optional[t.Dict[str, ToPythonOutputTypes]] = self._mysql_cur_dict.fetchone()
                     if total_records is not None:
@@ -579,7 +573,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                         self._mysql_cur.execute(
                             "SELECT * FROM `{table_name}` {limit}".format(
                                 table_name=table_name,
-                                limit="LIMIT {}".format(self._limit_rows) if self._limit_rows > 0 else "",
+                                limit=f"LIMIT {self._limit_rows}" if self._limit_rows > 0 else "",
                             )
                         )
                         columns: t.Tuple[str, ...] = tuple(column[0] for column in self._mysql_cur.description)  # type: ignore[union-attr]

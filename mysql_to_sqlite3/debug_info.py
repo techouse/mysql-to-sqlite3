@@ -52,9 +52,7 @@ def _implementation() -> str:
     else:
         implementation_version = "Unknown"
 
-    return "{implementation} {implementation_version}".format(
-        implementation=implementation, implementation_version=implementation_version
-    )
+    return f"{implementation} {implementation_version}"
 
 
 def _mysql_version() -> str:
@@ -73,10 +71,7 @@ def _mysql_version() -> str:
 def info() -> t.List[t.List[str]]:
     """Generate information for a bug report."""
     try:
-        platform_info: str = "{system} {release}".format(
-            system=platform.system(),
-            release=platform.release(),
-        )
+        platform_info: str = f"{platform.system()} {platform.release()}"
     except IOError:
         platform_info = "Unknown"
 

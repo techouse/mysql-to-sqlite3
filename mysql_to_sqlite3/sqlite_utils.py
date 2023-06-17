@@ -51,4 +51,4 @@ def convert_date(value: t.Any) -> date:
     try:
         return date.fromisoformat(value.decode())
     except ValueError as err:
-        raise ValueError("DATE field contains {}".format(err))  # pylint: disable=W0707
+        raise ValueError(f"DATE field contains {err}")  # pylint: disable=W0707
