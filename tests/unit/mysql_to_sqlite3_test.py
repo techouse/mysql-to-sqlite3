@@ -1,25 +1,34 @@
 import logging
+import os
 import sqlite3
+import typing as t
 from random import choice
 
 import mysql.connector
 import pytest
+from _pytest.logging import LogCaptureFixture
 from mysql.connector import errorcode
-from sqlalchemy import inspect
+from pytest_mock import MockerFixture, MockFixture
+from sqlalchemy import Inspector, inspect
 from sqlalchemy.dialects.mysql import __all__ as mysql_column_types
 
 from mysql_to_sqlite3 import MySQLtoSQLite
 from mysql_to_sqlite3.sqlite_utils import CollatingSequences
+from tests.conftest import MySQLCredentials
+from tests.database import Database
 
 
 class TestMySQLtoSQLiteClassmethods:
-    def test_translate_type_from_mysql_to_sqlite_invalid_column_type(self, mocker):
+    def test_translate_type_from_mysql_to_sqlite_invalid_column_type(
+        self,
+        mocker: MockFixture,
+    ) -> None:
         with pytest.raises(ValueError) as excinfo:
             mocker.patch.object(MySQLtoSQLite, "_valid_column_type", return_value=False)
             MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type="text")
         assert "Invalid column_type!" in str(excinfo.value)
 
-    def test_translate_type_from_mysql_to_sqlite_all_valid_columns(self):
+    def test_translate_type_from_mysql_to_sqlite_all_valid_columns(self) -> None:
         for column_type in mysql_column_types + (
             "BIGINT UNSIGNED",
             "INTEGER UNSIGNED",
@@ -115,7 +124,11 @@ class TestMySQLtoSQLiteClassmethods:
             ),
         ],
     )
-    def test_translate_default_from_mysql_to_sqlite(self, column_default, sqlite_default_translation):
+    def test_translate_default_from_mysql_to_sqlite(
+        self,
+        column_default: str,
+        sqlite_default_translation: str,
+    ) -> None:
         assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(column_default) == sqlite_default_translation
 
     @pytest.mark.parametrize(
@@ -128,8 +141,12 @@ class TestMySQLtoSQLiteClassmethods:
         ],
     )
     def test_translate_default_booleans_from_mysql_to_sqlite(
-        self, mocker, column_default, sqlite_default_translation, sqlite_version
-    ):
+        self,
+        mocker: MockerFixture,
+        column_default: bool,
+        sqlite_default_translation: str,
+        sqlite_version: str,
+    ) -> None:
         mocker.patch.object(sqlite3, "sqlite_version", sqlite_version)
         assert (
             MySQLtoSQLite._translate_default_from_mysql_to_sqlite(column_default, "BOOLEAN")
@@ -154,8 +171,11 @@ class TestMySQLtoSQLiteClassmethods:
         ],
     )
     def test_translate_default_numbers_from_mysql_to_sqlite(
-        self, column_default, sqlite_default_translation, column_type
-    ):
+        self,
+        column_default: t.Union[int, float, str],
+        sqlite_default_translation: str,
+        column_type: str,
+    ) -> None:
         assert (
             MySQLtoSQLite._translate_default_from_mysql_to_sqlite(column_default, column_type)
             == sqlite_default_translation
@@ -178,7 +198,11 @@ class TestMySQLtoSQLiteClassmethods:
             ),
         ],
     )
-    def test_translate_default_blob_bytes_from_mysql_to_sqlite(self, column_default, sqlite_default_translation):
+    def test_translate_default_blob_bytes_from_mysql_to_sqlite(
+        self,
+        column_default: bytes,
+        sqlite_default_translation: str,
+    ) -> None:
         assert (
             MySQLtoSQLite._translate_default_from_mysql_to_sqlite(column_default, "BLOB") == sqlite_default_translation
         )
@@ -280,15 +304,13 @@ class TestMySQLtoSQLiteClassmethods:
     )
     def test_data_type_collation_sequence_is_applied_on_textual_data_types(
         self,
-        collation,
-        resulting_column_collation,
-        column_type,
-    ):
+        collation: str,
+        resulting_column_collation: str,
+        column_type: str,
+    ) -> None:
         assert MySQLtoSQLite._data_type_collation_sequence(collation, column_type) == resulting_column_collation
 
-    def test_data_type_collation_sequence_is_not_applied_on_non_textual_data_types(
-        self,
-    ):
+    def test_data_type_collation_sequence_is_not_applied_on_non_textual_data_types(self) -> None:
         for column_type in (
             "BIGINT",
             "BINARY",
@@ -334,9 +356,15 @@ class TestMySQLtoSQLiteSQLExceptions:
         ],
     )
     def test_create_table_server_lost_connection_error(
-        self, sqlite_database, mysql_database, mysql_credentials, mocker, caplog, quiet
-    ):
-        proc = MySQLtoSQLite(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_database: Database,
+        mysql_credentials: MySQLCredentials,
+        mocker: MockerFixture,
+        caplog: LogCaptureFixture,
+        quiet: bool,
+    ) -> None:
+        proc: MySQLtoSQLite = MySQLtoSQLite(  # type: ignore[call-arg]
             sqlite_file=sqlite_database,
             mysql_user=mysql_credentials.user,
             mysql_password=mysql_credentials.password,
@@ -347,18 +375,18 @@ class TestMySQLtoSQLiteSQLExceptions:
         )
 
         class FakeSQLiteCursor:
-            def executescript(self, *args, **kwargs):
+            def executescript(self, *args, **kwargs) -> t.Any:
                 raise mysql.connector.Error(
                     msg="Error Code: 2013. Lost connection to MySQL server during query",
                     errno=errorcode.CR_SERVER_LOST,
                 )
 
         class FakeSQLiteConnector:
-            def commit(self, *args, **kwargs):
+            def commit(self, *args, **kwargs) -> t.Any:
                 return True
 
-        mysql_inspect = inspect(mysql_database.engine)
-        mysql_tables = mysql_inspect.get_table_names()
+        mysql_inspect: Inspector = inspect(mysql_database.engine)
+        mysql_tables: t.List[str] = mysql_inspect.get_table_names()
 
         mocker.patch.object(proc, "_sqlite_cur", FakeSQLiteCursor())
         mocker.patch.object(proc._mysql, "reconnect", return_value=True)
@@ -375,9 +403,15 @@ class TestMySQLtoSQLiteSQLExceptions:
         ],
     )
     def test_create_table_unknown_mysql_connector_error(
-        self, sqlite_database, mysql_database, mysql_credentials, mocker, caplog, quiet
-    ):
-        proc = MySQLtoSQLite(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_database: Database,
+        mysql_credentials: MySQLCredentials,
+        mocker: MockerFixture,
+        caplog: LogCaptureFixture,
+        quiet: bool,
+    ) -> None:
+        proc: MySQLtoSQLite = MySQLtoSQLite(  # type: ignore[call-arg]
             sqlite_file=sqlite_database,
             mysql_user=mysql_credentials.user,
             mysql_password=mysql_credentials.password,
@@ -388,14 +422,14 @@ class TestMySQLtoSQLiteSQLExceptions:
         )
 
         class FakeSQLiteCursor:
-            def executescript(self, statement):
+            def executescript(self, statement: t.Any) -> t.Any:
                 raise mysql.connector.Error(
                     msg="Error Code: 2000. Unknown MySQL error",
                     errno=errorcode.CR_UNKNOWN_ERROR,
                 )
 
-        mysql_inspect = inspect(mysql_database.engine)
-        mysql_tables = mysql_inspect.get_table_names()
+        mysql_inspect: Inspector = inspect(mysql_database.engine)
+        mysql_tables: t.List[str] = mysql_inspect.get_table_names()
         mocker.patch.object(proc, "_sqlite_cur", FakeSQLiteCursor())
         caplog.set_level(logging.DEBUG)
         with pytest.raises(mysql.connector.Error):
@@ -409,9 +443,15 @@ class TestMySQLtoSQLiteSQLExceptions:
         ],
     )
     def test_create_table_sqlite3_error(
-        self, sqlite_database, mysql_database, mysql_credentials, mocker, caplog, quiet
-    ):
-        proc = MySQLtoSQLite(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_database: Database,
+        mysql_credentials: MySQLCredentials,
+        mocker: MockerFixture,
+        caplog: LogCaptureFixture,
+        quiet: bool,
+    ) -> None:
+        proc: MySQLtoSQLite = MySQLtoSQLite(  # type: ignore[call-arg]
             sqlite_file=sqlite_database,
             mysql_user=mysql_credentials.user,
             mysql_password=mysql_credentials.password,
@@ -422,11 +462,11 @@ class TestMySQLtoSQLiteSQLExceptions:
         )
 
         class FakeSQLiteCursor:
-            def executescript(self, *args, **kwargs):
+            def executescript(self, *args, **kwargs) -> t.Any:
                 raise sqlite3.Error("Unknown SQLite error")
 
-        mysql_inspect = inspect(mysql_database.engine)
-        mysql_tables = mysql_inspect.get_table_names()
+        mysql_inspect: Inspector = inspect(mysql_database.engine)
+        mysql_tables: t.List[str] = mysql_inspect.get_table_names()
         mocker.patch.object(proc, "_sqlite_cur", FakeSQLiteCursor())
         caplog.set_level(logging.DEBUG)
         with pytest.raises(sqlite3.Error):
@@ -473,15 +513,15 @@ class TestMySQLtoSQLiteSQLExceptions:
     )
     def test_transfer_table_data_exceptions(
         self,
-        sqlite_database,
-        mysql_database,
-        mysql_credentials,
-        mocker,
-        caplog,
-        exception,
-        quiet,
-    ):
-        proc = MySQLtoSQLite(
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_database: Database,
+        mysql_credentials: MySQLCredentials,
+        mocker: MockerFixture,
+        caplog: LogCaptureFixture,
+        exception: Exception,
+        quiet: bool,
+    ) -> None:
+        proc: MySQLtoSQLite = MySQLtoSQLite(  # type: ignore[call-arg]
             sqlite_file=sqlite_database,
             mysql_user=mysql_credentials.user,
             mysql_password=mysql_credentials.password,
@@ -492,19 +532,19 @@ class TestMySQLtoSQLiteSQLExceptions:
         )
 
         class FakeMySQLCursor:
-            def fetchall(self):
+            def fetchall(self) -> t.Any:
                 raise exception
 
-            def fetchmany(self, size=1):
+            def fetchmany(self, size: int = 1) -> t.Any:
                 raise exception
 
-        mysql_inspect = inspect(mysql_database.engine)
-        mysql_tables = mysql_inspect.get_table_names()
+        mysql_inspect: Inspector = inspect(mysql_database.engine)
+        mysql_tables: t.List[str] = mysql_inspect.get_table_names()
 
-        table_name = choice(mysql_tables)
-        columns = [column["name"] for column in mysql_inspect.get_columns(table_name)]
+        table_name: str = choice(mysql_tables)
+        columns: t.List[str] = [column["name"] for column in mysql_inspect.get_columns(table_name)]
 
-        sql = 'INSERT OR IGNORE INTO "{table}" ({fields}) VALUES ({placeholders})'.format(
+        sql: str = 'INSERT OR IGNORE INTO "{table}" ({fields}) VALUES ({placeholders})'.format(
             table=table_name,
             fields=('"{}", ' * len(columns)).rstrip(" ,").format(*columns),
             placeholders=("?, " * len(columns)).rstrip(" ,"),

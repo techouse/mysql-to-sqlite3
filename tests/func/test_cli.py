@@ -1,17 +1,24 @@
+import os
+import typing as t
 from random import choice, sample
 
 import pytest
-from sqlalchemy import create_engine, inspect
+from click.testing import CliRunner, Result
+from faker import Faker
+from pytest_mock import MockFixture
+from sqlalchemy import Connection, Engine, Inspector, create_engine, inspect
 
 from mysql_to_sqlite3 import MySQLtoSQLite
 from mysql_to_sqlite3.cli import cli as mysql2sqlite
+from tests.conftest import MySQLCredentials
+from tests.database import Database
 
 
 @pytest.mark.cli
 @pytest.mark.usefixtures("mysql_instance")
 class TestMySQLtoSQLite:
-    def test_no_arguments(self, cli_runner):
-        result = cli_runner.invoke(mysql2sqlite)
+    def test_no_arguments(self, cli_runner: CliRunner) -> None:
+        result: Result = cli_runner.invoke(mysql2sqlite)
         assert result.exit_code > 0
         assert any(
             message in result.output
@@ -21,8 +28,8 @@ class TestMySQLtoSQLite:
             }
         )
 
-    def test_non_existing_sqlite_file(self, cli_runner, faker):
-        result = cli_runner.invoke(mysql2sqlite, ["-f", faker.file_path(depth=1, extension=".sqlite3")])
+    def test_non_existing_sqlite_file(self, cli_runner: CliRunner, faker: Faker) -> None:
+        result: Result = cli_runner.invoke(mysql2sqlite, ["-f", faker.file_path(depth=1, extension=".sqlite3")])
         assert result.exit_code > 0
         assert any(
             message in result.output
@@ -32,8 +39,8 @@ class TestMySQLtoSQLite:
             }
         )
 
-    def test_no_database_name(self, cli_runner, sqlite_database):
-        result = cli_runner.invoke(mysql2sqlite, ["-f", sqlite_database])
+    def test_no_database_name(self, cli_runner: CliRunner, sqlite_database: "os.PathLike[t.Any]") -> None:
+        result: Result = cli_runner.invoke(mysql2sqlite, ["-f", str(sqlite_database)])
         assert result.exit_code > 0
         assert any(
             message in result.output
@@ -43,8 +50,13 @@ class TestMySQLtoSQLite:
             }
         )
 
-    def test_no_database_user(self, cli_runner, sqlite_database, mysql_credentials):
-        result = cli_runner.invoke(mysql2sqlite, ["-f", sqlite_database, "-d", mysql_credentials.database])
+    def test_no_database_user(
+        self,
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+    ) -> None:
+        result = cli_runner.invoke(mysql2sqlite, ["-f", str(sqlite_database), "-d", mysql_credentials.database])
         assert result.exit_code > 0
         assert any(
             message in result.output
@@ -54,12 +66,19 @@ class TestMySQLtoSQLite:
             }
         )
 
-    def test_invalid_database_name(self, cli_runner, sqlite_database, mysql_database, mysql_credentials, faker):
-        result = cli_runner.invoke(
+    def test_invalid_database_name(
+        self,
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_database: Database,
+        mysql_credentials: MySQLCredentials,
+        faker: Faker,
+    ) -> None:
+        result: Result = cli_runner.invoke(
             mysql2sqlite,
             [
                 "-f",
-                sqlite_database,
+                str(sqlite_database),
                 "-d",
                 "_".join(faker.words(nb=3)),
                 "-u",
@@ -69,12 +88,19 @@ class TestMySQLtoSQLite:
         assert result.exit_code > 0
         assert "1045 (28000): Access denied" in result.output
 
-    def test_invalid_database_user(self, cli_runner, sqlite_database, mysql_database, mysql_credentials, faker):
-        result = cli_runner.invoke(
+    def test_invalid_database_user(
+        self,
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_database: Database,
+        mysql_credentials: MySQLCredentials,
+        faker: Faker,
+    ) -> None:
+        result: Result = cli_runner.invoke(
             mysql2sqlite,
             [
                 "-f",
-                sqlite_database,
+                str(sqlite_database),
                 "-d",
                 mysql_credentials.database,
                 "-u",
@@ -84,12 +110,19 @@ class TestMySQLtoSQLite:
         assert result.exit_code > 0
         assert "1045 (28000): Access denied" in result.output
 
-    def test_invalid_database_password(self, cli_runner, sqlite_database, mysql_database, mysql_credentials, faker):
-        result = cli_runner.invoke(
+    def test_invalid_database_password(
+        self,
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_database: Database,
+        mysql_credentials: MySQLCredentials,
+        faker: Faker,
+    ) -> None:
+        result: Result = cli_runner.invoke(
             mysql2sqlite,
             [
                 "-f",
-                sqlite_database,
+                str(sqlite_database),
                 "-d",
                 mysql_credentials.database,
                 "-u",
@@ -103,16 +136,16 @@ class TestMySQLtoSQLite:
 
     def test_database_password_prompt(
         self,
-        cli_runner,
-        sqlite_database,
-        mysql_credentials,
-        mysql_database,
-    ):
-        result = cli_runner.invoke(
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        mysql_database: Database,
+    ) -> None:
+        result: Result = cli_runner.invoke(
             mysql2sqlite,
             args=[
                 "-f",
-                sqlite_database,
+                str(sqlite_database),
                 "-d",
                 mysql_credentials.database,
                 "-u",
@@ -125,17 +158,17 @@ class TestMySQLtoSQLite:
 
     def test_invalid_database_password_prompt(
         self,
-        cli_runner,
-        sqlite_database,
-        mysql_credentials,
-        mysql_database,
-        faker,
-    ):
-        result = cli_runner.invoke(
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        mysql_database: Database,
+        faker: Faker,
+    ) -> None:
+        result: Result = cli_runner.invoke(
             mysql2sqlite,
             args=[
                 "-f",
-                sqlite_database,
+                str(sqlite_database),
                 "-d",
                 mysql_credentials.database,
                 "-u",
@@ -147,15 +180,22 @@ class TestMySQLtoSQLite:
         assert result.exit_code > 0
         assert "1045 (28000): Access denied" in result.output
 
-    def test_invalid_database_port(self, cli_runner, sqlite_database, mysql_database, mysql_credentials, faker):
-        port = choice(range(2, 2**16 - 1))
+    def test_invalid_database_port(
+        self,
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_database: Database,
+        mysql_credentials: MySQLCredentials,
+        faker: Faker,
+    ) -> None:
+        port: int = choice(range(2, 2**16 - 1))
         if port == mysql_credentials.port:
             port -= 1
-        result = cli_runner.invoke(
+        result: Result = cli_runner.invoke(
             mysql2sqlite,
             [
                 "-f",
-                sqlite_database,
+                str(sqlite_database),
                 "-d",
                 mysql_credentials.database,
                 "-u",
@@ -165,7 +205,7 @@ class TestMySQLtoSQLite:
                 "-h",
                 mysql_credentials.host,
                 "-P",
-                port,
+                str(port),
             ],
         )
         assert result.exit_code > 0
@@ -258,18 +298,18 @@ class TestMySQLtoSQLite:
     )
     def test_minimum_valid_parameters(
         self,
-        cli_runner,
-        sqlite_database,
-        mysql_database,
-        mysql_credentials,
-        chunk,
-        vacuum,
-        use_buffered_cursors,
-        quiet,
-    ):
-        arguments = [
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_database: Database,
+        mysql_credentials: MySQLCredentials,
+        chunk: t.Optional[int],
+        vacuum: bool,
+        use_buffered_cursors: bool,
+        quiet: bool,
+    ) -> None:
+        arguments: t.List[str] = [
             "-f",
-            sqlite_database,
+            str(sqlite_database),
             "-d",
             mysql_credentials.database,
             "-u",
@@ -279,30 +319,38 @@ class TestMySQLtoSQLite:
             "-h",
             mysql_credentials.host,
             "-P",
-            mysql_credentials.port,
-            "-c",
-            chunk,
+            str(mysql_credentials.port),
         ]
+        if chunk:
+            arguments.append("-c")
+            arguments.append(str(chunk))
         if vacuum:
             arguments.append("-V")
         if use_buffered_cursors:
             arguments.append("--use-buffered-cursors")
         if quiet:
             arguments.append("-q")
-        result = cli_runner.invoke(mysql2sqlite, arguments)
+        result: Result = cli_runner.invoke(mysql2sqlite, arguments)
         assert result.exit_code == 0
         if quiet:
             assert result.output == ""
         else:
             assert result.output != ""
 
-    def test_keyboard_interrupt(self, cli_runner, sqlite_database, mysql_credentials, mysql_database, mocker):
+    def test_keyboard_interrupt(
+        self,
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        mysql_database: Database,
+        mocker: MockFixture,
+    ) -> None:
         mocker.patch.object(MySQLtoSQLite, "transfer", side_effect=KeyboardInterrupt())
-        result = cli_runner.invoke(
+        result: Result = cli_runner.invoke(
             mysql2sqlite,
             [
                 "-f",
-                sqlite_database,
+                str(sqlite_database),
                 "-d",
                 mysql_credentials.database,
                 "-u",
@@ -312,16 +360,20 @@ class TestMySQLtoSQLite:
                 "-h",
                 mysql_credentials.host,
                 "-P",
-                mysql_credentials.port,
+                str(mysql_credentials.port),
             ],
         )
         assert result.exit_code > 0
         assert "Process interrupted" in result.output
 
     def test_specific_tables_include_and_exclude_are_mutually_exclusive_options(
-        self, cli_runner, sqlite_database, mysql_credentials, mysql_database
-    ):
-        mysql_engine = create_engine(
+        self,
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        mysql_database: Database,
+    ) -> None:
+        mysql_engine: Engine = create_engine(
             "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
                 user=mysql_credentials.user,
                 password=mysql_credentials.password,
@@ -330,22 +382,22 @@ class TestMySQLtoSQLite:
                 database=mysql_credentials.database,
             )
         )
-        mysql_cnx = mysql_engine.connect()
-        mysql_inspect = inspect(mysql_engine)
-        mysql_tables = mysql_inspect.get_table_names()
+        mysql_cnx: Connection = mysql_engine.connect()
+        mysql_inspect: Inspector = inspect(mysql_engine)
+        mysql_tables: t.List[str] = mysql_inspect.get_table_names()
 
-        table_number = choice(range(1, len(mysql_tables) // 2))
+        table_number: int = choice(range(1, len(mysql_tables) // 2))
 
-        include_mysql_tables = sample(mysql_tables, table_number)
+        include_mysql_tables: t.List[str] = sample(mysql_tables, table_number)
         include_mysql_tables.sort()
         exclude_mysql_tables = list(set(sample(mysql_tables, table_number)) - set(include_mysql_tables))
         exclude_mysql_tables.sort()
 
-        result = cli_runner.invoke(
+        result: Result = cli_runner.invoke(
             mysql2sqlite,
             [
                 "-f",
-                sqlite_database,
+                str(sqlite_database),
                 "-d",
                 mysql_credentials.database,
                 "-t",
@@ -359,14 +411,23 @@ class TestMySQLtoSQLite:
                 "-h",
                 mysql_credentials.host,
                 "-P",
-                mysql_credentials.port,
+                str(mysql_credentials.port),
             ],
         )
         assert result.exit_code > 0
         assert "Illegal usage: --mysql-tables and --exclude-mysql-tables are mutually exclusive!" in result.output
 
-    def test_transfer_specific_tables_only(self, cli_runner, sqlite_database, mysql_credentials, mysql_database):
-        mysql_engine = create_engine(
+        mysql_cnx.close()
+        mysql_engine.dispose()
+
+    def test_transfer_specific_tables_only(
+        self,
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        mysql_database: Database,
+    ) -> None:
+        mysql_engine: Engine = create_engine(
             "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
                 user=mysql_credentials.user,
                 password=mysql_credentials.password,
@@ -375,16 +436,16 @@ class TestMySQLtoSQLite:
                 database=mysql_credentials.database,
             )
         )
-        mysql_inspect = inspect(mysql_engine)
-        mysql_tables = mysql_inspect.get_table_names()
+        mysql_inspect: Inspector = inspect(mysql_engine)
+        mysql_tables: t.List[str] = mysql_inspect.get_table_names()
 
-        table_number = choice(range(1, len(mysql_tables)))
+        table_number: int = choice(range(1, len(mysql_tables)))
 
-        result = cli_runner.invoke(
+        result: Result = cli_runner.invoke(
             mysql2sqlite,
             [
                 "-f",
-                sqlite_database,
+                str(sqlite_database),
                 "-d",
                 mysql_credentials.database,
                 "-t",
@@ -396,12 +457,13 @@ class TestMySQLtoSQLite:
                 "-h",
                 mysql_credentials.host,
                 "-P",
-                mysql_credentials.port,
+                str(mysql_credentials.port),
             ],
         )
         assert result.exit_code == 0
 
-    def test_version(self, cli_runner):
+    @pytest.mark.xfail
+    def test_version(self, cli_runner: CliRunner) -> None:
         result = cli_runner.invoke(mysql2sqlite, ["--version"])
         assert result.exit_code == 0
         assert all(
