@@ -1,9 +1,11 @@
 import json
+import os
 import socket
+import typing as t
 from codecs import open
-from collections import namedtuple
-from contextlib import closing, contextmanager
+from contextlib import contextmanager
 from os.path import abspath, dirname, isfile, join
+from pathlib import Path
 from random import choice
 from string import ascii_lowercase, ascii_uppercase, digits
 from time import sleep
@@ -11,23 +13,26 @@ from time import sleep
 import docker
 import mysql.connector
 import pytest
-import six
+from _pytest._py.path import LocalPath
+from _pytest.config import Config
+from _pytest.config.argparsing import Parser
+from _pytest.legacypath import TempdirFactory
 from click.testing import CliRunner
+from docker import DockerClient
 from docker.errors import NotFound
-from mysql.connector import errorcode
+from docker.models.containers import Container
+from faker import Faker
+from mysql.connector import CMySQLConnection, MySQLConnection, errorcode
+from mysql.connector.pooling import PooledMySQLConnection
 from requests import HTTPError
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 from sqlalchemy_utils import database_exists, drop_database
 
-from .database import Database
-from .factories import ArticleFactory, AuthorFactory, CrazyNameFactory, ImageFactory, MiscFactory, TagFactory
+from . import database, factories, models
 
 
-if six.PY2:
-    from .sixeptions import *
-
-
-def pytest_addoption(parser):
+def pytest_addoption(parser: "Parser"):
     parser.addoption(
         "--mysql-user",
         dest="mysql_user",
@@ -83,9 +88,9 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def cleanup_hanged_docker_containers():
+def cleanup_hanged_docker_containers() -> None:
     try:
-        client = docker.from_env()
+        client: DockerClient = docker.from_env()
         for container in client.containers.list():
             if container.name == "pytest_mysql_to_sqlite3":
                 container.kill()
@@ -94,9 +99,9 @@ def cleanup_hanged_docker_containers():
         pass
 
 
-def pytest_keyboard_interrupt():
+def pytest_keyboard_interrupt() -> None:
     try:
-        client = docker.from_env()
+        client: DockerClient = docker.from_env()
         for container in client.containers.list():
             if container.name == "pytest_mysql_to_sqlite3":
                 container.kill()
@@ -108,17 +113,17 @@ def pytest_keyboard_interrupt():
 class Helpers:
     @staticmethod
     @contextmanager
-    def not_raises(exception):
+    def not_raises(exception: t.Type[Exception]) -> t.Generator:
         try:
             yield
         except exception:
-            raise pytest.fail("DID RAISE {0}".format(exception))
+            raise pytest.fail(f"DID RAISE {exception}")
 
     @staticmethod
     @contextmanager
-    def session_scope(db):
+    def session_scope(db: database.Database) -> t.Generator:
         """Provide a transactional scope around a series of operations."""
-        session = db.Session()
+        session: Session = db.Session()
         try:
             yield session
             session.commit()
@@ -130,36 +135,37 @@ class Helpers:
 
 
 @pytest.fixture
-def helpers():
+def helpers() -> t.Type[Helpers]:
     return Helpers
 
 
 @pytest.fixture()
-def sqlite_database(tmpdir):
-    if six.PY2:
-        db_name = "".join(choice(ascii_uppercase + ascii_lowercase + digits) for _ in xrange(32))
-    else:
-        db_name = "".join(choice(ascii_uppercase + ascii_lowercase + digits) for _ in range(32))
-    return str(tmpdir.join("{}.sqlite3".format(db_name)))
+def sqlite_database(tmpdir: LocalPath) -> t.Union[str, Path, "os.PathLike[t.Any]"]:
+    db_name: str = "".join(choice(ascii_uppercase + ascii_lowercase + digits) for _ in range(32))
+    return Path(tmpdir.join(Path(f"{db_name}.sqlite3")))
 
 
-def is_port_in_use(port, host="0.0.0.0"):
-    if six.PY2:
-        with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-            return s.connect_ex((host, port)) == 0
-    else:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            return s.connect_ex((host, port)) == 0
+def is_port_in_use(port: int, host: str = "0.0.0.0") -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex((host, port)) == 0
+
+
+class MySQLCredentials(t.NamedTuple):
+    """MySQL credentials."""
+
+    user: str
+    password: str
+    host: str
+    port: int
+    database: str
 
 
 @pytest.fixture(scope="session")
-def mysql_credentials(pytestconfig):
-    MySQLCredentials = namedtuple("MySQLCredentials", ["user", "password", "host", "port", "database"])
-
-    db_credentials_file = abspath(join(dirname(__file__), "db_credentials.json"))
+def mysql_credentials(pytestconfig: Config) -> MySQLCredentials:
+    db_credentials_file: str = abspath(join(dirname(__file__), "db_credentials.json"))
     if isfile(db_credentials_file):
         with open(db_credentials_file, "r", "utf-8") as fh:
-            db_credentials = json.load(fh)
+            db_credentials: t.Dict[str, t.Any] = json.load(fh)
             return MySQLCredentials(
                 user=db_credentials["mysql_user"],
                 password=db_credentials["mysql_password"],
@@ -168,16 +174,11 @@ def mysql_credentials(pytestconfig):
                 port=db_credentials["mysql_port"],
             )
 
-    port = pytestconfig.getoption("mysql_port") or 3306
+    port: int = pytestconfig.getoption("mysql_port") or 3306
     if pytestconfig.getoption("use_docker"):
         while is_port_in_use(port, pytestconfig.getoption("mysql_host")):
             if port >= 2**16 - 1:
-                pytest.fail(
-                    "No ports appear to be available on the host {}".format(pytestconfig.getoption("mysql_host"))
-                )
-                raise ConnectionError(
-                    "No ports appear to be available on the host {}".format(pytestconfig.getoption("mysql_host"))
-                )
+                pytest.fail(f"No ports appear to be available on the host {pytestconfig.getoption('mysql_host')}")
             port += 1
 
     return MySQLCredentials(
@@ -190,11 +191,11 @@ def mysql_credentials(pytestconfig):
 
 
 @pytest.fixture(scope="session")
-def mysql_instance(mysql_credentials, pytestconfig):
-    container = None
-    mysql_connection = None
-    mysql_available = False
-    mysql_connection_retries = 15  # failsafe
+def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) -> t.Iterator[MySQLConnection]:
+    container: t.Optional[Container] = None
+    mysql_connection: t.Optional[t.Union[PooledMySQLConnection, MySQLConnection, CMySQLConnection]] = None
+    mysql_available: bool = False
+    mysql_connection_retries: int = 15  # failsafe
 
     db_credentials_file = abspath(join(dirname(__file__), "db_credentials.json"))
     if isfile(db_credentials_file):
@@ -210,27 +211,20 @@ def mysql_instance(mysql_credentials, pytestconfig):
             client = docker.from_env()
         except Exception as err:
             pytest.fail(str(err))
-            raise
 
         docker_mysql_image = pytestconfig.getoption("docker_mysql_image") or "mysql:latest"
 
         if not any(docker_mysql_image in image.tags for image in client.images.list()):
-            print("Attempting to download Docker image {}'".format(docker_mysql_image))
+            print(f"Attempting to download Docker image {docker_mysql_image}'")
             try:
                 client.images.pull(docker_mysql_image)
             except (HTTPError, NotFound) as err:
                 pytest.fail(str(err))
-                raise
 
         container = client.containers.run(
             image=docker_mysql_image,
             name="pytest_mysql_to_sqlite3",
-            ports={
-                "3306/tcp": (
-                    mysql_credentials.host,
-                    "{}/tcp".format(mysql_credentials.port),
-                )
-            },
+            ports={"3306/tcp": (mysql_credentials.host, f"{mysql_credentials.port}/tcp")},
             environment={
                 "MYSQL_RANDOM_ROOT_PASSWORD": "yes",
                 "MYSQL_USER": mysql_credentials.user,
@@ -268,109 +262,58 @@ def mysql_instance(mysql_credentials, pytestconfig):
         if not mysql_available and mysql_connection_retries <= 0:
             raise ConnectionAbortedError("Maximum MySQL connection retries exhausted! Are you sure MySQL is running?")
 
-    yield
+    yield  # type: ignore[misc]
 
-    if use_docker:
+    if use_docker and container is not None:
         container.kill()
 
 
-if six.PY2:
+@pytest.fixture(scope="session")
+def mysql_database(
+    tmpdir_factory: TempdirFactory,
+    mysql_instance: MySQLConnection,
+    mysql_credentials: MySQLCredentials,
+    _session_faker: Faker,
+) -> t.Iterator[database.Database]:
+    temp_image_dir: LocalPath = tmpdir_factory.mktemp("images")
 
-    @pytest.fixture(scope="session")
-    def mysql_database(tmpdir_factory, mysql_instance, mysql_credentials, faker):
-        temp_image_dir = tmpdir_factory.mktemp("images")
+    db: database.Database = database.Database(
+        f"mysql+mysqldb://{mysql_credentials.user}:{mysql_credentials.password}@{mysql_credentials.host}:{mysql_credentials.port}/{mysql_credentials.database}"
+    )
 
-        db = Database(
-            "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
-                user=mysql_credentials.user,
-                password=mysql_credentials.password,
-                host=mysql_credentials.host,
-                port=mysql_credentials.port,
-                database=mysql_credentials.database,
-            )
-        )
-
-        with Helpers.session_scope(db) as session:
-            for _ in range(faker.pyint(min_value=12, max_value=24)):
-                article = ArticleFactory()
-                article.authors.append(AuthorFactory())
-                article.tags.append(TagFactory())
-                article.misc.append(MiscFactory())
-                for _ in range(faker.pyint(min_value=1, max_value=4)):
-                    article.images.append(
-                        ImageFactory(
-                            path=join(
-                                str(temp_image_dir),
-                                faker.year(),
-                                faker.month(),
-                                faker.day_of_month(),
-                                faker.file_name(extension="jpg"),
-                            )
+    with Helpers.session_scope(db) as session:
+        for _ in range(_session_faker.pyint(min_value=12, max_value=24)):
+            article: models.Article = factories.ArticleFactory()
+            article.authors.append(factories.AuthorFactory())
+            article.tags.append(factories.TagFactory())
+            article.misc.append(factories.MiscFactory())
+            for _ in range(_session_faker.pyint(min_value=1, max_value=4)):
+                article.images.append(
+                    factories.ImageFactory(
+                        path=join(
+                            str(temp_image_dir),
+                            _session_faker.year(),
+                            _session_faker.month(),
+                            _session_faker.day_of_month(),
+                            _session_faker.file_name(extension="jpg"),
                         )
                     )
-                session.add(article)
+                )
+            session.add(article)
 
-            for _ in range(faker.pyint(min_value=12, max_value=24)):
-                session.add(CrazyNameFactory())
-            try:
-                session.commit()
-            except IntegrityError:
-                session.rollback()
+        for _ in range(_session_faker.pyint(min_value=12, max_value=24)):
+            session.add(factories.CrazyNameFactory())
+        try:
+            session.commit()
+        except IntegrityError:
+            session.rollback()
 
-        yield db
+    yield db
 
-        if database_exists(db.engine.url):
-            drop_database(db.engine.url)
-
-else:
-
-    @pytest.fixture(scope="session")
-    def mysql_database(tmpdir_factory, mysql_instance, mysql_credentials, _session_faker):
-        temp_image_dir = tmpdir_factory.mktemp("images")
-
-        db = Database(
-            "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
-                user=mysql_credentials.user,
-                password=mysql_credentials.password,
-                host=mysql_credentials.host,
-                port=mysql_credentials.port,
-                database=mysql_credentials.database,
-            )
-        )
-
-        with Helpers.session_scope(db) as session:
-            for _ in range(_session_faker.pyint(min_value=12, max_value=24)):
-                article = ArticleFactory()
-                article.authors.append(AuthorFactory())
-                article.tags.append(TagFactory())
-                article.misc.append(MiscFactory())
-                for _ in range(_session_faker.pyint(min_value=1, max_value=4)):
-                    article.images.append(
-                        ImageFactory(
-                            path=join(
-                                str(temp_image_dir),
-                                _session_faker.year(),
-                                _session_faker.month(),
-                                _session_faker.day_of_month(),
-                                _session_faker.file_name(extension="jpg"),
-                            )
-                        )
-                    )
-                session.add(article)
-
-            for _ in range(_session_faker.pyint(min_value=12, max_value=24)):
-                session.add(CrazyNameFactory())
-            try:
-                session.commit()
-            except IntegrityError:
-                session.rollback()
-
-        yield db
-
-        if database_exists(db.engine.url):
-            drop_database(db.engine.url)
+    if database_exists(db.engine.url):
+        drop_database(db.engine.url)
 
 
 @pytest.fixture()
-def cli_runner():
+def cli_runner() -> t.Iterator[CliRunner]:
     yield CliRunner()

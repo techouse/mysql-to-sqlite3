@@ -1,21 +1,42 @@
 import logging
+import os
 import re
+import typing as t
 from collections import namedtuple
 from decimal import Decimal
+from pathlib import Path
 from random import choice, sample
 
 import mysql.connector
 import pytest
 import simplejson as json
-import six
-from mysql.connector import MySQLConnection, errorcode
-from sqlalchemy import MetaData, Table, create_engine, inspect, select, text
+from _pytest._py.path import LocalPath
+from _pytest.logging import LogCaptureFixture
+from faker import Faker
+from mysql.connector import CMySQLConnection, MySQLConnection, errorcode
+from mysql.connector.cursor import MySQLCursor
+from mysql.connector.pooling import PooledMySQLConnection
+from pytest_mock import MockFixture
+from sqlalchemy import (
+    Connection,
+    CursorResult,
+    Engine,
+    Inspector,
+    MetaData,
+    Row,
+    Select,
+    Table,
+    TextClause,
+    create_engine,
+    inspect,
+    select,
+    text,
+)
+from sqlalchemy.engine.interfaces import ReflectedIndex
 
 from mysql_to_sqlite3 import MySQLtoSQLite
-
-
-if six.PY2:
-    from ..sixeptions import *
+from tests.conftest import Helpers, MySQLCredentials
+from tests.database import Database
 
 
 @pytest.mark.usefixtures("mysql_instance")
@@ -28,9 +49,9 @@ class TestMySQLtoSQLite:
             pytest.param(True, id="quiet"),
         ],
     )
-    def test_missing_mysql_user_raises_exception(self, mysql_credentials, quiet):
+    def test_missing_mysql_user_raises_exception(self, mysql_credentials: MySQLCredentials, quiet: bool) -> None:
         with pytest.raises(ValueError) as excinfo:
-            MySQLtoSQLite(mysql_database=mysql_credentials.database, quiet=quiet)
+            MySQLtoSQLite(mysql_database=mysql_credentials.database, quiet=quiet)  # type: ignore[call-arg]
         assert "Please provide a MySQL user" in str(excinfo.value)
 
     @pytest.mark.init
@@ -41,9 +62,9 @@ class TestMySQLtoSQLite:
             pytest.param(True, id="quiet"),
         ],
     )
-    def test_missing_mysql_database_raises_exception(self, faker, quiet):
+    def test_missing_mysql_database_raises_exception(self, faker: Faker, quiet: bool) -> None:
         with pytest.raises(ValueError) as excinfo:
-            MySQLtoSQLite(mysql_user=faker.first_name().lower(), quiet=quiet)
+            MySQLtoSQLite(mysql_user=faker.first_name().lower(), quiet=quiet)  # type: ignore[call-arg]
         assert "Please provide a MySQL database" in str(excinfo.value)
 
     @pytest.mark.init
@@ -55,10 +76,15 @@ class TestMySQLtoSQLite:
         ],
     )
     def test_invalid_mysql_credentials_raises_access_denied_exception(
-        self, sqlite_database, mysql_database, mysql_credentials, faker, quiet
-    ):
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_database: Database,
+        mysql_credentials: MySQLCredentials,
+        faker: Faker,
+        quiet: bool,
+    ) -> None:
         with pytest.raises(mysql.connector.Error) as excinfo:
-            MySQLtoSQLite(
+            MySQLtoSQLite(  # type: ignore[call-arg]
                 sqlite_file=sqlite_database,
                 mysql_user=faker.first_name().lower(),
                 mysql_password=faker.password(length=16),
@@ -77,7 +103,13 @@ class TestMySQLtoSQLite:
             pytest.param(True, id="quiet"),
         ],
     )
-    def test_bad_mysql_connection(self, sqlite_database, mysql_credentials, mocker, quiet):
+    def test_bad_mysql_connection(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        mocker: MockFixture,
+        quiet: bool,
+    ) -> None:
         FakeConnector = namedtuple("FakeConnector", ["is_connected"])
         mocker.patch.object(
             mysql.connector,
@@ -85,7 +117,7 @@ class TestMySQLtoSQLite:
             return_value=FakeConnector(is_connected=lambda: False),
         )
         with pytest.raises((ConnectionError, IOError)) as excinfo:
-            MySQLtoSQLite(
+            MySQLtoSQLite(  # type: ignore[call-arg]
                 sqlite_file=sqlite_database,
                 mysql_user=mysql_credentials.user,
                 mysql_password=mysql_credentials.password,
@@ -117,44 +149,44 @@ class TestMySQLtoSQLite:
     )
     def test_non_existing_mysql_database_raises_exception(
         self,
-        sqlite_database,
-        mysql_database,
-        mysql_credentials,
-        faker,
-        mocker,
-        caplog,
-        exception,
-        quiet,
-    ):
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_database: Database,
+        mysql_credentials: MySQLCredentials,
+        faker: Faker,
+        mocker: MockFixture,
+        caplog: LogCaptureFixture,
+        exception: Exception,
+        quiet: bool,
+    ) -> None:
         class FakeMySQLConnection(MySQLConnection):
             @property
-            def database(self):
+            def database(self) -> str:
                 return self._database
 
             @database.setter
-            def database(self, value):
+            def database(self, value) -> None:
                 self._database = value
                 # raise a fake exception
                 raise exception
 
-            def is_connected(self):
+            def is_connected(self) -> bool:
                 return True
 
             def cursor(
                 self,
-                buffered=None,
-                raw=None,
-                prepared=None,
-                cursor_class=None,
-                dictionary=None,
-                named_tuple=None,
-            ):
+                buffered: t.Optional[bool] = None,
+                raw: t.Optional[bool] = None,
+                prepared: t.Optional[bool] = None,
+                cursor_class: t.Optional[t.Type[MySQLCursor]] = None,
+                dictionary: t.Optional[bool] = None,
+                named_tuple: t.Optional[bool] = None,
+            ) -> t.Union[t.Any, MySQLCursor]:
                 return True
 
         caplog.set_level(logging.DEBUG)
         mocker.patch.object(mysql.connector, "connect", return_value=FakeMySQLConnection())
         with pytest.raises((mysql.connector.Error, Exception)) as excinfo:
-            MySQLtoSQLite(
+            MySQLtoSQLite(  # type: ignore[call-arg]
                 sqlite_file=sqlite_database,
                 mysql_user=mysql_credentials.user,
                 mysql_password=mysql_credentials.password,
@@ -177,18 +209,18 @@ class TestMySQLtoSQLite:
     )
     def test_log_to_file(
         self,
-        sqlite_database,
-        mysql_database,
-        mysql_credentials,
-        caplog,
-        tmpdir,
-        faker,
-        quiet,
-    ):
-        log_file = tmpdir.join("db.log")
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_database: Database,
+        mysql_credentials: MySQLCredentials,
+        caplog: LogCaptureFixture,
+        tmpdir: LocalPath,
+        faker: Faker,
+        quiet: bool,
+    ) -> None:
+        log_file: LocalPath = tmpdir.join(Path("db.log"))
         caplog.set_level(logging.DEBUG)
         with pytest.raises(mysql.connector.Error):
-            MySQLtoSQLite(
+            MySQLtoSQLite(  # type: ignore[call-arg]
                 sqlite_file=sqlite_database,
                 mysql_user=faker.first_name().lower(),
                 mysql_password=faker.password(length=16),
@@ -343,17 +375,17 @@ class TestMySQLtoSQLite:
     )
     def test_transfer_transfers_all_tables_from_mysql_to_sqlite(
         self,
-        sqlite_database,
-        mysql_database,
-        mysql_credentials,
-        helpers,
-        caplog,
-        chunk,
-        vacuum,
-        buffered,
-        prefix_indices,
-    ):
-        proc = MySQLtoSQLite(
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_database: Database,
+        mysql_credentials: MySQLCredentials,
+        helpers: Helpers,
+        caplog: LogCaptureFixture,
+        chunk: t.Optional[int],
+        vacuum: bool,
+        buffered: bool,
+        prefix_indices: bool,
+    ) -> None:
+        proc: MySQLtoSQLite = MySQLtoSQLite(  # type: ignore[call-arg]
             sqlite_file=sqlite_database,
             mysql_user=mysql_credentials.user,
             mysql_password=mysql_credentials.password,
@@ -384,37 +416,32 @@ class TestMySQLtoSQLite:
         assert all(record.levelname == "INFO" for record in caplog.records)
         assert not any(record.levelname == "ERROR" for record in caplog.records)
 
-        sqlite_engine = create_engine(
-            "sqlite:///{database}".format(
-                database=sqlite_database,
-                json_serializer=json.dumps,
-                json_deserializer=json.loads,
-            )
+        sqlite_engine: Engine = create_engine(
+            f"sqlite:///{sqlite_database}",
+            json_serializer=json.dumps,
+            json_deserializer=json.loads,
         )
-        sqlite_cnx = sqlite_engine.connect()
-        sqlite_inspect = inspect(sqlite_engine)
-        sqlite_tables = sqlite_inspect.get_table_names()
-        mysql_engine = create_engine(
-            "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
-                user=mysql_credentials.user,
-                password=mysql_credentials.password,
-                host=mysql_credentials.host,
-                port=mysql_credentials.port,
-                database=mysql_credentials.database,
-            )
-        )
-        mysql_cnx = mysql_engine.connect()
-        mysql_inspect = inspect(mysql_engine)
-        mysql_tables = mysql_inspect.get_table_names()
 
-        mysql_connector_connection = mysql.connector.connect(
+        sqlite_cnx: Connection = sqlite_engine.connect()
+        sqlite_inspect: Inspector = inspect(sqlite_engine)
+        sqlite_tables: t.List[str] = sqlite_inspect.get_table_names()
+        mysql_engine: Engine = create_engine(
+            f"mysql+mysqldb://{mysql_credentials.user}:{mysql_credentials.password}@{mysql_credentials.host}:{mysql_credentials.port}/{mysql_credentials.database}"
+        )
+        mysql_cnx: Connection = mysql_engine.connect()
+        mysql_inspect: Inspector = inspect(mysql_engine)
+        mysql_tables: t.List[str] = mysql_inspect.get_table_names()
+
+        mysql_connector_connection: t.Union[
+            PooledMySQLConnection, MySQLConnection, CMySQLConnection
+        ] = mysql.connector.connect(
             user=mysql_credentials.user,
             password=mysql_credentials.password,
             host=mysql_credentials.host,
             port=mysql_credentials.port,
             database=mysql_credentials.database,
         )
-        server_version = mysql_connector_connection.get_server_version()
+        server_version: t.Tuple[int, ...] = mysql_connector_connection.get_server_version()
 
         """ Test if both databases have the same table names """
         assert sqlite_tables == mysql_tables
@@ -426,17 +453,17 @@ class TestMySQLtoSQLite:
             ]
 
         """ Test if all the tables have the same indices """
-        index_keys = {"name", "column_names", "unique"}
-        mysql_indices = []
+        index_keys: t.Tuple[str, ...] = ("name", "column_names", "unique")
+        mysql_indices: t.List[ReflectedIndex] = []
         for table_name in mysql_tables:
             for index in mysql_inspect.get_indexes(table_name):
-                mysql_index = {}
+                mysql_index: t.Dict[str, t.Any] = {}
                 for key in index_keys:
                     if key == "name" and prefix_indices:
-                        mysql_index[key] = "{table}_{name}".format(table=table_name, name=index[key])
+                        mysql_index[key] = f"{table_name}_{index[key]}"  # type: ignore[literal-required]
                     else:
-                        mysql_index[key] = index[key]
-                mysql_indices.append(mysql_index)
+                        mysql_index[key] = index[key]  # type: ignore[literal-required]
+                mysql_indices.append(t.cast(ReflectedIndex, mysql_index))
 
         for table_name in sqlite_tables:
             for sqlite_index in sqlite_inspect.get_indexes(table_name):
@@ -447,7 +474,7 @@ class TestMySQLtoSQLite:
 
         """ Test if all the tables have the same foreign keys """
         for table_name in mysql_tables:
-            mysql_fk_stmt = text(
+            mysql_fk_stmt: TextClause = text(
                 """
                 SELECT k.COLUMN_NAME AS `from`,
                        k.REFERENCED_TABLE_NAME AS `table`,
@@ -471,14 +498,14 @@ class TestMySQLtoSQLite:
                 table_name=table_name,
                 constraint_type="FOREIGN KEY",
             )
-            mysql_fk_result = mysql_cnx.execute(mysql_fk_stmt)
-            mysql_foreign_keys = [dict(row) for row in mysql_fk_result]
+            mysql_fk_result: CursorResult = mysql_cnx.execute(mysql_fk_stmt)
+            mysql_foreign_keys: t.List[t.Dict[str, t.Any]] = [dict(row) for row in mysql_fk_result.mappings()]
 
-            sqlite_fk_stmt = 'PRAGMA foreign_key_list("{table}")'.format(table=table_name)
-            sqlite_fk_result = sqlite_cnx.execute(sqlite_fk_stmt)
+            sqlite_fk_stmt: TextClause = text(f'PRAGMA foreign_key_list("{table_name}")')
+            sqlite_fk_result: CursorResult = sqlite_cnx.execute(sqlite_fk_stmt)
             if sqlite_fk_result.returns_rows:
-                for row in sqlite_fk_result:
-                    fk = dict(row)
+                for row in sqlite_fk_result.mappings():
+                    fk: t.Dict[str, t.Any] = dict(row)
                     assert {
                         "table": fk["table"],
                         "from": fk["from"],
@@ -488,42 +515,47 @@ class TestMySQLtoSQLite:
                     } in mysql_foreign_keys
 
         """ Check if all the data was transferred correctly """
-        sqlite_results = []
-        mysql_results = []
+        sqlite_results: t.List[t.Tuple[t.Tuple[t.Any, ...], ...]] = []
+        mysql_results: t.List[t.Tuple[t.Tuple[t.Any, ...], ...]] = []
 
-        meta = MetaData(bind=None)
+        meta: MetaData = MetaData()
         for table_name in sqlite_tables:
-            sqlite_table = Table(table_name, meta, autoload=True, autoload_with=sqlite_engine)
-            sqlite_stmt = select([sqlite_table])
-            sqlite_result = sqlite_cnx.execute(sqlite_stmt).fetchall()
+            sqlite_table: Table = Table(table_name, meta, autoload_with=sqlite_engine)
+            sqlite_stmt: Select = select(sqlite_table)
+            sqlite_result: t.List[Row[t.Any]] = list(sqlite_cnx.execute(sqlite_stmt).fetchall())
             sqlite_result.sort()
-            sqlite_result = [
-                [float(data) if isinstance(data, Decimal) else data for data in row] for row in sqlite_result
-            ]
-            sqlite_results.append(sqlite_result)
+            sqlite_result_adapted: t.Tuple[t.Tuple[t.Any, ...], ...] = tuple(
+                tuple(float(data) if isinstance(data, Decimal) else data for data in row) for row in sqlite_result
+            )
+            sqlite_results.append(sqlite_result_adapted)
 
         for table_name in mysql_tables:
-            mysql_table = Table(table_name, meta, autoload=True, autoload_with=mysql_engine)
-            mysql_stmt = select([mysql_table])
-            mysql_result = mysql_cnx.execute(mysql_stmt).fetchall()
+            mysql_table: Table = Table(table_name, meta, autoload_with=mysql_engine)
+            mysql_stmt: Select = select(mysql_table)
+            mysql_result: t.List[Row[t.Any]] = list(mysql_cnx.execute(mysql_stmt).fetchall())
             mysql_result.sort()
-            mysql_result = [
-                [float(data) if isinstance(data, Decimal) else data for data in row] for row in mysql_result
-            ]
-            mysql_results.append(mysql_result)
+            mysql_result_adapted: t.Tuple[t.Tuple[t.Any, ...], ...] = tuple(
+                tuple(float(data) if isinstance(data, Decimal) else data for data in row) for row in mysql_result
+            )
+            mysql_results.append(mysql_result_adapted)
 
         assert sqlite_results == mysql_results
+
+        mysql_cnx.close()
+        sqlite_cnx.close()
+        mysql_engine.dispose()
+        sqlite_engine.dispose()
 
     @pytest.mark.transfer
     def test_specific_tables_include_and_exclude_are_mutually_exclusive_options(
         self,
-        sqlite_database,
-        mysql_credentials,
-        caplog,
-        faker,
-    ):
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        caplog: LogCaptureFixture,
+        faker: Faker,
+    ) -> None:
         with pytest.raises(ValueError) as excinfo:
-            MySQLtoSQLite(
+            MySQLtoSQLite(  # type: ignore[call-arg]
                 sqlite_file=sqlite_database,
                 mysql_user=mysql_credentials.user,
                 mysql_password=mysql_credentials.password,
@@ -831,42 +863,33 @@ class TestMySQLtoSQLite:
     )
     def test_transfer_specific_tables_transfers_only_specified_tables_from_mysql_to_sqlite(
         self,
-        sqlite_database,
-        mysql_database,
-        mysql_credentials,
-        helpers,
-        caplog,
-        chunk,
-        vacuum,
-        buffered,
-        prefix_indices,
-        exclude_tables,
-    ):
-        mysql_engine = create_engine(
-            "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
-                user=mysql_credentials.user,
-                password=mysql_credentials.password,
-                host=mysql_credentials.host,
-                port=mysql_credentials.port,
-                database=mysql_credentials.database,
-            )
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_database: Database,
+        mysql_credentials: MySQLCredentials,
+        helpers: Helpers,
+        caplog: LogCaptureFixture,
+        chunk: t.Optional[int],
+        vacuum: bool,
+        buffered: bool,
+        prefix_indices: bool,
+        exclude_tables: bool,
+    ) -> None:
+        mysql_engine: Engine = create_engine(
+            f"mysql+mysqldb://{mysql_credentials.user}:{mysql_credentials.password}@{mysql_credentials.host}:{mysql_credentials.port}/{mysql_credentials.database}"
         )
-        mysql_cnx = mysql_engine.connect()
-        mysql_inspect = inspect(mysql_engine)
-        mysql_tables = mysql_inspect.get_table_names()
+        mysql_cnx: Connection = mysql_engine.connect()
+        mysql_inspect: Inspector = inspect(mysql_engine)
+        mysql_tables: t.List[str] = mysql_inspect.get_table_names()
 
-        if six.PY2:
-            table_number = choice(xrange(1, len(mysql_tables)))
-        else:
-            table_number = choice(range(1, len(mysql_tables)))
+        table_number: int = choice(range(1, len(mysql_tables)))
 
-        random_mysql_tables = sample(mysql_tables, table_number)
+        random_mysql_tables: t.List[str] = sample(mysql_tables, table_number)
         random_mysql_tables.sort()
 
-        remaining_tables = list(set(mysql_tables) - set(random_mysql_tables))
+        remaining_tables: t.List[str] = list(set(mysql_tables) - set(random_mysql_tables))
         remaining_tables.sort()
 
-        proc = MySQLtoSQLite(
+        proc: MySQLtoSQLite = MySQLtoSQLite(  # type: ignore[call-arg]
             sqlite_file=sqlite_database,
             mysql_user=mysql_credentials.user,
             mysql_password=mysql_credentials.password,
@@ -883,7 +906,7 @@ class TestMySQLtoSQLite:
             message in [record.message for record in caplog.records]
             for message in set(
                 [
-                    "Transferring table {}".format(table)
+                    f"Transferring table {table}"
                     for table in (remaining_tables if exclude_tables else random_mysql_tables)
                 ]
                 + ["Done!"]
@@ -892,16 +915,15 @@ class TestMySQLtoSQLite:
         assert all(record.levelname == "INFO" for record in caplog.records)
         assert not any(record.levelname == "ERROR" for record in caplog.records)
 
-        sqlite_engine = create_engine(
-            "sqlite:///{database}".format(
-                database=sqlite_database,
-                json_serializer=json.dumps,
-                json_deserializer=json.loads,
-            )
+        sqlite_engine: Engine = create_engine(
+            f"sqlite:///{sqlite_database}",
+            json_serializer=json.dumps,
+            json_deserializer=json.loads,
         )
-        sqlite_cnx = sqlite_engine.connect()
-        sqlite_inspect = inspect(sqlite_engine)
-        sqlite_tables = sqlite_inspect.get_table_names()
+
+        sqlite_cnx: Connection = sqlite_engine.connect()
+        sqlite_inspect: Inspector = inspect(sqlite_engine)
+        sqlite_tables: t.List[str] = sqlite_inspect.get_table_names()
 
         """ Test if both databases have the same table names """
         if exclude_tables:
@@ -916,17 +938,17 @@ class TestMySQLtoSQLite:
             ]
 
         """ Test if all the tables have the same indices """
-        index_keys = {"name", "column_names", "unique"}
-        mysql_indices = []
+        index_keys: t.Tuple[str, ...] = ("name", "column_names", "unique")
+        mysql_indices: t.List[ReflectedIndex] = []
         for table_name in remaining_tables if exclude_tables else random_mysql_tables:
             for index in mysql_inspect.get_indexes(table_name):
-                mysql_index = {}
+                mysql_index: t.Dict[str, t.Any] = {}
                 for key in index_keys:
                     if key == "name" and prefix_indices:
-                        mysql_index[key] = "{table}_{name}".format(table=table_name, name=index[key])
+                        mysql_index[key] = f"{table_name}_{index[key]}"  # type: ignore[literal-required]
                     else:
-                        mysql_index[key] = index[key]
-                mysql_indices.append(mysql_index)
+                        mysql_index[key] = index[key]  # type: ignore[literal-required]
+                mysql_indices.append(t.cast(ReflectedIndex, mysql_index))
 
         for table_name in sqlite_tables:
             for sqlite_index in sqlite_inspect.get_indexes(table_name):
@@ -936,31 +958,36 @@ class TestMySQLtoSQLite:
                 assert sqlite_index in mysql_indices
 
         """ Check if all the data was transferred correctly """
-        sqlite_results = []
-        mysql_results = []
+        sqlite_results: t.List[t.Tuple[t.Tuple[t.Any, ...], ...]] = []
+        mysql_results: t.List[t.Tuple[t.Tuple[t.Any, ...], ...]] = []
 
-        meta = MetaData(bind=None)
+        meta: MetaData = MetaData()
         for table_name in sqlite_tables:
-            sqlite_table = Table(table_name, meta, autoload=True, autoload_with=sqlite_engine)
-            sqlite_stmt = select([sqlite_table])
-            sqlite_result = sqlite_cnx.execute(sqlite_stmt).fetchall()
+            sqlite_table: Table = Table(table_name, meta, autoload_with=sqlite_engine)
+            sqlite_stmt: Select = select(sqlite_table)
+            sqlite_result: t.List[Row[t.Any]] = list(sqlite_cnx.execute(sqlite_stmt).fetchall())
             sqlite_result.sort()
-            sqlite_result = [
-                [float(data) if isinstance(data, Decimal) else data for data in row] for row in sqlite_result
-            ]
-            sqlite_results.append(sqlite_result)
+            sqlite_result_adapted = tuple(
+                tuple(float(data) if isinstance(data, Decimal) else data for data in row) for row in sqlite_result
+            )
+            sqlite_results.append(sqlite_result_adapted)
 
         for table_name in remaining_tables if exclude_tables else random_mysql_tables:
-            mysql_table = Table(table_name, meta, autoload=True, autoload_with=mysql_engine)
-            mysql_stmt = select([mysql_table])
-            mysql_result = mysql_cnx.execute(mysql_stmt).fetchall()
+            mysql_table: Table = Table(table_name, meta, autoload_with=mysql_engine)
+            mysql_stmt: Select = select(mysql_table)
+            mysql_result: t.List[Row[t.Any]] = list(mysql_cnx.execute(mysql_stmt).fetchall())
             mysql_result.sort()
-            mysql_result = [
-                [float(data) if isinstance(data, Decimal) else data for data in row] for row in mysql_result
-            ]
-            mysql_results.append(mysql_result)
+            mysql_result_adapted = tuple(
+                tuple(float(data) if isinstance(data, Decimal) else data for data in row) for row in mysql_result
+            )
+            mysql_results.append(mysql_result_adapted)
 
         assert sqlite_results == mysql_results
+
+        mysql_cnx.close()
+        sqlite_cnx.close()
+        mysql_engine.dispose()
+        sqlite_engine.dispose()
 
     @pytest.mark.transfer
     @pytest.mark.parametrize(
@@ -1098,22 +1125,19 @@ class TestMySQLtoSQLite:
     )
     def test_transfer_limited_rows_from_mysql_to_sqlite(
         self,
-        sqlite_database,
-        mysql_database,
-        mysql_credentials,
-        helpers,
-        caplog,
-        chunk,
-        vacuum,
-        buffered,
-        prefix_indices,
-    ):
-        if six.PY2:
-            limit_rows = choice(xrange(1, 10))
-        else:
-            limit_rows = choice(range(1, 10))
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_database: Database,
+        mysql_credentials: MySQLCredentials,
+        helpers: Helpers,
+        caplog: LogCaptureFixture,
+        chunk: t.Optional[int],
+        vacuum: bool,
+        buffered: bool,
+        prefix_indices: bool,
+    ) -> None:
+        limit_rows: int = choice(range(1, 10))
 
-        proc = MySQLtoSQLite(
+        proc: MySQLtoSQLite = MySQLtoSQLite(  # type: ignore[call-arg]
             sqlite_file=sqlite_database,
             mysql_user=mysql_credentials.user,
             mysql_password=mysql_credentials.password,
@@ -1142,37 +1166,32 @@ class TestMySQLtoSQLite:
         assert all(record.levelname == "INFO" for record in caplog.records)
         assert not any(record.levelname == "ERROR" for record in caplog.records)
 
-        sqlite_engine = create_engine(
-            "sqlite:///{database}".format(
-                database=sqlite_database,
-                json_serializer=json.dumps,
-                json_deserializer=json.loads,
-            )
+        sqlite_engine: Engine = create_engine(
+            f"sqlite:///{sqlite_database}",
+            json_serializer=json.dumps,
+            json_deserializer=json.loads,
         )
-        sqlite_cnx = sqlite_engine.connect()
-        sqlite_inspect = inspect(sqlite_engine)
-        sqlite_tables = sqlite_inspect.get_table_names()
-        mysql_engine = create_engine(
-            "mysql+mysqldb://{user}:{password}@{host}:{port}/{database}".format(
-                user=mysql_credentials.user,
-                password=mysql_credentials.password,
-                host=mysql_credentials.host,
-                port=mysql_credentials.port,
-                database=mysql_credentials.database,
-            )
-        )
-        mysql_cnx = mysql_engine.connect()
-        mysql_inspect = inspect(mysql_engine)
-        mysql_tables = mysql_inspect.get_table_names()
 
-        mysql_connector_connection = mysql.connector.connect(
+        sqlite_cnx: Connection = sqlite_engine.connect()
+        sqlite_inspect: Inspector = inspect(sqlite_engine)
+        sqlite_tables: t.List[str] = sqlite_inspect.get_table_names()
+        mysql_engine: Engine = create_engine(
+            f"mysql+mysqldb://{mysql_credentials.user}:{mysql_credentials.password}@{mysql_credentials.host}:{mysql_credentials.port}/{mysql_credentials.database}"
+        )
+        mysql_cnx: Connection = mysql_engine.connect()
+        mysql_inspect: Inspector = inspect(mysql_engine)
+        mysql_tables: t.List[str] = mysql_inspect.get_table_names()
+
+        mysql_connector_connection: t.Union[
+            PooledMySQLConnection, MySQLConnection, CMySQLConnection
+        ] = mysql.connector.connect(
             user=mysql_credentials.user,
             password=mysql_credentials.password,
             host=mysql_credentials.host,
             port=mysql_credentials.port,
             database=mysql_credentials.database,
         )
-        server_version = mysql_connector_connection.get_server_version()
+        server_version: t.Tuple[int, ...] = mysql_connector_connection.get_server_version()
 
         """ Test if both databases have the same table names """
         assert sqlite_tables == mysql_tables
@@ -1184,17 +1203,17 @@ class TestMySQLtoSQLite:
             ]
 
         """ Test if all the tables have the same indices """
-        index_keys = {"name", "column_names", "unique"}
-        mysql_indices = []
+        index_keys: t.Tuple[str, ...] = ("name", "column_names", "unique")
+        mysql_indices: t.List[ReflectedIndex] = []
         for table_name in mysql_tables:
             for index in mysql_inspect.get_indexes(table_name):
-                mysql_index = {}
+                mysql_index: t.Dict[str, t.Any] = {}
                 for key in index_keys:
                     if key == "name" and prefix_indices:
-                        mysql_index[key] = "{table}_{name}".format(table=table_name, name=index[key])
+                        mysql_index[key] = f"{table_name}_{index[key]}"  # type: ignore[literal-required]
                     else:
-                        mysql_index[key] = index[key]
-                mysql_indices.append(mysql_index)
+                        mysql_index[key] = index[key]  # type: ignore[literal-required]
+                mysql_indices.append(t.cast(ReflectedIndex, mysql_index))
 
         for table_name in sqlite_tables:
             for sqlite_index in sqlite_inspect.get_indexes(table_name):
@@ -1205,7 +1224,7 @@ class TestMySQLtoSQLite:
 
         """ Test if all the tables have the same foreign keys """
         for table_name in mysql_tables:
-            mysql_fk_stmt = text(
+            mysql_fk_stmt: TextClause = text(
                 """
                 SELECT k.COLUMN_NAME AS `from`,
                        k.REFERENCED_TABLE_NAME AS `table`,
@@ -1229,14 +1248,14 @@ class TestMySQLtoSQLite:
                 table_name=table_name,
                 constraint_type="FOREIGN KEY",
             )
-            mysql_fk_result = mysql_cnx.execute(mysql_fk_stmt)
-            mysql_foreign_keys = [dict(row) for row in mysql_fk_result]
+            mysql_fk_result: CursorResult = mysql_cnx.execute(mysql_fk_stmt)
+            mysql_foreign_keys: t.List[t.Dict[str, t.Any]] = [dict(row) for row in mysql_fk_result.mappings()]
 
-            sqlite_fk_stmt = 'PRAGMA foreign_key_list("{table}")'.format(table=table_name)
-            sqlite_fk_result = sqlite_cnx.execute(sqlite_fk_stmt)
+            sqlite_fk_stmt: TextClause = text(f'PRAGMA foreign_key_list("{table_name}")')
+            sqlite_fk_result: CursorResult = sqlite_cnx.execute(sqlite_fk_stmt)
             if sqlite_fk_result.returns_rows:
-                for row in sqlite_fk_result:
-                    fk = dict(row)
+                for row in sqlite_fk_result.mappings():
+                    fk: t.Dict[str, t.Any] = dict(row)
                     assert {
                         "table": fk["table"],
                         "from": fk["from"],
@@ -1246,28 +1265,33 @@ class TestMySQLtoSQLite:
                     } in mysql_foreign_keys
 
         """ Check if all the data was transferred correctly """
-        sqlite_results = []
-        mysql_results = []
+        sqlite_results: t.List[t.Tuple[t.Tuple[t.Any, ...], ...]] = []
+        mysql_results: t.List[t.Tuple[t.Tuple[t.Any, ...], ...]] = []
 
-        meta = MetaData(bind=None)
+        meta: MetaData = MetaData()
         for table_name in sqlite_tables:
-            sqlite_table = Table(table_name, meta, autoload=True, autoload_with=sqlite_engine)
-            sqlite_stmt = select([sqlite_table])
-            sqlite_result = sqlite_cnx.execute(sqlite_stmt).fetchall()
+            sqlite_table: Table = Table(table_name, meta, autoload_with=sqlite_engine)
+            sqlite_stmt: Select = select(sqlite_table)
+            sqlite_result: t.List[Row[t.Any]] = list(sqlite_cnx.execute(sqlite_stmt).fetchall())
             sqlite_result.sort()
-            sqlite_result = [
-                [float(data) if isinstance(data, Decimal) else data for data in row] for row in sqlite_result
-            ]
-            sqlite_results.append(sqlite_result)
+            sqlite_result_adapted = tuple(
+                tuple(float(data) if isinstance(data, Decimal) else data for data in row) for row in sqlite_result
+            )
+            sqlite_results.append(sqlite_result_adapted)
 
         for table_name in mysql_tables:
-            mysql_table = Table(table_name, meta, autoload=True, autoload_with=mysql_engine)
-            mysql_stmt = select([mysql_table]).limit(limit_rows)
-            mysql_result = mysql_cnx.execute(mysql_stmt).fetchall()
+            mysql_table: Table = Table(table_name, meta, autoload_with=mysql_engine)
+            mysql_stmt: Select = select(mysql_table).limit(limit_rows)
+            mysql_result: t.List[Row[t.Any]] = list(mysql_cnx.execute(mysql_stmt).fetchall())
             mysql_result.sort()
-            mysql_result = [
-                [float(data) if isinstance(data, Decimal) else data for data in row] for row in mysql_result
-            ]
-            mysql_results.append(mysql_result)
+            sqlite_result_adapted = tuple(
+                tuple(float(data) if isinstance(data, Decimal) else data for data in row) for row in mysql_result
+            )
+            mysql_results.append(sqlite_result_adapted)
 
         assert sqlite_results == mysql_results
+
+        mysql_cnx.close()
+        sqlite_cnx.close()
+        mysql_engine.dispose()
+        sqlite_engine.dispose()

@@ -13,11 +13,7 @@ interactions related to the project.
 
 Ensuring backward compatibility is an imperative requirement.
 
-Currently, the tool supports Python versions 2.7, 3.5, 3.6, 3.7, 3.8, 3.9, 3.10 and 3.11.
-
-Despite the fact that Python 2.7 has indeed reached the conclusion of its lifecycle in early 2020, a considerable number
-of individuals still rely heavily upon it. Consequently, it is incumbent upon us to maintain our support for this
-version until such time as the fundamental tools unequivocally discontinue their backing for it.
+Currently, the tool supports Python versions 3.7, 3.8, 3.9, 3.10 and 3.11.
 
 ## MySQL version support
 
