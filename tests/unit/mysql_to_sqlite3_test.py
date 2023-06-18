@@ -98,38 +98,57 @@ class TestMySQLtoSQLiteClassmethods:
                 assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type) == column_type
 
     @pytest.mark.parametrize(
-        "column_default, sqlite_default_translation",
+        "column_default, column_extra, sqlite_default_translation",
         [
-            pytest.param(None, "", id="None"),
-            pytest.param("", "DEFAULT ''", id='""'),
-            pytest.param("lorem", "DEFAULT 'lorem'", id='"lorem"'),
+            pytest.param(None, None, "", id="None"),
+            pytest.param("", None, "DEFAULT ''", id='""'),
+            pytest.param("lorem", None, "DEFAULT 'lorem'", id='"lorem"'),
             pytest.param(
                 "lorem ipsum dolor",
+                None,
                 "DEFAULT 'lorem ipsum dolor'",
                 id='"lorem ipsum dolor"',
             ),
-            pytest.param("CURRENT_TIME", "DEFAULT CURRENT_TIME", id='"CURRENT_TIME"'),
-            pytest.param("current_time", "DEFAULT CURRENT_TIME", id='"current_time"'),
-            pytest.param("CURRENT_DATE", "DEFAULT CURRENT_DATE", id='"CURRENT_DATE"'),
-            pytest.param("current_date", "DEFAULT CURRENT_DATE", id='"current_date"'),
+            pytest.param("CURRENT_TIME", "DEFAULT_GENERATED", "DEFAULT CURRENT_TIME", id='"CURRENT_TIME"'),
+            pytest.param("current_time", "DEFAULT_GENERATED", "DEFAULT CURRENT_TIME", id='"current_time"'),
+            pytest.param("CURRENT_DATE", "DEFAULT_GENERATED", "DEFAULT CURRENT_DATE", id='"CURRENT_DATE"'),
+            pytest.param("current_date", "DEFAULT_GENERATED", "DEFAULT CURRENT_DATE", id='"current_date"'),
             pytest.param(
                 "CURRENT_TIMESTAMP",
+                "DEFAULT_GENERATED",
                 "DEFAULT CURRENT_TIMESTAMP",
                 id='"CURRENT_TIMESTAMP"',
             ),
             pytest.param(
                 "current_timestamp",
+                "DEFAULT_GENERATED",
                 "DEFAULT CURRENT_TIMESTAMP",
                 id='"current_timestamp"',
+            ),
+            pytest.param(r"""_utf8mb4\'[]\'""", "DEFAULT_GENERATED", "DEFAULT '[]'", id=r"""_utf8mb4\'[]\'"""),
+            pytest.param(r"""_latin1\'abc\'""", "DEFAULT_GENERATED", "DEFAULT 'abc'", id=r"""_latin1\'abc\'"""),
+            pytest.param(r"""_binary\'abc\'""", "DEFAULT_GENERATED", "DEFAULT 'abc'", id=r"""_binary\'abc\'"""),
+            pytest.param(
+                r"""_latin1 X\'4D7953514C\'""",
+                "DEFAULT_GENERATED",
+                "DEFAULT x'4D7953514C'",
+                id=r"""_latin1 X\'4D7953514C\'""",
+            ),
+            pytest.param(
+                r"""_latin1 b\'1000001\'""", "DEFAULT_GENERATED", "DEFAULT 'A'", id=r"""_latin1 b\'1000001\'"""
             ),
         ],
     )
     def test_translate_default_from_mysql_to_sqlite(
         self,
-        column_default: str,
+        column_default: t.Optional[str],
+        column_extra: t.Optional[str],
         sqlite_default_translation: str,
     ) -> None:
-        assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(column_default) == sqlite_default_translation
+        assert (
+            MySQLtoSQLite._translate_default_from_mysql_to_sqlite(column_default, column_extra=column_extra)
+            == sqlite_default_translation
+        )
 
     @pytest.mark.parametrize(
         "column_default, sqlite_default_translation, sqlite_version",

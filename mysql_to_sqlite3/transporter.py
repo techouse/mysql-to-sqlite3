@@ -17,6 +17,7 @@ from mysql.connector import CMySQLConnection, MySQLConnection, errorcode
 from mysql.connector.types import ToPythonOutputTypes
 from tqdm import tqdm, trange
 
+from mysql_to_sqlite3.mysql_utils import CHARSET_INTRODUCERS
 from mysql_to_sqlite3.sqlite_utils import (
     CollatingSequences,
     adapt_decimal,
@@ -249,8 +250,13 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
     @classmethod
     def _translate_default_from_mysql_to_sqlite(
-        cls, column_default: t.Optional[t.Any] = None, column_type: t.Optional[str] = None
+        cls,
+        column_default: ToPythonOutputTypes = None,
+        column_type: t.Optional[str] = None,
+        column_extra: ToPythonOutputTypes = None,
     ) -> str:
+        is_binary: bool
+        is_hex: bool
         if isinstance(column_default, bytes):
             if column_type in {
                 "BIT",
@@ -261,6 +267,34 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 "TINYBLOB",
                 "VARBINARY",
             }:
+                if column_extra in {"DEFAULT_GENERATED", "default_generated"}:
+                    for charset_introducer in CHARSET_INTRODUCERS:
+                        if column_default.startswith(charset_introducer.encode()):
+                            is_binary = False
+                            is_hex = False
+                            for b_prefix in ("B", "b"):
+                                if column_default.startswith(rf"{charset_introducer} {b_prefix}\'".encode()):
+                                    is_binary = True
+                                    break
+                            for x_prefix in ("X", "x"):
+                                if column_default.startswith(rf"{charset_introducer} {x_prefix}\'".encode()):
+                                    is_hex = True
+                                    break
+                            column_default = (
+                                column_default.replace(charset_introducer.encode(), b"")
+                                .replace(rb"x\'", b"")
+                                .replace(rb"X\'", b"")
+                                .replace(rb"b\'", b"")
+                                .replace(rb"B\'", b"")
+                                .replace(rb"\'", b"")
+                                .replace(rb"'", b"")
+                                .strip()
+                            )
+                            if is_binary:
+                                return f"DEFAULT '{chr(int(column_default, 2))}'"
+                            if is_hex:
+                                return f"DEFAULT x'{column_default.decode()}'"
+                            break
                 return f"DEFAULT x'{column_default.hex()}'"
             try:
                 column_default = column_default.decode()
@@ -275,13 +309,42 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 return "DEFAULT(FALSE)"
             return f"DEFAULT '{int(column_default)}'"
         if isinstance(column_default, str):
-            if column_default.upper() in {
-                "CURRENT_TIME",
-                "CURRENT_DATE",
-                "CURRENT_TIMESTAMP",
-            }:
-                return f"DEFAULT {column_default.upper()}"
-        return f"DEFAULT '{str(column_default)}'"
+            if column_extra in {"DEFAULT_GENERATED", "default_generated"}:
+                if column_default.upper() in {
+                    "CURRENT_TIME",
+                    "CURRENT_DATE",
+                    "CURRENT_TIMESTAMP",
+                }:
+                    return f"DEFAULT {column_default.upper()}"
+                for charset_introducer in CHARSET_INTRODUCERS:
+                    if column_default.startswith(charset_introducer):
+                        is_binary = False
+                        is_hex = False
+                        for b_prefix in ("B", "b"):
+                            if column_default.startswith(rf"{charset_introducer} {b_prefix}\'"):
+                                is_binary = True
+                                break
+                        for x_prefix in ("X", "x"):
+                            if column_default.startswith(rf"{charset_introducer} {x_prefix}\'"):
+                                is_hex = True
+                                break
+                        column_default = (
+                            column_default.replace(charset_introducer, "")
+                            .replace(r"x\'", "")
+                            .replace(r"X\'", "")
+                            .replace(r"b\'", "")
+                            .replace(r"B\'", "")
+                            .replace(r"\'", "")
+                            .replace(r"'", "")
+                            .strip()
+                        )
+                        if is_binary:
+                            return f"DEFAULT '{chr(int(column_default, 2))}'"
+                        if is_hex:
+                            return f"DEFAULT x'{column_default}'"
+                        return f"DEFAULT '{column_default}'"
+            return "DEFAULT '{}'".format(column_default.replace(r"\'", r"''"))
+        return "DEFAULT '{}'".format(str(column_default).replace(r"\'", r"''"))
 
     @classmethod
     def _data_type_collation_sequence(
@@ -324,7 +387,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                     name=row["Field"].decode() if isinstance(row["Field"], bytes) else row["Field"],
                     type=column_type,
                     notnull="NULL" if row["Null"] == "YES" else "NOT NULL",
-                    default=self._translate_default_from_mysql_to_sqlite(row["Default"], column_type),
+                    default=self._translate_default_from_mysql_to_sqlite(row["Default"], column_type, row["Extra"]),
                     collation=self._data_type_collation_sequence(self._collation, column_type),
                 )
 
