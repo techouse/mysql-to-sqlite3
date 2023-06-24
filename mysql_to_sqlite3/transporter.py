@@ -13,7 +13,8 @@ from sys import stdout
 
 import mysql.connector
 import typing_extensions as tx
-from mysql.connector import CMySQLConnection, MySQLConnection, errorcode
+from mysql.connector import MySQLConnection, errorcode
+from mysql.connector.connection_cext import CMySQLConnection
 from mysql.connector.types import ToPythonOutputTypes
 from tqdm import tqdm, trange
 

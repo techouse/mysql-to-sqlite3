@@ -5,7 +5,8 @@ from logging import Logger
 from sqlite3 import Connection, Cursor
 
 import typing_extensions as tx
-from mysql.connector import CMySQLConnection, MySQLConnection
+from mysql.connector import MySQLConnection
+from mysql.connector.connection_cext import CMySQLConnection
 from mysql.connector.cursor import MySQLCursorDict, MySQLCursorPrepared, MySQLCursorRaw
 
 
