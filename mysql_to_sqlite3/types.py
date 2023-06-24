@@ -5,8 +5,7 @@ from logging import Logger
 from sqlite3 import Connection, Cursor
 
 import typing_extensions as tx
-from mysql.connector import MySQLConnection
-from mysql.connector.connection_cext import CMySQLConnection
+from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.cursor import MySQLCursorDict, MySQLCursorPrepared, MySQLCursorRaw
 
 
@@ -46,7 +45,7 @@ class MySQLtoSQLiteAttributes:
     _json_as_text: bool
     _limit_rows: int
     _logger: Logger
-    _mysql: t.Union[MySQLConnection, CMySQLConnection]
+    _mysql: MySQLConnectionAbstract
     _mysql_cur: MySQLCursorRaw
     _mysql_cur_dict: MySQLCursorDict
     _mysql_cur_prepared: MySQLCursorPrepared

@@ -13,8 +13,8 @@ from sys import stdout
 
 import mysql.connector
 import typing_extensions as tx
-from mysql.connector import MySQLConnection, errorcode
-from mysql.connector.connection_cext import CMySQLConnection
+from mysql.connector import errorcode
+from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.types import ToPythonOutputTypes
 from tqdm import tqdm, trange
 
@@ -124,7 +124,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 port=self._mysql_port,
                 ssl_disabled=self._mysql_ssl_disabled,
             )
-            if isinstance(_mysql_connection, (MySQLConnection, CMySQLConnection)):
+            if isinstance(_mysql_connection, MySQLConnectionAbstract):
                 self._mysql = _mysql_connection
             else:
                 raise ConnectionError("Unable to connect to MySQL")
