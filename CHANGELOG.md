@@ -1,3 +1,7 @@
+# 2.0.3
+
+* [FIX] import MySQLConnectionAbstract instead of concrete implementations
+
 # 2.0.2
 
 * [FIX] properly import CMySQLConnection
