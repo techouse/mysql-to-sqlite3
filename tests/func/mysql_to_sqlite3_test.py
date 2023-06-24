@@ -13,7 +13,8 @@ import simplejson as json
 from _pytest._py.path import LocalPath
 from _pytest.logging import LogCaptureFixture
 from faker import Faker
-from mysql.connector import CMySQLConnection, MySQLConnection, errorcode
+from mysql.connector import MySQLConnection, errorcode
+from mysql.connector.connection_cext import CMySQLConnection
 from mysql.connector.cursor import MySQLCursor
 from mysql.connector.pooling import PooledMySQLConnection
 from pytest_mock import MockFixture
