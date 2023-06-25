@@ -16,9 +16,6 @@
 
 #### A simple Python tool to transfer data from MySQL to SQLite 3.
 
-This is the long overdue complimentary tool to my [SQLite3 to MySQL](https://github.com/techouse/sqlite3-to-mysql). It 
-transfers all data from a MySQL database to a SQLite3 database.
-
 ### How to run
 
 ```bash
