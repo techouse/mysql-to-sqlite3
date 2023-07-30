@@ -30,6 +30,7 @@ jobs:
   test:
     needs: analyze
     runs-on: ubuntu-latest
+    environment: test
     strategy:
       matrix:
         include:
