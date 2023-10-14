@@ -13,7 +13,7 @@ interactions related to the project.
 
 Ensuring backward compatibility is an imperative requirement.
 
-Currently, the tool supports Python versions 3.7, 3.8, 3.9, 3.10 and 3.11.
+Currently, the tool supports Python versions 3.8, 3.9, 3.10 and 3.11.
 
 ## MySQL version support
 
@@ -31,20 +31,6 @@ utmost importance to ensure thorough testing. Please remember to write tests for
 In order to run the test suite run these commands using a Docker MySQL image.
 
 **Requires a running Docker instance!**
-
-- using Python 2.7
-
-```bash
-git clone https://github.com/techouse/mysql-to-sqlite3
-cd mysql-to-sqlite3
-virtualenv -p $(which python2) env
-source env/bin/activate
-pip install -e .
-pip install -r requirements_dev.txt
-tox
-```
-
-- using Python 3.5+
 
 ```bash
 git clone https://github.com/techouse/mysql-to-sqlite3

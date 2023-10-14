@@ -1,3 +1,7 @@
+# 2.1.0
+
+* [CHORE] drop support for Python 3.7
+
 # 2.0.3
 
 * [FIX] import MySQLConnectionAbstract instead of concrete implementations
