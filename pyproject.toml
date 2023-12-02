@@ -11,7 +11,6 @@ requires-python = ">=3.8"
 authors = [
     { name = "Klemen Tusar", email = "techouse@gmail.com" },
 ]
-urls = { Source = "https://github.com/techouse/mysql-to-sqlite3" }
 keywords = [
     "mysql",
     "sqlite3",
@@ -49,6 +48,12 @@ dependencies = [
     "typing_extensions",
 ]
 dynamic = ["version"]
+
+[project.urls]
+Changelog = "https://github.com/techouse/mysql-to-sqlite3/blob/master/CHANGELOG.md"
+Source = "https://github.com/techouse/mysql-to-sqlite3"
+Sponsor = "https://github.com/sponsors/techouse"
+PayPal = "https://paypal.me/ktusar"
 
 [tool.hatch.version]
 path = "mysql_to_sqlite3/__init__.py"
