@@ -26,7 +26,7 @@ class TestMySQLtoSQLiteClassmethods:
         with pytest.raises(ValueError) as excinfo:
             mocker.patch.object(MySQLtoSQLite, "_valid_column_type", return_value=False)
             MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type="text")
-        assert "Invalid column_type!" in str(excinfo.value)
+        assert "is not a valid column_type!" in str(excinfo.value)
 
     def test_translate_type_from_mysql_to_sqlite_all_valid_columns(self) -> None:
         for column_type in mysql_column_types + (
