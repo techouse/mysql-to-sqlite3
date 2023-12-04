@@ -84,3 +84,20 @@ Options:
   --version                       Show the version and exit.
   --help                          Show this message and exit.
 ```
+
+#### Dockerfile
+
+If you prefer to use Docker, you can build the image yourself:
+
+```bash
+docker build -t mysql2sqlite .
+```
+
+and then run it:
+
+```bash
+docker run -it -w `pwd` -v `pwd`:`pwd` --rm mysql2sqlite --help
+```
+
+This will mount your host current working directory (pwd) inside the Docker container as the current working directory.
+Any files Docker would write to the current working directory are written to the host directory where you did docker run.
