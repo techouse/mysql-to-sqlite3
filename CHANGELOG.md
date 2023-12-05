@@ -1,3 +1,7 @@
+# 2.1.3
+
+* [CHORE] maintenance release to publish first containerized release
+
 # 2.1.2
 
 * [FIX] throw more comprehensive error messages when translating column types
