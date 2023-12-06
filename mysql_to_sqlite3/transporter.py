@@ -202,7 +202,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         # This could be optimized even further, however is seems adequate.
         match: t.Optional[t.Match[str]] = cls._valid_column_type(_column_type)
         if not match:
-            raise ValueError(f'"${_column_type}" is not a valid column_type!')
+            raise ValueError(f'"{_column_type}" is not a valid column_type!')
 
         data_type: str = match.group(0).upper()
 
