@@ -1,3 +1,7 @@
+# 2.1.4
+
+* [FIX] maintenance release to publish first containerized release again
+
 # 2.1.3
 
 * [CHORE] maintenance release to publish first containerized release
