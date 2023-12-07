@@ -1,3 +1,7 @@
+# 2.1.5
+
+* [CHORE] fix Docker package publishing from Github Workflow
+
 # 2.1.4
 
 * [FIX] fix invalid column_type error message
