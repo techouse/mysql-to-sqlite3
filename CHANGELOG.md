@@ -1,6 +1,6 @@
 # 2.1.4
 
-* [FIX] maintenance release to publish first containerized release again
+* [FIX] fix invalid column_type error message
 
 # 2.1.3
 
