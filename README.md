@@ -12,7 +12,6 @@
 [![codecov](https://codecov.io/gh/techouse/mysql-to-sqlite3/branch/master/graph/badge.svg)](https://codecov.io/gh/techouse/mysql-to-sqlite3)
 [![GitHub stars](https://img.shields.io/github/stars/techouse/mysql-to-sqlite3.svg?style=social&label=Star&maxAge=2592000)](https://github.com/techouse/mysql-to-sqlite3/stargazers)
 
-
 # MySQL to SQLite3
 
 #### A simple Python tool to transfer data from MySQL to SQLite 3.
@@ -25,6 +24,7 @@ mysql2sqlite --help
 ```
 
 ### Usage
+
 ```
 Usage: mysql2sqlite [OPTIONS]
 
@@ -84,3 +84,25 @@ Options:
   --version                       Show the version and exit.
   --help                          Show this message and exit.
 ```
+
+#### Docker image usage
+
+If you don't want to install the tool on your system, you can use the Docker image instead.
+
+```bash
+docker run -it \
+    --workdir $(pwd) \
+    --volume $(pwd):$(pwd) \
+    --rm ghcr.io/techouse/mysql-to-sqlite3:latest \
+    --sqlite-file baz.db \
+    --mysql-user foo \
+    --mysql-password bar \
+    --mysql-database baz \
+    --mysql-host host.docker.internal
+```
+
+This will mount your host current working directory (pwd) inside the Docker container as the current working directory.
+Any files Docker would write to the current working directory are written to the host directory where you did docker
+run. Note that you have to also use a
+[special hostname](https://docs.docker.com/desktop/networking/#use-cases-and-workarounds-for-all-platforms) `host.docker.internal`
+to access your host machine from inside the Docker container.
