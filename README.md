@@ -106,3 +106,13 @@ Any files Docker would write to the current working directory are written to the
 run. Note that you have to also use a
 [special hostname](https://docs.docker.com/desktop/networking/#use-cases-and-workarounds-for-all-platforms) `host.docker.internal`
 to access your host machine from inside the Docker container.
+
+#### Homebrew
+
+If you're on macOS, you can install the tool using [Homebrew](https://brew.sh/).
+
+```bash
+brew tap techouse/mysql-to-sqlite3
+brew install mysql-to-sqlite3
+mysql2sqlite --help
+```
