@@ -85,7 +85,7 @@ Options:
   --help                          Show this message and exit.
 ```
 
-#### Docker image usage
+#### Docker
 
 If you don't want to install the tool on your system, you can use the Docker image instead.
 
