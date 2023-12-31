@@ -448,8 +448,10 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 FROM information_schema.TABLE_CONSTRAINTS AS i
                 {JOIN} information_schema.KEY_COLUMN_USAGE AS k
                     ON i.CONSTRAINT_NAME = k.CONSTRAINT_NAME
+                    AND i.TABLE_NAME = k.TABLE_NAME
                 {JOIN} information_schema.REFERENTIAL_CONSTRAINTS AS c
                     ON c.CONSTRAINT_NAME = i.CONSTRAINT_NAME
+                    AND c.TABLE_NAME = i.TABLE_NAME
                 WHERE i.TABLE_SCHEMA = %s
                 AND i.TABLE_NAME = %s
                 AND i.CONSTRAINT_TYPE = %s
