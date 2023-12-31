@@ -371,6 +371,17 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         except sqlite3.Error:
             return False
 
+    def _build_create_view_sql(self, table_name: str) -> str:
+        sql: str = f'CREATE VIEW IF NOT EXISTS "{table_name}" AS '
+        self._mysql_cur_dict.execute(f"SELECT VIEW_DEFINITION FROM `information_schema`.`VIEWS` WHERE TABLE_SCHEMA = SCHEMA() AND TABLE_NAME = \"{table_name}\";")
+        row = self._mysql_cur_dict.fetchone()
+        if row is not None:
+            sql += re.sub(r'`{}`.'.format(str(self._mysql.database)), '', str(row["VIEW_DEFINITION"]))
+        
+        sql += "\n;"
+
+        return sql
+
     def _build_create_table_sql(self, table_name: str) -> str:
         sql: str = f'CREATE TABLE IF NOT EXISTS "{table_name}" ('
         primary: str = ""
@@ -477,17 +488,20 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
         return sql
 
-    def _create_table(self, table_name: str, attempting_reconnect: bool = False) -> None:
+    def _create_table(self, table_name: str, table_type: str, attempting_reconnect: bool = False) -> None:
         try:
             if attempting_reconnect:
                 self._mysql.reconnect()
-            self._sqlite_cur.executescript(self._build_create_table_sql(table_name))
+            if table_type == "VIEW":
+                self._sqlite_cur.executescript(self._build_create_view_sql(table_name))
+            else:
+                self._sqlite_cur.executescript(self._build_create_table_sql(table_name))
             self._sqlite.commit()
         except mysql.connector.Error as err:
             if err.errno == errorcode.CR_SERVER_LOST:
                 if not attempting_reconnect:
                     self._logger.warning("Connection to MySQL server lost.\nAttempting to reconnect.")
-                    self._create_table(table_name, True)
+                    self._create_table(table_name, table_type, True)
                 else:
                     self._logger.warning("Connection to MySQL server lost.\nReconnection attempt aborted.")
                     raise
@@ -571,7 +585,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
             self._mysql_cur_prepared.execute(
                 """
-                SELECT TABLE_NAME
+                SELECT TABLE_NAME, TABLE_TYPE
                 FROM information_schema.TABLES
                 WHERE TABLE_SCHEMA = SCHEMA()
                 AND TABLE_NAME {exclude} IN ({placeholders})
@@ -581,25 +595,33 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 ),
                 specific_tables,
             )
-            tables: t.Iterable[ToPythonOutputTypes] = (row[0] for row in self._mysql_cur_prepared.fetchall())
+            tables: t.Iterable[ToPythonOutputTypes] = ((row[0], row[1]) for row in self._mysql_cur_prepared.fetchall())
         else:
             # transfer all tables
             self._mysql_cur.execute(
                 """
-                SELECT TABLE_NAME
+                SELECT TABLE_NAME, TABLE_TYPE
                 FROM information_schema.TABLES
                 WHERE TABLE_SCHEMA = SCHEMA()
             """
             )
-            tables = (row[0].decode() for row in self._mysql_cur.fetchall())  # type: ignore[union-attr]
+            tables = ((row[0].decode(), row[1].decode()) for row in self._mysql_cur.fetchall())  # type: ignore[union-attr]
 
         try:
             # turn off foreign key checking in SQLite while transferring data
             self._sqlite_cur.execute("PRAGMA foreign_keys=OFF")
 
-            for table_name in tables:
+            view_list = []
+            for table_name, table_type in tables:
+                if isinstance(table_type, bytes):
+                    table_type = table_type.decode()
+
                 if isinstance(table_name, bytes):
                     table_name = table_name.decode()
+
+                if table_type == 'VIEW':
+                    view_list.append((table_name, table_type))
+                    continue
 
                 self._logger.info(
                     "%sTransferring table %s",
@@ -611,9 +633,9 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 self._current_chunk_number = 0
 
                 # create the table
-                self._create_table(table_name)  # type: ignore[arg-type]
+                self._create_table(table_name, table_type)  # type: ignore[arg-type]
 
-                if not self._without_data:
+                if not self._without_data :
                     # get the size of the data
                     if self._limit_rows > 0:
                         # limit to the requested number of rows
@@ -656,6 +678,19 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                             sql=sql,
                             total_records=total_records_count,
                         )
+            for table_name, table_type in view_list:
+
+                self._logger.info(
+                    "Transferring view %s",
+                    table_name,
+                )
+
+                # reset the chunk
+                self._current_chunk_number = 0
+
+                # create the table
+                self._create_table(table_name, table_type)  # type: ignore[arg-type]
+
         except Exception:  # pylint: disable=W0706
             raise
         finally:
