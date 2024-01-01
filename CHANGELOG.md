@@ -1,3 +1,7 @@
+# 2.1.7
+
+* [FIX] use more precise foreign key constraints
+
 # 2.1.6
 
 * [FEAT] build both linux/amd64 and linux/arm64 Docker images
