@@ -1,5 +1,6 @@
 import os
 import typing as t
+from datetime import datetime
 from random import choice, sample
 
 import pytest
@@ -9,6 +10,7 @@ from pytest_mock import MockFixture
 from sqlalchemy import Connection, Engine, Inspector, create_engine, inspect
 
 from mysql_to_sqlite3 import MySQLtoSQLite
+from mysql_to_sqlite3 import __version__ as package_version
 from mysql_to_sqlite3.cli import cli as mysql2sqlite
 from tests.conftest import MySQLCredentials
 from tests.database import Database
@@ -19,12 +21,12 @@ from tests.database import Database
 class TestMySQLtoSQLite:
     def test_no_arguments(self, cli_runner: CliRunner) -> None:
         result: Result = cli_runner.invoke(mysql2sqlite)
-        assert result.exit_code > 0
-        assert any(
+        assert result.exit_code == 0
+        assert all(
             message in result.output
             for message in {
-                'Error: Missing option "-f" / "--sqlite-file"',
-                "Error: Missing option '-f' / '--sqlite-file'",
+                f"Usage: {mysql2sqlite.name} [OPTIONS]",
+                f"{mysql2sqlite.name} version {package_version} Copyright (c) 2019-{datetime.now().year} Klemen Tusar",
             }
         )
 
@@ -332,10 +334,14 @@ class TestMySQLtoSQLite:
             arguments.append("-q")
         result: Result = cli_runner.invoke(mysql2sqlite, arguments)
         assert result.exit_code == 0
+        copyright_header = (
+            f"{mysql2sqlite.name} version {package_version} Copyright (c) 2019-{datetime.now().year} Klemen Tusar\n"
+        )
+        assert copyright_header in result.output
         if quiet:
-            assert result.output == ""
+            assert result.output.replace(copyright_header, "") == ""
         else:
-            assert result.output != ""
+            assert result.output.replace(copyright_header, "") != ""
 
     def test_keyboard_interrupt(
         self,

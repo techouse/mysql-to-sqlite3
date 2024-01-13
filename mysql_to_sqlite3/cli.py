@@ -2,17 +2,27 @@
 import os
 import sys
 import typing as t
+from datetime import datetime
 
 import click
 from tabulate import tabulate
 
 from . import MySQLtoSQLite
+from . import __version__ as package_version
 from .click_utils import OptionEatAll, prompt_password, validate_positive_integer
 from .debug_info import info
 from .sqlite_utils import CollatingSequences
 
 
-@click.command()
+_copyright_header: str = f"mysql2sqlite version {package_version} Copyright (c) 2019-{datetime.now().year} Klemen Tusar"
+
+
+@click.command(
+    name="mysql2sqlite",
+    help=_copyright_header,
+    no_args_is_help=True,
+    epilog="For more information, visit https://github.com/techouse/mysql-to-sqlite3",
+)
 @click.option(
     "-f",
     "--sqlite-file",
@@ -141,6 +151,7 @@ def cli(
     debug: bool,
 ) -> None:
     """Transfer MySQL to SQLite using the provided CLI options."""
+    click.echo(_copyright_header)
     try:
         if mysql_tables and exclude_mysql_tables:
             raise click.UsageError("Illegal usage: --mysql-tables and --exclude-mysql-tables are mutually exclusive!")
