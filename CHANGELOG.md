@@ -1,3 +1,7 @@
+# 2.1.8
+
+* [FIX] ensure index names do not collide with table names
+
 # 2.1.7
 
 * [FIX] use more precise foreign key constraints
