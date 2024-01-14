@@ -419,14 +419,17 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 # check if the index name collides with any table name
                 self._mysql_cur_dict.execute(
                     """
-                    SELECT COUNT(*) 
+                    SELECT COUNT(*) AS `count`
                     FROM information_schema.TABLES 
                     WHERE TABLE_SCHEMA = %s 
                     AND TABLE_NAME = %s
                     """,
                     (self._mysql_database, index_name),
                 )
-                index_name_collision: t.Optional[t.Dict[str, ToPythonOutputTypes]] = self._mysql_cur_dict.fetchone()
+                collision: t.Optional[t.Dict[str, ToPythonOutputTypes]] = self._mysql_cur_dict.fetchone()
+                table_collisions: int = 0
+                if collision is not None:
+                    table_collisions = int(collision["count"])  # type: ignore[arg-type]
 
                 columns: str = ""
                 if isinstance(index["columns"], bytes):
@@ -443,7 +446,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                         indices += """CREATE {unique} INDEX IF NOT EXISTS "{name}" ON "{table}" ({columns});""".format(
                             unique="UNIQUE" if index["unique"] in {1, "1"} else "",
                             name=f"{table_name}_{index_name}"
-                            if (index_name_collision is not None or self._prefix_indices)
+                            if (table_collisions > 0 or self._prefix_indices)
                             else index_name,
                             table=table_name,
                             columns=", ".join(f'"{column}"' for column in columns.split(",")),
