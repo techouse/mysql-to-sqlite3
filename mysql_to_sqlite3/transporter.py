@@ -420,8 +420,8 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 self._mysql_cur_dict.execute(
                     """
                     SELECT COUNT(*) AS `count`
-                    FROM information_schema.TABLES 
-                    WHERE TABLE_SCHEMA = %s 
+                    FROM information_schema.TABLES
+                    WHERE TABLE_SCHEMA = %s
                     AND TABLE_NAME = %s
                     """,
                     (self._mysql_database, index_name),
