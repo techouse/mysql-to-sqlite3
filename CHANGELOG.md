@@ -1,3 +1,7 @@
+# 2.1.9
+
+* [FIX] pin MySQL Connector/Python to 8.3.0
+
 # 2.1.8
 
 * [FIX] ensure index names do not collide with table names

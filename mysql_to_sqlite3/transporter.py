@@ -15,7 +15,7 @@ import mysql.connector
 import typing_extensions as tx
 from mysql.connector import errorcode
 from mysql.connector.abstracts import MySQLConnectionAbstract
-from mysql.connector.types import ToPythonOutputTypes
+from mysql.connector.types import RowItemType
 from tqdm import tqdm, trange
 
 from mysql_to_sqlite3.mysql_utils import CHARSET_INTRODUCERS
@@ -252,9 +252,9 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
     @classmethod
     def _translate_default_from_mysql_to_sqlite(
         cls,
-        column_default: ToPythonOutputTypes = None,
+        column_default: RowItemType = None,
         column_type: t.Optional[str] = None,
-        column_extra: ToPythonOutputTypes = None,
+        column_extra: RowItemType = None,
     ) -> str:
         is_binary: bool
         is_hex: bool
@@ -405,7 +405,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             """,
             (self._mysql_database, table_name),
         )
-        mysql_indices: t.Sequence[t.Optional[t.Dict[str, ToPythonOutputTypes]]] = self._mysql_cur_dict.fetchall()
+        mysql_indices: t.Sequence[t.Optional[t.Dict[str, RowItemType]]] = self._mysql_cur_dict.fetchall()
         for index in mysql_indices:
             if index is not None:
                 index_name: str
@@ -426,7 +426,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                     """,
                     (self._mysql_database, index_name),
                 )
-                collision: t.Optional[t.Dict[str, ToPythonOutputTypes]] = self._mysql_cur_dict.fetchone()
+                collision: t.Optional[t.Dict[str, RowItemType]] = self._mysql_cur_dict.fetchone()
                 table_collisions: int = 0
                 if collision is not None:
                     table_collisions = int(collision["count"])  # type: ignore[arg-type]
@@ -456,7 +456,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         sql = sql.rstrip(", ")
 
         if not self._without_foreign_keys:
-            server_version: t.Tuple[int, ...] = self._mysql.get_server_version()
+            server_version: t.Optional[t.Tuple[int, ...]] = self._mysql.get_server_version()
             self._mysql_cur_dict.execute(
                 """
                 SELECT k.COLUMN_NAME AS `column`,
@@ -481,7 +481,9 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                          c.UPDATE_RULE,
                          c.DELETE_RULE
                 """.format(
-                    JOIN="JOIN" if (server_version[0] == 8 and server_version[2] > 19) else "LEFT JOIN"
+                    JOIN="JOIN"
+                    if (server_version is not None and server_version[0] == 8 and server_version[2] > 19)
+                    else "LEFT JOIN"
                 ),
                 (self._mysql_database, table_name, "FOREIGN KEY"),
             )
@@ -602,7 +604,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 ),
                 specific_tables,
             )
-            tables: t.Iterable[ToPythonOutputTypes] = (row[0] for row in self._mysql_cur_prepared.fetchall())
+            tables: t.Iterable[RowItemType] = (row[0] for row in self._mysql_cur_prepared.fetchall())
         else:
             # transfer all tables
             self._mysql_cur.execute(
@@ -646,7 +648,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                         # get all rows
                         self._mysql_cur_dict.execute(f"SELECT COUNT(*) AS `total_records` FROM `{table_name}`")
 
-                    total_records: t.Optional[t.Dict[str, ToPythonOutputTypes]] = self._mysql_cur_dict.fetchone()
+                    total_records: t.Optional[t.Dict[str, RowItemType]] = self._mysql_cur_dict.fetchone()
                     if total_records is not None:
                         total_records_count: int = int(total_records["total_records"])  # type: ignore[arg-type]
                     else:
