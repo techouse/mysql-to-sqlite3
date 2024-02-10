@@ -52,3 +52,20 @@ def convert_date(value: t.Any) -> date:
         return date.fromisoformat(value.decode())
     except ValueError as err:
         raise ValueError(f"DATE field contains {err}")  # pylint: disable=W0707
+
+
+Integer_Types: t.Set[str] = {
+    "INTEGER",
+    "INTEGER UNSIGNED",
+    "INT",
+    "INT UNSIGNED",
+    "BIGINT",
+    "BIGINT UNSIGNED",
+    "MEDIUMINT",
+    "MEDIUMINT UNSIGNED",
+    "SMALLINT",
+    "SMALLINT UNSIGNED",
+    "TINYINT",
+    "TINYINT UNSIGNED",
+    "NUMERIC",
+}

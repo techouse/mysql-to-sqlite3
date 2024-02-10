@@ -21,6 +21,7 @@ from tqdm import tqdm, trange
 from mysql_to_sqlite3.mysql_utils import CHARSET_INTRODUCERS
 from mysql_to_sqlite3.sqlite_utils import (
     CollatingSequences,
+    Integer_Types,
     adapt_decimal,
     adapt_timedelta,
     convert_date,
@@ -384,24 +385,42 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                     column_type=row["Type"],  # type: ignore[arg-type]
                     sqlite_json1_extension_enabled=self._sqlite_json1_extension_enabled,
                 )
-                sql += '\n\t"{name}" {type} {notnull} {default} {collation},'.format(
-                    name=row["Field"].decode() if isinstance(row["Field"], bytes) else row["Field"],
-                    type=column_type,
-                    notnull="NULL" if row["Null"] == "YES" else "NOT NULL",
-                    default=self._translate_default_from_mysql_to_sqlite(row["Default"], column_type, row["Extra"]),
-                    collation=self._data_type_collation_sequence(self._collation, column_type),
-                )
+                if row["Key"] == "PRI" and row["Extra"] == "auto_increment":
+                    if column_type in Integer_Types:
+                        sql += '\n\t"{name}" INTEGER PRIMARY KEY AUTOINCREMENT,'.format(
+                            name=row["Field"].decode() if isinstance(row["Field"], bytes) else row["Field"],
+                        )
+                    else:
+                        self._logger.warning(
+                            'Primary key "%s" in table "%s" is not an INTEGER type! Skipping.',
+                            row["Field"],
+                            table_name,
+                        )
+                else:
+                    sql += '\n\t"{name}" {type} {notnull} {default} {collation},'.format(
+                        name=row["Field"].decode() if isinstance(row["Field"], bytes) else row["Field"],
+                        type=column_type,
+                        notnull="NULL" if row["Null"] == "YES" else "NOT NULL",
+                        default=self._translate_default_from_mysql_to_sqlite(row["Default"], column_type, row["Extra"]),
+                        collation=self._data_type_collation_sequence(self._collation, column_type),
+                    )
 
         self._mysql_cur_dict.execute(
             """
-            SELECT INDEX_NAME AS `name`,
-                  IF (NON_UNIQUE = 0 AND INDEX_NAME = 'PRIMARY', 1, 0) AS `primary`,
-                  IF (NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY', 1, 0) AS `unique`,
-                  GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS `columns`
-            FROM information_schema.STATISTICS
-            WHERE TABLE_SCHEMA = %s
-            AND TABLE_NAME = %s
-            GROUP BY INDEX_NAME, NON_UNIQUE
+            SELECT s.INDEX_NAME AS `name`,
+                IF (NON_UNIQUE = 0 AND s.INDEX_NAME = 'PRIMARY', 1, 0) AS `primary`,
+                IF (NON_UNIQUE = 0 AND s.INDEX_NAME <> 'PRIMARY', 1, 0) AS `unique`,
+                IF (c.EXTRA = 'auto_increment', 1, 0) AS `auto_increment`,
+                GROUP_CONCAT(s.COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS `columns`,
+                GROUP_CONCAT(c.COLUMN_TYPE ORDER BY SEQ_IN_INDEX) AS `types`
+            FROM information_schema.STATISTICS AS s
+            JOIN information_schema.COLUMNS AS c
+                ON s.TABLE_SCHEMA = c.TABLE_SCHEMA
+                AND s.TABLE_NAME = c.TABLE_NAME
+                AND s.COLUMN_NAME = c.COLUMN_NAME
+            WHERE s.TABLE_SCHEMA = %s
+            AND s.TABLE_NAME = %s
+            GROUP BY s.INDEX_NAME, s.NON_UNIQUE, c.EXTRA
             """,
             (self._mysql_database, table_name),
         )
@@ -437,17 +456,33 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 elif isinstance(index["columns"], str):
                     columns = index["columns"]
 
+                types: str = ""
+                if isinstance(index["types"], bytes):
+                    types = index["types"].decode()
+                elif isinstance(index["types"], str):
+                    types = index["types"]
+
                 if len(columns) > 0:
                     if index["primary"] in {1, "1"}:
-                        primary += "\n\tPRIMARY KEY ({})".format(
-                            ", ".join(f'"{column}"' for column in columns.split(","))
-                        )
+                        if (index["auto_increment"] not in {1, "1"}) or any(
+                            self._translate_type_from_mysql_to_sqlite(
+                                column_type=_type,
+                                sqlite_json1_extension_enabled=self._sqlite_json1_extension_enabled,
+                            )
+                            not in Integer_Types
+                            for _type in types.split(",")
+                        ):
+                            primary += "\n\tPRIMARY KEY ({})".format(
+                                ", ".join(f'"{column}"' for column in columns.split(","))
+                            )
                     else:
                         indices += """CREATE {unique} INDEX IF NOT EXISTS "{name}" ON "{table}" ({columns});""".format(
                             unique="UNIQUE" if index["unique"] in {1, "1"} else "",
-                            name=f"{table_name}_{index_name}"
-                            if (table_collisions > 0 or self._prefix_indices)
-                            else index_name,
+                            name=(
+                                f"{table_name}_{index_name}"
+                                if (table_collisions > 0 or self._prefix_indices)
+                                else index_name
+                            ),
                             table=table_name,
                             columns=", ".join(f'"{column}"' for column in columns.split(",")),
                         )
@@ -481,9 +516,11 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                          c.UPDATE_RULE,
                          c.DELETE_RULE
                 """.format(
-                    JOIN="JOIN"
-                    if (server_version is not None and server_version[0] == 8 and server_version[2] > 19)
-                    else "LEFT JOIN"
+                    JOIN=(
+                        "JOIN"
+                        if (server_version is not None and server_version[0] == 8 and server_version[2] > 19)
+                        else "LEFT JOIN"
+                    )
                 ),
                 (self._mysql_database, table_name, "FOREIGN KEY"),
             )

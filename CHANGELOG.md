@@ -1,3 +1,7 @@
+# 2.1.10
+
+* [FEAT] add support for AUTOINCREMENT
+
 # 2.1.9
 
 * [FIX] pin MySQL Connector/Python to 8.3.0
