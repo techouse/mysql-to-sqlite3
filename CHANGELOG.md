@@ -1,3 +1,7 @@
+# 2.1.11
+
+* [CHORE] migrate package from flat layout to src layout
+
 # 2.1.10
 
 * [FEAT] add support for AUTOINCREMENT
