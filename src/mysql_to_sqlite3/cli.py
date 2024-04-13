@@ -183,10 +183,10 @@ def cli(
     except KeyboardInterrupt:
         if debug:
             raise
-        print("\nProcess interrupted. Exiting...")
+        click.echo("\nProcess interrupted. Exiting...")
         sys.exit(1)
     except Exception as err:  # pylint: disable=W0703
         if debug:
             raise
-        print(err)
+        click.echo(err)
         sys.exit(1)
