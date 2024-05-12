@@ -1,3 +1,8 @@
+# 2.1.12
+
+* [CHORE] update MySQL Connector/Python to 8.4.0
+* [CHORE] add Sphinx documentation
+
 # 2.1.11
 
 * [CHORE] migrate package from flat layout to src layout

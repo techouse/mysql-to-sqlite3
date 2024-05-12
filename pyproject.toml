@@ -50,8 +50,10 @@ dependencies = [
 dynamic = ["version"]
 
 [project.urls]
-Changelog = "https://github.com/techouse/mysql-to-sqlite3/blob/master/CHANGELOG.md"
+Homepage = "https://techouse.github.io/mysql-to-sqlite3/"
+Documentation = "https://techouse.github.io/mysql-to-sqlite3/"
 Source = "https://github.com/techouse/mysql-to-sqlite3"
+Changelog = "https://github.com/techouse/mysql-to-sqlite3/blob/master/CHANGELOG.md"
 Sponsor = "https://github.com/sponsors/techouse"
 PayPal = "https://paypal.me/ktusar"
 
