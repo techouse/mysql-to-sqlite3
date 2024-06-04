@@ -100,6 +100,9 @@ _copyright_header: str = f"mysql2sqlite version {package_version} Copyright (c) 
 )
 @click.option("-h", "--mysql-host", default="localhost", help="MySQL host. Defaults to localhost.")
 @click.option("-P", "--mysql-port", type=int, default=3306, help="MySQL port. Defaults to 3306.")
+@click.option("--mysql-ssl-cert", type=click.Path(), help="Path to SSL certificate file.")
+@click.option("--mysql-ssl-key", type=click.Path(), help="Path to SSL key file.")
+@click.option("--mysql-ssl-ca", type=click.Path(), help="Path to SSL CA certificate file.")
 @click.option("-S", "--skip-ssl", is_flag=True, help="Disable MySQL connection encryption.")
 @click.option(
     "-c",
@@ -142,6 +145,9 @@ def cli(
     without_data: bool,
     mysql_host: str,
     mysql_port: int,
+    mysql_ssl_cert: t.Optional[str],
+    mysql_ssl_key: t.Optional[str],
+    mysql_ssl_ca: t.Optional[str],
     skip_ssl: bool,
     chunk: int,
     log_file: t.Union[str, "os.PathLike[t.Any]"],
@@ -171,6 +177,9 @@ def cli(
             without_data=without_data,
             mysql_host=mysql_host,
             mysql_port=mysql_port,
+            mysql_ssl_cert=mysql_ssl_cert,
+            mysql_ssl_key=mysql_ssl_key,
+            mysql_ssl_ca=mysql_ssl_ca,
             mysql_ssl_disabled=skip_ssl,
             chunk=chunk,
             json_as_text=json_as_text,
