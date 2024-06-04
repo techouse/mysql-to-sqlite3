@@ -68,6 +68,9 @@ Options:
   -W, --without-data              Do not transfer table data, DDL only.
   -h, --mysql-host TEXT           MySQL host. Defaults to localhost.
   -P, --mysql-port INTEGER        MySQL port. Defaults to 3306.
+  --mysql-ssl-cert PATH           Path to SSL certificate file.
+  --mysql-ssl-key PATH            Path to SSL key file.
+  --mysql-ssl-ca PATH             Path to SSL CA certificate file.
   -S, --skip-ssl                  Disable MySQL connection encryption.
   -c, --chunk INTEGER             Chunk reading/writing SQL records
   -l, --log-file PATH             Log file

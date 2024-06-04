@@ -88,6 +88,12 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
         self._without_data = kwargs.get("without_data") or False
 
+        self._mysql_ssl_ca = kwargs.get("mysql_ssl_ca") or None
+
+        self._mysql_ssl_cert = kwargs.get("mysql_ssl_cert") or None
+
+        self._mysql_ssl_key = kwargs.get("mysql_ssl_key") or None
+
         self._mysql_ssl_disabled = kwargs.get("mysql_ssl_disabled") or False
 
         self._current_chunk_number = 0
@@ -123,6 +129,9 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 password=self._mysql_password,
                 host=self._mysql_host,
                 port=self._mysql_port,
+                ssl_ca=self._mysql_ssl_ca,
+                ssl_cert=self._mysql_ssl_cert,
+                ssl_key=self._mysql_ssl_key,
                 ssl_disabled=self._mysql_ssl_disabled,
             )
             if isinstance(_mysql_connection, MySQLConnectionAbstract):
