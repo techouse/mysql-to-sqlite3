@@ -93,6 +93,12 @@ _copyright_header: str = f"mysql2sqlite version {package_version} Copyright (c) 
 )
 @click.option("-X", "--without-foreign-keys", is_flag=True, help="Do not transfer foreign keys.")
 @click.option(
+    "-Z",
+    "--without-tables",
+    is_flag=True,
+    help="Do not transfer tables, data only.",
+)
+@click.option(
     "-W",
     "--without-data",
     is_flag=True,
@@ -139,6 +145,7 @@ def cli(
     collation: t.Optional[str],
     prefix_indices: bool,
     without_foreign_keys: bool,
+    without_tables: bool,
     without_data: bool,
     mysql_host: str,
     mysql_port: int,
@@ -154,6 +161,12 @@ def cli(
     """Transfer MySQL to SQLite using the provided CLI options."""
     click.echo(_copyright_header)
     try:
+        # check if both mysql_skip_create_table and mysql_skip_transfer_data are True
+        if without_tables and without_data:
+            raise click.ClickException(
+                "Error: Both -Z/--without-tables and -W/--without-data are set. There is nothing to do. Exiting..."
+            )
+
         if mysql_tables and exclude_mysql_tables:
             raise click.UsageError("Illegal usage: --mysql-tables and --exclude-mysql-tables are mutually exclusive!")
 
@@ -168,6 +181,7 @@ def cli(
             collation=collation,
             prefix_indices=prefix_indices,
             without_foreign_keys=without_foreign_keys or (mysql_tables is not None and len(mysql_tables) > 0),
+            without_tables=without_tables,
             without_data=without_data,
             mysql_host=mysql_host,
             mysql_port=mysql_port,

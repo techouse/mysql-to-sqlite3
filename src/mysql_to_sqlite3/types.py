@@ -31,6 +31,7 @@ class MySQLtoSQLiteParams(tx.TypedDict):
     quiet: t.Optional[bool]
     sqlite_file: t.Union[str, "os.PathLike[t.Any]"]
     vacuum: t.Optional[bool]
+    without_tables: t.Optional[bool]
     without_data: t.Optional[bool]
     without_foreign_keys: t.Optional[bool]
 
@@ -62,6 +63,7 @@ class MySQLtoSQLiteAttributes:
     _sqlite: Connection
     _sqlite_cur: Cursor
     _sqlite_file: t.Union[str, "os.PathLike[t.Any]"]
+    _without_tables: bool
     _sqlite_json1_extension_enabled: bool
     _vacuum: bool
     _without_data: bool

@@ -219,6 +219,81 @@ class TestMySQLtoSQLite:
             }
         )
 
+    def test_without_data(
+        self,
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_database: Database,
+        mysql_credentials: MySQLCredentials,
+    ) -> None:
+        result: Result = cli_runner.invoke(
+            mysql2sqlite,
+            [
+                "-f",
+                str(sqlite_database),
+                "-d",
+                mysql_credentials.database,
+                "-u",
+                mysql_credentials.user,
+                "--mysql-password",
+                mysql_credentials.password,
+                "-h",
+                mysql_credentials.host,
+                "-P",
+                str(mysql_credentials.port),
+                "-W",
+            ],
+        )
+        assert result.exit_code == 0
+
+    def test_without_tables(
+        self,
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_database: Database,
+        mysql_credentials: MySQLCredentials,
+    ) -> None:
+        # First we need to create the tables in the SQLite database
+        result1: Result = cli_runner.invoke(
+            mysql2sqlite,
+            [
+                "-f",
+                str(sqlite_database),
+                "-d",
+                mysql_credentials.database,
+                "-u",
+                mysql_credentials.user,
+                "--mysql-password",
+                mysql_credentials.password,
+                "-h",
+                mysql_credentials.host,
+                "-P",
+                str(mysql_credentials.port),
+                "-W",
+            ],
+        )
+        assert result1.exit_code == 0
+
+        result2: Result = cli_runner.invoke(
+            mysql2sqlite,
+            [
+                "-f",
+                str(sqlite_database),
+                "-d",
+                mysql_credentials.database,
+                "-u",
+                mysql_credentials.user,
+                "--mysql-password",
+                mysql_credentials.password,
+                "-h",
+                mysql_credentials.host,
+                "-P",
+                str(mysql_credentials.port),
+                "-Z",
+            ],
+        )
+        assert result2.exit_code == 0
+
     @pytest.mark.parametrize(
         "chunk, vacuum, use_buffered_cursors, quiet",
         [
