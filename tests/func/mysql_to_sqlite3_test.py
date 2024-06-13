@@ -199,6 +199,29 @@ class TestMySQLtoSQLite:
             assert any("MySQL Database does not exist!" in message for message in caplog.messages)
         assert "Unknown database" in str(excinfo.value)
 
+    @pytest.mark.init
+    def test_without_tables_and_without_data(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_database: Database,
+        mysql_credentials: MySQLCredentials,
+        caplog: LogCaptureFixture,
+        tmpdir: LocalPath,
+        faker: Faker,
+    ) -> None:
+        with pytest.raises(ValueError) as excinfo:
+            MySQLtoSQLite(  # type: ignore[call-arg]
+                sqlite_file=sqlite_database,
+                mysql_user=mysql_credentials.user,
+                mysql_password=mysql_credentials.password,
+                mysql_database=mysql_credentials.database,
+                mysql_host=mysql_credentials.host,
+                mysql_port=mysql_credentials.port,
+                without_tables=True,
+                without_data=True,
+            )
+        assert "Unable to continue without transferring data or creating tables!" in str(excinfo.value)
+
     @pytest.mark.xfail
     @pytest.mark.init
     @pytest.mark.parametrize(

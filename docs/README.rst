@@ -36,6 +36,7 @@ Transfer Options
 - ``-C, --collation [BINARY|NOCASE|RTRIM]``: Create datatypes of TEXT affinity using a specified collation sequence. The default is BINARY.
 - ``-K, --prefix-indices``: Prefix indices with their corresponding tables. This ensures that their names remain unique across the SQLite database.
 - ``-X, --without-foreign-keys``: Do not transfer foreign keys.
+- ``-Z, --without-tables``: Do not transfer tables, data only.
 - ``-W, --without-data``: Do not transfer table data, DDL only.
 
 Connection Options

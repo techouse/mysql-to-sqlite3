@@ -57,18 +57,18 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
         self._mysql_password = str(kwargs.get("mysql_password")) or None
 
-        self._mysql_host = kwargs.get("mysql_host") or "localhost"
+        self._mysql_host = kwargs.get("mysql_host", "localhost") or "localhost"
 
-        self._mysql_port = kwargs.get("mysql_port") or 3306
+        self._mysql_port = kwargs.get("mysql_port", 3306) or 3306
 
         self._mysql_tables = kwargs.get("mysql_tables") or tuple()
 
         self._exclude_mysql_tables = kwargs.get("exclude_mysql_tables") or tuple()
 
-        if len(self._mysql_tables) > 0 and len(self._exclude_mysql_tables) > 0:
+        if bool(self._mysql_tables) and bool(self._exclude_mysql_tables):
             raise ValueError("mysql_tables and exclude_mysql_tables are mutually exclusive")
 
-        self._limit_rows = kwargs.get("limit_rows") or 0
+        self._limit_rows = kwargs.get("limit_rows", 0) or 0
 
         if kwargs.get("collation") is not None and str(kwargs.get("collation")).upper() in {
             CollatingSequences.BINARY,
@@ -79,26 +79,30 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         else:
             self._collation = CollatingSequences.BINARY
 
-        self._prefix_indices = kwargs.get("prefix_indices") or False
+        self._prefix_indices = kwargs.get("prefix_indices", False) or False
 
-        if len(self._mysql_tables) > 0 or len(self._exclude_mysql_tables) > 0:
+        if bool(self._mysql_tables) or bool(self._exclude_mysql_tables):
             self._without_foreign_keys = True
         else:
-            self._without_foreign_keys = kwargs.get("without_foreign_keys") or False
+            self._without_foreign_keys = bool(kwargs.get("without_foreign_keys", False))
 
-        self._without_data = kwargs.get("without_data") or False
+        self._without_data = bool(kwargs.get("without_data", False))
+        self._without_tables = bool(kwargs.get("without_tables", False))
 
-        self._mysql_ssl_disabled = kwargs.get("mysql_ssl_disabled") or False
+        if self._without_tables and self._without_data:
+            raise ValueError("Unable to continue without transferring data or creating tables!")
+
+        self._mysql_ssl_disabled = bool(kwargs.get("mysql_ssl_disabled", False))
 
         self._current_chunk_number = 0
 
         self._chunk_size = kwargs.get("chunk") or None
 
-        self._buffered = kwargs.get("buffered") or False
+        self._buffered = bool(kwargs.get("buffered", False))
 
-        self._vacuum = kwargs.get("vacuum") or False
+        self._vacuum = bool(kwargs.get("vacuum", False))
 
-        self._quiet = kwargs.get("quiet") or False
+        self._quiet = bool(kwargs.get("quiet", False))
 
         self._logger = self._setup_logger(log_file=kwargs.get("log_file") or None, quiet=self._quiet)
 
@@ -113,7 +117,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
         self._sqlite_cur = self._sqlite.cursor()
 
-        self._json_as_text = kwargs.get("json_as_text") or False
+        self._json_as_text = bool(kwargs.get("json_as_text", False))
 
         self._sqlite_json1_extension_enabled = not self._json_as_text and self._check_sqlite_json1_extension_enabled()
 
@@ -490,7 +494,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         sql += primary
         sql = sql.rstrip(", ")
 
-        if not self._without_foreign_keys:
+        if not self._without_tables and not self._without_foreign_keys:
             server_version: t.Optional[t.Tuple[int, ...]] = self._mysql.get_server_version()
             self._mysql_cur_dict.execute(
                 """
@@ -662,16 +666,18 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                     table_name = table_name.decode()
 
                 self._logger.info(
-                    "%sTransferring table %s",
+                    "%s%sTransferring table %s",
                     "[WITHOUT DATA] " if self._without_data else "",
+                    "[ONLY DATA] " if self._without_tables else "",
                     table_name,
                 )
 
                 # reset the chunk
                 self._current_chunk_number = 0
 
-                # create the table
-                self._create_table(table_name)  # type: ignore[arg-type]
+                if not self._without_tables:
+                    # create the table
+                    self._create_table(table_name)  # type: ignore[arg-type]
 
                 if not self._without_data:
                     # get the size of the data
