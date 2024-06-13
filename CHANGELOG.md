@@ -1,3 +1,7 @@
+# 2.2.0
+
+* [FEAT] add --without-tables option
+
 # 2.1.12
 
 * [CHORE] update MySQL Connector/Python to 8.4.0
