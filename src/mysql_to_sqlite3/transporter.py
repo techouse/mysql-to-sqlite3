@@ -382,14 +382,17 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         indices: str = ""
 
         self._mysql_cur_dict.execute(f"SHOW COLUMNS FROM `{table_name}`")
+        rows: t.Sequence[t.Optional[t.Dict[str, RowItemType]]] = self._mysql_cur_dict.fetchall()
 
-        for row in self._mysql_cur_dict.fetchall():
+        primary_keys: int = sum(1 for row in rows if row is not None and row["Key"] == "PRI")
+
+        for row in rows:
             if row is not None:
                 column_type = self._translate_type_from_mysql_to_sqlite(
                     column_type=row["Type"],  # type: ignore[arg-type]
                     sqlite_json1_extension_enabled=self._sqlite_json1_extension_enabled,
                 )
-                if row["Key"] == "PRI" and row["Extra"] == "auto_increment":
+                if row["Key"] == "PRI" and row["Extra"] == "auto_increment" and primary_keys == 1:
                     if column_type in Integer_Types:
                         sql += '\n\t"{name}" INTEGER PRIMARY KEY AUTOINCREMENT,'.format(
                             name=row["Field"].decode() if isinstance(row["Field"], bytes) else row["Field"],
@@ -414,7 +417,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             SELECT s.INDEX_NAME AS `name`,
                 IF (NON_UNIQUE = 0 AND s.INDEX_NAME = 'PRIMARY', 1, 0) AS `primary`,
                 IF (NON_UNIQUE = 0 AND s.INDEX_NAME <> 'PRIMARY', 1, 0) AS `unique`,
-                IF (c.EXTRA = 'auto_increment', 1, 0) AS `auto_increment`,
+                {auto_increment}
                 GROUP_CONCAT(s.COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS `columns`,
                 GROUP_CONCAT(c.COLUMN_TYPE ORDER BY SEQ_IN_INDEX) AS `types`
             FROM information_schema.STATISTICS AS s
@@ -424,8 +427,15 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 AND s.COLUMN_NAME = c.COLUMN_NAME
             WHERE s.TABLE_SCHEMA = %s
             AND s.TABLE_NAME = %s
-            GROUP BY s.INDEX_NAME, s.NON_UNIQUE, c.EXTRA
-            """,
+            GROUP BY s.INDEX_NAME, s.NON_UNIQUE {group_by_extra}
+            """.format(
+                auto_increment=(
+                    "IF (c.EXTRA = 'auto_increment', 1, 0) AS `auto_increment`,"
+                    if primary_keys == 1
+                    else "0 as `auto_increment`,"
+                ),
+                group_by_extra=" ,c.EXTRA" if primary_keys == 1 else "",
+            ),
             (self._mysql_database, table_name),
         )
         mysql_indices: t.Sequence[t.Optional[t.Dict[str, RowItemType]]] = self._mysql_cur_dict.fetchall()
@@ -476,8 +486,8 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                             not in Integer_Types
                             for _type in types.split(",")
                         ):
-                            primary += "\n\tPRIMARY KEY ({})".format(
-                                ", ".join(f'"{column}"' for column in columns.split(","))
+                            primary += "\n\tPRIMARY KEY ({columns})".format(
+                                columns=", ".join(f'"{column}"' for column in columns.split(","))
                             )
                     else:
                         indices += """CREATE {unique} INDEX IF NOT EXISTS "{name}" ON "{table}" ({columns});""".format(
