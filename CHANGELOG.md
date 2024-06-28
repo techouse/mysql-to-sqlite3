@@ -1,3 +1,7 @@
+# 2.2.1
+
+* [FIX] Fix transferring composite primary keys when AUTOINCREMENT present
+
 # 2.2.0
 
 * [FEAT] add --without-tables option
