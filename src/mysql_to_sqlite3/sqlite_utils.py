@@ -5,7 +5,8 @@ import typing as t
 from datetime import date, timedelta
 from decimal import Decimal
 
-from dateutil.parser import parse as dateutil_parse, ParserError
+from dateutil.parser import ParserError
+from dateutil.parser import parse as dateutil_parse
 from pytimeparse2 import parse
 
 
