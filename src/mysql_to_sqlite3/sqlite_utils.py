@@ -5,7 +5,7 @@ import typing as t
 from datetime import date, timedelta
 from decimal import Decimal
 
-from dateutil.parser import parse as dateutil_parse
+from dateutil.parser import parse as dateutil_parse, ParserError
 from pytimeparse2 import parse
 
 
@@ -51,7 +51,7 @@ def convert_date(value: t.Union[str, bytes]) -> date:
     """Handle SQLite date conversion."""
     try:
         return dateutil_parse(value.decode() if isinstance(value, bytes) else value).date()
-    except ValueError as err:
+    except ParserError as err:
         raise ValueError(f"DATE field contains {err}")  # pylint: disable=W0707
 
 
