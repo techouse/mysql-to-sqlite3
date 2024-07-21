@@ -1,6 +1,10 @@
+# 2.2.2
+
+* [FIX] use `dateutil.parse` to parse SQLite dates
+
 # 2.2.1
 
-* [FIX] Fix transferring composite primary keys when AUTOINCREMENT present
+* [FIX] fix transferring composite primary keys when AUTOINCREMENT present
 
 # 2.2.0
 
