@@ -183,6 +183,16 @@ def cli(
     """Transfer MySQL to SQLite using the provided CLI options."""
     click.echo(_copyright_header)
     try:
+        if mysql_collation:
+            charset_collations: t.Tuple[str, ...] = tuple(
+                cs.collation for cs in mysql_supported_character_sets(mysql_charset.lower())
+            )
+            if mysql_collation not in set(charset_collations):
+                raise click.ClickException(
+                    f"Error: Invalid value for '--collation' of charset '{mysql_charset}': '{mysql_collation}' "
+                    f"""is not one of {"'" + "', '".join(charset_collations) + "'"}."""
+                )
+
         # check if both mysql_skip_create_table and mysql_skip_transfer_data are True
         if without_tables and without_data:
             raise click.ClickException(
