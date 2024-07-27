@@ -6,12 +6,14 @@ import typing as t
 from datetime import datetime
 
 import click
+from mysql.connector import CharacterSet
 from tabulate import tabulate
 
 from . import MySQLtoSQLite
 from . import __version__ as package_version
 from .click_utils import OptionEatAll, prompt_password, validate_positive_integer
 from .debug_info import info
+from .mysql_utils import mysql_supported_character_sets
 from .sqlite_utils import CollatingSequences
 
 
@@ -106,6 +108,24 @@ _copyright_header: str = f"mysql2sqlite version {package_version} Copyright (c) 
 )
 @click.option("-h", "--mysql-host", default="localhost", help="MySQL host. Defaults to localhost.")
 @click.option("-P", "--mysql-port", type=int, default=3306, help="MySQL port. Defaults to 3306.")
+@click.option(
+    "--mysql-charset",
+    metavar="TEXT",
+    type=click.Choice(list(CharacterSet().get_supported()), case_sensitive=False),
+    default="utf8mb4",
+    show_default=True,
+    help="MySQL database and table character set",
+)
+@click.option(
+    "--mysql-collation",
+    metavar="TEXT",
+    type=click.Choice(
+        [charset.collation for charset in mysql_supported_character_sets()],
+        case_sensitive=False,
+    ),
+    default=None,
+    help="MySQL database and table collation",
+)
 @click.option("-S", "--skip-ssl", is_flag=True, help="Disable MySQL connection encryption.")
 @click.option(
     "-c",
@@ -149,6 +169,8 @@ def cli(
     without_data: bool,
     mysql_host: str,
     mysql_port: int,
+    mysql_charset: str,
+    mysql_collation: str,
     skip_ssl: bool,
     chunk: int,
     log_file: t.Union[str, "os.PathLike[t.Any]"],
@@ -185,6 +207,8 @@ def cli(
             without_data=without_data,
             mysql_host=mysql_host,
             mysql_port=mysql_port,
+            mysql_charset=mysql_charset,
+            mysql_collation=mysql_collation,
             mysql_ssl_disabled=skip_ssl,
             chunk=chunk,
             json_as_text=json_as_text,

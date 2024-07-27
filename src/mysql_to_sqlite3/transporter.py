@@ -13,7 +13,7 @@ from sys import stdout
 
 import mysql.connector
 import typing_extensions as tx
-from mysql.connector import errorcode
+from mysql.connector import CharacterSet, errorcode
 from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.types import RowItemType
 from tqdm import tqdm, trange
@@ -60,6 +60,14 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         self._mysql_host = kwargs.get("mysql_host", "localhost") or "localhost"
 
         self._mysql_port = kwargs.get("mysql_port", 3306) or 3306
+
+        self._mysql_charset = kwargs.get("mysql_charset", "utf8mb4") or "utf8mb4"
+
+        self._mysql_collation = (
+            kwargs.get("mysql_collation") or CharacterSet().get_default_collation(self._mysql_charset.lower())[0]
+        )
+        if not kwargs.get("mysql_collation") and self._mysql_collation == "utf8mb4_0900_ai_ci":
+            self._mysql_collation = "utf8mb4_unicode_ci"
 
         self._mysql_tables = kwargs.get("mysql_tables") or tuple()
 
@@ -128,6 +136,8 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 host=self._mysql_host,
                 port=self._mysql_port,
                 ssl_disabled=self._mysql_ssl_disabled,
+                charset=self._mysql_charset,
+                collation=self._mysql_collation,
             )
             if isinstance(_mysql_connection, MySQLConnectionAbstract):
                 self._mysql = _mysql_connection
