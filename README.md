@@ -31,8 +31,6 @@ mysql2sqlite --help
 ```
 Usage: mysql2sqlite [OPTIONS]
 
-  mysql2sqlite version 2.1.12 Copyright (c) 2019-2024 Klemen Tusar
-
 Options:
   -f, --sqlite-file PATH          SQLite3 database file  [required]
   -d, --mysql-database TEXT       MySQL database name  [required]
@@ -64,6 +62,9 @@ Options:
   -W, --without-data              Do not transfer table data, DDL only.
   -h, --mysql-host TEXT           MySQL host. Defaults to localhost.
   -P, --mysql-port INTEGER        MySQL port. Defaults to 3306.
+  --mysql-charset TEXT            MySQL database and table character set
+                                  [default: utf8mb4]
+  --mysql-collation TEXT          MySQL database and table collation
   -S, --skip-ssl                  Disable MySQL connection encryption.
   -c, --chunk INTEGER             Chunk reading/writing SQL records
   -l, --log-file PATH             Log file
