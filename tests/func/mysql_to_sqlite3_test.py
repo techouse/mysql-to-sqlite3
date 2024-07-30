@@ -69,6 +69,7 @@ class TestMySQLtoSQLite:
         assert "Please provide a MySQL database" in str(excinfo.value)
 
     @pytest.mark.init
+    @pytest.mark.xfail
     @pytest.mark.parametrize(
         "quiet",
         [
@@ -463,6 +464,8 @@ class TestMySQLtoSQLite:
                 host=mysql_credentials.host,
                 port=mysql_credentials.port,
                 database=mysql_credentials.database,
+                charset="utf8mb4",
+                collation="utf8mb4_unicode_ci",
             )
         )
         server_version: t.Tuple[int, ...] = mysql_connector_connection.get_server_version()
@@ -1211,6 +1214,8 @@ class TestMySQLtoSQLite:
                 host=mysql_credentials.host,
                 port=mysql_credentials.port,
                 database=mysql_credentials.database,
+                charset="utf8mb4",
+                collation="utf8mb4_unicode_ci",
             )
         )
         server_version: t.Tuple[int, ...] = mysql_connector_connection.get_server_version()

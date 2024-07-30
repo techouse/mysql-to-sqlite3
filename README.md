@@ -1,8 +1,8 @@
 [![PyPI](https://img.shields.io/pypi/v/mysql-to-sqlite3)](https://pypi.org/project/mysql-to-sqlite3/)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/mysql-to-sqlite3)](https://pypistats.org/packages/mysql-to-sqlite3)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mysql-to-sqlite3)](https://pypi.org/project/mysql-to-sqlite3/)
-[![MySQL Support](https://img.shields.io/static/v1?label=MySQL&message=5.5+|+5.6+|+5.7+|+8.0&color=2b5d80)](https://img.shields.io/static/v1?label=MySQL&message=5.6+|+5.7+|+8.0&color=2b5d80)
-[![MariaDB Support](https://img.shields.io/static/v1?label=MariaDB&message=5.5+|+10.0+|+10.1+|+10.2+|+10.3+|+10.4+|+10.5+|+10.6|+10.11&color=C0765A)](https://img.shields.io/static/v1?label=MariaDB&message=10.0+|+10.1+|+10.2+|+10.3+|+10.4+|+10.5&color=C0765A)
+[![MySQL Support](https://img.shields.io/static/v1?label=MySQL&message=5.5+|+5.6+|+5.7+|+8.0+|+8.4&color=2b5d80)](https://img.shields.io/static/v1?label=MySQL&message=5.5+|+5.6+|+5.7+|+8.0+|+8.4&color=2b5d80)
+[![MariaDB Support](https://img.shields.io/static/v1?label=MariaDB&message=5.5+|+10.0+|+10.1+|+10.2+|+10.3+|+10.4+|+10.5+|+10.6|+10.11+|+11.4&color=C0765A)](https://img.shields.io/static/v1?label=MariaDB&message=5.5|+10.0+|+10.1+|+10.2+|+10.3+|+10.4+|+10.5|+11.4&color=C0765A)
 [![GitHub license](https://img.shields.io/github/license/techouse/mysql-to-sqlite3)](https://github.com/techouse/mysql-to-sqlite3/blob/master/LICENSE)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE-OF-CONDUCT.md)
 [![PyPI - Format](https://img.shields.io/pypi/format/mysql-to-sqlite3)](https://pypi.org/project/sqlite3-to-mysql/)
@@ -30,8 +30,6 @@ mysql2sqlite --help
 
 ```
 Usage: mysql2sqlite [OPTIONS]
-
-  mysql2sqlite version 2.1.12 Copyright (c) 2019-2024 Klemen Tusar
 
 Options:
   -f, --sqlite-file PATH          SQLite3 database file  [required]
@@ -64,6 +62,9 @@ Options:
   -W, --without-data              Do not transfer table data, DDL only.
   -h, --mysql-host TEXT           MySQL host. Defaults to localhost.
   -P, --mysql-port INTEGER        MySQL port. Defaults to 3306.
+  --mysql-charset TEXT            MySQL database and table character set
+                                  [default: utf8mb4]
+  --mysql-collation TEXT          MySQL database and table collation
   -S, --skip-ssl                  Disable MySQL connection encryption.
   -c, --chunk INTEGER             Chunk reading/writing SQL records
   -l, --log-file PATH             Log file
