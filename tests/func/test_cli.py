@@ -1,8 +1,11 @@
 import os
+import subprocess
 import typing as t
 from datetime import datetime
+from pathlib import Path
 from random import choice, sample
 
+import mysql.connector
 import pytest
 from click.testing import CliRunner, Result
 from faker import Faker
@@ -578,3 +581,180 @@ class TestMySQLtoSQLite:
                 "tqdm",
             }
         )
+
+    @pytest.mark.parametrize("mysql_credentials", ["ssl"], indirect=True)
+    def test_ssl_connection(
+        self,
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        mysql_database: Database,
+        tmp_path_factory: pytest.TempPathFactory,
+    ):
+        certs_dir = tmp_path_factory.getbasetemp() / "certs"
+
+        result: Result = cli_runner.invoke(
+            mysql2sqlite,
+            [
+                "-f",
+                str(sqlite_database),
+                "-d",
+                mysql_credentials.database,
+                "-u",
+                mysql_credentials.user,
+                "--mysql-password",
+                mysql_credentials.password,
+                "-h",
+                mysql_credentials.host,
+                "-P",
+                str(mysql_credentials.port),
+                "--mysql-ssl-ca",
+                str(certs_dir / "ca.pem"),
+                "--mysql-ssl-cert",
+                str(certs_dir / "client-cert.pem"),
+                "--mysql-ssl-key",
+                str(certs_dir / "client-key.pem"),
+            ],
+        )
+
+        assert result.exit_code == 0
+
+    @pytest.mark.parametrize("mysql_credentials", ["ssl"], indirect=True)
+    def test_ssl_connection_missing_ca(
+        self,
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        mysql_database: Database,
+        tmp_path_factory: pytest.TempPathFactory,
+    ):
+        certs_dir = tmp_path_factory.getbasetemp() / "certs"
+
+        result: Result = cli_runner.invoke(
+            mysql2sqlite,
+            [
+                "-f",
+                str(sqlite_database),
+                "-d",
+                mysql_credentials.database,
+                "-u",
+                mysql_credentials.user,
+                "--mysql-password",
+                mysql_credentials.password,
+                "-h",
+                mysql_credentials.host,
+                "-P",
+                str(mysql_credentials.port),
+                "--mysql-ssl-cert",
+                str(certs_dir / "client-cert.pem"),
+                "--mysql-ssl-key",
+                str(certs_dir / "client-key.pem"),
+            ],
+        )
+
+        assert result.exit_code == 0
+
+    @pytest.mark.parametrize("mysql_credentials", ["ssl"], indirect=True)
+    def test_ssl_connection_missing_cert(
+        self,
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        mysql_database: Database,
+        tmp_path_factory: pytest.TempPathFactory,
+    ):
+        certs_dir = tmp_path_factory.getbasetemp() / "certs"
+
+        result: Result = cli_runner.invoke(
+            mysql2sqlite,
+            [
+                "-f",
+                str(sqlite_database),
+                "-d",
+                mysql_credentials.database,
+                "-u",
+                mysql_credentials.user,
+                "--mysql-password",
+                mysql_credentials.password,
+                "-h",
+                mysql_credentials.host,
+                "-P",
+                str(mysql_credentials.port),
+                "--mysql-ssl-ca",
+                str(certs_dir / "ca.pem"),
+                "--mysql-ssl-key",
+                str(certs_dir / "client-key.pem"),
+            ],
+        )
+
+        assert result.exit_code > 0
+        assert "ssl_key and ssl_cert need to be both set, or neither" in result.output
+
+    @pytest.mark.parametrize("mysql_credentials", ["ssl"], indirect=True)
+    def test_ssl_connection_missing_key(
+        self,
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        mysql_database: Database,
+        tmp_path_factory: pytest.TempPathFactory,
+    ):
+        certs_dir = tmp_path_factory.getbasetemp() / "certs"
+
+        result: Result = cli_runner.invoke(
+            mysql2sqlite,
+            [
+                "-f",
+                str(sqlite_database),
+                "-d",
+                mysql_credentials.database,
+                "-u",
+                mysql_credentials.user,
+                "--mysql-password",
+                mysql_credentials.password,
+                "-h",
+                mysql_credentials.host,
+                "-P",
+                str(mysql_credentials.port),
+                "--mysql-ssl-ca",
+                str(certs_dir / "ca.pem"),
+                "--mysql-ssl-cert",
+                str(certs_dir / "client-cert.pem"),
+            ],
+        )
+
+        assert result.exit_code > 0
+        assert "ssl_key and ssl_cert need to be both set, or neither" in result.output
+
+    @pytest.mark.parametrize("mysql_credentials", ["ssl"], indirect=True)
+    def test_ssl_connection_only_ca(
+        self,
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        mysql_database: Database,
+        tmp_path_factory: pytest.TempPathFactory,
+    ):
+        certs_dir = tmp_path_factory.getbasetemp() / "certs"
+
+        result: Result = cli_runner.invoke(
+            mysql2sqlite,
+            [
+                "-f",
+                str(sqlite_database),
+                "-d",
+                mysql_credentials.database,
+                "-u",
+                mysql_credentials.user,
+                "--mysql-password",
+                mysql_credentials.password,
+                "-h",
+                mysql_credentials.host,
+                "-P",
+                str(mysql_credentials.port),
+                "--mysql-ssl-ca",
+                str(certs_dir / "ca.pem"),
+            ],
+        )
+
+        assert result.exit_code == 0

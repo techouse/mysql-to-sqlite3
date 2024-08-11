@@ -1,10 +1,13 @@
 import json
 import os
 import socket
+import subprocess
+import threading
 import typing as t
+import uuid
 from codecs import open
 from contextlib import contextmanager
-from os.path import abspath, dirname, isfile, join
+from os.path import abspath, basename, dirname, isfile, join
 from pathlib import Path
 from random import choice
 from string import ascii_lowercase, ascii_uppercase, digits
@@ -31,6 +34,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy_utils import database_exists, drop_database
 
 from . import database, factories, models
+from .utils import generate_ssl_certs, stream_logs
 
 
 def pytest_addoption(parser: "Parser"):
@@ -68,6 +72,27 @@ def pytest_addoption(parser: "Parser"):
         type=int,
         default=None,
         help="The TCP port of the MySQL server.",
+    )
+
+    parser.addoption(
+        "--mysql-ssl-ca",
+        dest="mysql_ssl_ca",
+        default=None,
+        help="Path to SSL CA certificate file.",
+    )
+
+    parser.addoption(
+        "--mysql-ssl-cert",
+        dest="mysql_ssl_cert",
+        default=None,
+        help="Path to SSL certificate file.",
+    )
+
+    parser.addoption(
+        "--mysql-ssl-key",
+        dest="mysql_ssl_key",
+        default=None,
+        help="Path to SSL key file.",
     )
 
     parser.addoption(
@@ -159,10 +184,13 @@ class MySQLCredentials(t.NamedTuple):
     host: str
     port: int
     database: str
+    ssl_ca: t.Optional[str] = None
+    ssl_cert: t.Optional[str] = None
+    ssl_key: t.Optional[str] = None
 
 
 @pytest.fixture(scope="session")
-def mysql_credentials(pytestconfig: Config) -> MySQLCredentials:
+def mysql_credentials(request, pytestconfig: Config, tmp_path_factory: pytest.TempPathFactory) -> MySQLCredentials:
     db_credentials_file: str = abspath(join(dirname(__file__), "db_credentials.json"))
     if isfile(db_credentials_file):
         with open(db_credentials_file, "r", "utf-8") as fh:
@@ -173,6 +201,9 @@ def mysql_credentials(pytestconfig: Config) -> MySQLCredentials:
                 database=db_credentials["mysql_database"],
                 host=db_credentials["mysql_host"],
                 port=db_credentials["mysql_port"],
+                ssl_ca=db_credentials.get("mysql_ssl_ca"),
+                ssl_cert=db_credentials.get("mysql_ssl_cert"),
+                ssl_key=db_credentials.get("mysql_ssl_key"),
             )
 
     port: int = pytestconfig.getoption("mysql_port") or 3306
@@ -182,12 +213,35 @@ def mysql_credentials(pytestconfig: Config) -> MySQLCredentials:
                 pytest.fail(f"No ports appear to be available on the host {pytestconfig.getoption('mysql_host')}")
             port += 1
 
+    ssl_credentials = {
+        "ssl_ca": pytestconfig.getoption("mysql_ssl_ca") or None,
+        "ssl_cert": pytestconfig.getoption("mysql_ssl_cert") or None,
+        "ssl_key": pytestconfig.getoption("mysql_ssl_key") or None,
+    }
+
+    if hasattr(request, "param") and request.param == "ssl":
+        certs_dir = tmp_path_factory.getbasetemp() / "certs"
+        if not certs_dir.exists():
+            certs_dir.mkdir(parents=True)
+            generate_ssl_certs(certs_dir)
+
+            # FIXED: docker perms
+            subprocess.call(["chmod", "0644", str(certs_dir / "ca-key.pem")])
+            subprocess.call(["chmod", "0644", str(certs_dir / "server-key.pem")])
+
+        ssl_credentials = {
+            "ssl_ca": str(certs_dir / "ca.pem"),
+            "ssl_cert": str(certs_dir / "server-cert.pem"),
+            "ssl_key": str(certs_dir / "server-key.pem"),
+        }
+
     return MySQLCredentials(
         user=pytestconfig.getoption("mysql_user") or "tester",
         password=pytestconfig.getoption("mysql_password") or "testpass",
         database=pytestconfig.getoption("mysql_database") or "test_db",
         host=pytestconfig.getoption("mysql_host") or "0.0.0.0",
         port=port,
+        **ssl_credentials,
     )
 
 
@@ -222,9 +276,38 @@ def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) ->
             except (HTTPError, NotFound) as err:
                 pytest.fail(str(err))
 
+        ssl_cmds = []
+        ssl_args = {}
+        ssl_volumes = {}
+        host_certs_dir = None
+        container_certs_dir = "/etc/mysql/certs"
+
+        if mysql_credentials.ssl_ca:
+            host_certs_dir = dirname(mysql_credentials.ssl_ca)
+            ssl_cmds.append(f"--ssl-ca={container_certs_dir}/{basename(mysql_credentials.ssl_ca)}")
+            ssl_args["ssl_ca"] = mysql_credentials.ssl_ca
+
+        if mysql_credentials.ssl_cert:
+            host_certs_dir = dirname(mysql_credentials.ssl_cert)
+            ssl_cmds.append(f"--ssl-cert={container_certs_dir}/{basename(mysql_credentials.ssl_cert)}")
+            ssl_args["ssl_cert"] = f"{host_certs_dir}/client-cert.pem"
+
+        if mysql_credentials.ssl_key:
+            host_certs_dir = dirname(mysql_credentials.ssl_key)
+            ssl_cmds.append(f"--ssl-key={container_certs_dir}/{basename(mysql_credentials.ssl_key)}")
+            ssl_args["ssl_key"] = f"{host_certs_dir}/client-key.pem"
+
+        if host_certs_dir:
+            ssl_volumes[host_certs_dir] = {"bind": container_certs_dir, "mode": "ro"}
+
+        if ssl_args:
+            ssl_args["ssl_verify_cert"] = True
+
+        container_name = f"pytest_mysql_to_sqlite3_{uuid.uuid4().hex[:10]}"
+
         container = client.containers.run(
             image=docker_mysql_image,
-            name="pytest_mysql_to_sqlite3",
+            name=container_name,
             ports={"3306/tcp": (mysql_credentials.host, f"{mysql_credentials.port}/tcp")},
             environment={
                 "MYSQL_RANDOM_ROOT_PASSWORD": "yes",
@@ -232,16 +315,25 @@ def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) ->
                 "MYSQL_PASSWORD": mysql_credentials.password,
                 "MYSQL_DATABASE": mysql_credentials.database,
             },
+            volumes=ssl_volumes,
             command=[
                 "--character-set-server=utf8mb4",
                 "--collation-server=utf8mb4_unicode_ci",
-            ],
+            ]
+            + ssl_cmds,
             detach=True,
             auto_remove=True,
         )
 
+        log_thread = threading.Thread(target=stream_logs, args=(container,))
+        # The thread will terminate when the main program terminates
+        log_thread.daemon = True
+        log_thread.start()
+
     while not mysql_available and mysql_connection_retries > 0:
         try:
+            print(f"Attempt #{mysql_connection_retries} to connect to MySQL...")
+
             mysql_connection = mysql.connector.connect(
                 user=mysql_credentials.user,
                 password=mysql_credentials.password,
@@ -249,6 +341,7 @@ def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) ->
                 port=mysql_credentials.port,
                 charset="utf8mb4",
                 collation="utf8mb4_unicode_ci",
+                **ssl_args,
             )
         except mysql.connector.Error as err:
             if err.errno == errorcode.CR_SERVER_LOST:
@@ -269,6 +362,10 @@ def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) ->
 
     if use_docker and container is not None:
         container.kill()
+
+        # Wait for the log thread to finish (optional)
+        if "log_thread" in locals() and log_thread.is_alive():
+            log_thread.join(timeout=5)
 
 
 @pytest.fixture(scope="session")
