@@ -191,28 +191,6 @@ class MySQLCredentials(t.NamedTuple):
 
 @pytest.fixture(scope="session")
 def mysql_credentials(request, pytestconfig: Config, tmp_path_factory: pytest.TempPathFactory) -> MySQLCredentials:
-    db_credentials_file: str = abspath(join(dirname(__file__), "db_credentials.json"))
-    if isfile(db_credentials_file):
-        with open(db_credentials_file, "r", "utf-8") as fh:
-            db_credentials: t.Dict[str, t.Any] = json.load(fh)
-            return MySQLCredentials(
-                user=db_credentials["mysql_user"],
-                password=db_credentials["mysql_password"],
-                database=db_credentials["mysql_database"],
-                host=db_credentials["mysql_host"],
-                port=db_credentials["mysql_port"],
-                ssl_ca=db_credentials.get("mysql_ssl_ca"),
-                ssl_cert=db_credentials.get("mysql_ssl_cert"),
-                ssl_key=db_credentials.get("mysql_ssl_key"),
-            )
-
-    port: int = pytestconfig.getoption("mysql_port") or 3306
-    if pytestconfig.getoption("use_docker"):
-        while is_port_in_use(port, pytestconfig.getoption("mysql_host")):
-            if port >= 2**16 - 1:
-                pytest.fail(f"No ports appear to be available on the host {pytestconfig.getoption('mysql_host')}")
-            port += 1
-
     ssl_credentials = {
         "ssl_ca": pytestconfig.getoption("mysql_ssl_ca") or None,
         "ssl_cert": pytestconfig.getoption("mysql_ssl_cert") or None,
@@ -235,6 +213,28 @@ def mysql_credentials(request, pytestconfig: Config, tmp_path_factory: pytest.Te
             "ssl_key": str(certs_dir / "server-key.pem"),
         }
 
+    db_credentials_file: str = abspath(join(dirname(__file__), "db_credentials.json"))
+    if isfile(db_credentials_file):
+        with open(db_credentials_file, "r", "utf-8") as fh:
+            db_credentials: t.Dict[str, t.Any] = json.load(fh)
+            return MySQLCredentials(
+                user=db_credentials["mysql_user"],
+                password=db_credentials["mysql_password"],
+                database=db_credentials["mysql_database"],
+                host=db_credentials["mysql_host"],
+                port=db_credentials["mysql_port"],
+                ssl_ca=db_credentials.get("mysql_ssl_ca") or ssl_credentials["ssl_ca"],
+                ssl_cert=db_credentials.get("mysql_ssl_cert") or ssl_credentials["ssl_cert"],
+                ssl_key=db_credentials.get("mysql_ssl_key") or ssl_credentials["ssl_key"],
+            )
+
+    port: int = pytestconfig.getoption("mysql_port") or 3306
+    if pytestconfig.getoption("use_docker"):
+        while is_port_in_use(port, pytestconfig.getoption("mysql_host")):
+            if port >= 2**16 - 1:
+                pytest.fail(f"No ports appear to be available on the host {pytestconfig.getoption('mysql_host')}")
+            port += 1
+
     return MySQLCredentials(
         user=pytestconfig.getoption("mysql_user") or "tester",
         password=pytestconfig.getoption("mysql_password") or "testpass",
@@ -251,6 +251,7 @@ def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) ->
     mysql_connection: t.Optional[t.Union[PooledMySQLConnection, MySQLConnection, CMySQLConnection]] = None
     mysql_available: bool = False
     mysql_connection_retries: int = 15  # failsafe
+    ssl_args = {}
 
     db_credentials_file = abspath(join(dirname(__file__), "db_credentials.json"))
     if isfile(db_credentials_file):
@@ -277,7 +278,6 @@ def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) ->
                 pytest.fail(str(err))
 
         ssl_cmds = []
-        ssl_args = {}
         ssl_volumes = {}
         host_certs_dir = None
         container_certs_dir = "/etc/mysql/certs"
