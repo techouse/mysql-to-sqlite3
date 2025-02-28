@@ -100,6 +100,12 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         if self._without_tables and self._without_data:
             raise ValueError("Unable to continue without transferring data or creating tables!")
 
+        self._mysql_ssl_ca = kwargs.get("mysql_ssl_ca") or None
+
+        self._mysql_ssl_cert = kwargs.get("mysql_ssl_cert") or None
+
+        self._mysql_ssl_key = kwargs.get("mysql_ssl_key") or None
+
         self._mysql_ssl_disabled = bool(kwargs.get("mysql_ssl_disabled", False))
 
         self._current_chunk_number = 0
@@ -135,6 +141,9 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 password=self._mysql_password,
                 host=self._mysql_host,
                 port=self._mysql_port,
+                ssl_ca=self._mysql_ssl_ca,
+                ssl_cert=self._mysql_ssl_cert,
+                ssl_key=self._mysql_ssl_key,
                 ssl_disabled=self._mysql_ssl_disabled,
                 charset=self._mysql_charset,
                 collation=self._mysql_collation,
