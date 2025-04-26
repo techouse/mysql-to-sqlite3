@@ -79,6 +79,8 @@ class TestMySQLtoSQLiteClassmethods:
                 "MEDIUMTEXT",
                 "SET",
                 "TINYTEXT",
+                "INET4",
+                "INET6",
             }:
                 assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite(column_type) == "TEXT"
             elif column_type == "JSON":

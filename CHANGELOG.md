@@ -1,3 +1,7 @@
+# 2.4.0
+
+* [CHORE] drop support for Python 3.8
+
 # 2.3.0
 
 * [FEAT] add MySQL 8.4 and MariaDB 11.4 support
