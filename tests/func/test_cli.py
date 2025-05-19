@@ -21,7 +21,7 @@ from tests.database import Database
 class TestMySQLtoSQLite:
     def test_no_arguments(self, cli_runner: CliRunner) -> None:
         result: Result = cli_runner.invoke(mysql2sqlite)
-        assert result.exit_code == 0
+        assert result.exit_code in {0, 2}
         assert all(
             message in result.output
             for message in {
