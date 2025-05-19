@@ -578,3 +578,67 @@ class TestMySQLtoSQLite:
                 "tqdm",
             }
         )
+
+    def test_invalid_mysql_charset_collation(
+        self,
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        mysql_database: Database,
+    ) -> None:
+        """Test CLI with invalid collation for the specified charset."""
+        result: Result = cli_runner.invoke(
+            mysql2sqlite,
+            [
+                "-f",
+                str(sqlite_database),
+                "-d",
+                mysql_credentials.database,
+                "-u",
+                mysql_credentials.user,
+                "--mysql-password",
+                mysql_credentials.password,
+                "-h",
+                mysql_credentials.host,
+                "-P",
+                str(mysql_credentials.port),
+                "--mysql-charset",
+                "utf8mb4",
+                "--mysql-collation",
+                "invalid_collation",
+            ],
+        )
+        assert result.exit_code > 0
+        assert "Error: Invalid value for '--mysql-collation': 'invalid_collation'" in result.output
+
+    def test_without_tables_and_without_data_flags(
+        self,
+        cli_runner: CliRunner,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+    ) -> None:
+        """Test CLI with both --without-tables and --without-data flags set."""
+        result: Result = cli_runner.invoke(
+            mysql2sqlite,
+            [
+                "-f",
+                str(sqlite_database),
+                "-d",
+                mysql_credentials.database,
+                "-u",
+                mysql_credentials.user,
+                "--mysql-password",
+                mysql_credentials.password,
+                "-h",
+                mysql_credentials.host,
+                "-P",
+                str(mysql_credentials.port),
+                "--without-tables",
+                "--without-data",
+            ],
+        )
+        assert result.exit_code > 0
+        assert (
+            "Error: Both -Z/--without-tables and -W/--without-data are set. There is nothing to do. Exiting..."
+            in result.output
+        )

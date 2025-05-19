@@ -34,10 +34,18 @@ def convert_timedelta(value: t.Any) -> timedelta:
 
 def encode_data_for_sqlite(value: t.Any) -> t.Any:
     """Fix encoding bytes."""
-    try:
-        return value.decode()
-    except (UnicodeDecodeError, AttributeError):
-        return sqlite3.Binary(value)
+    if isinstance(value, bytes):
+        try:
+            return value.decode()
+        except (UnicodeDecodeError, AttributeError):
+            return sqlite3.Binary(value)
+    elif isinstance(value, str):
+        return value
+    else:
+        try:
+            return sqlite3.Binary(value)
+        except TypeError:
+            return value
 
 
 class CollatingSequences:

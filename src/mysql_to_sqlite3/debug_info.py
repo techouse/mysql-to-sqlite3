@@ -83,7 +83,7 @@ def info() -> t.List[t.List[str]]:
         ["MySQL", _mysql_version()],
         ["SQLite", sqlite3.sqlite_version],
         ["", ""],
-        ["click", click.__version__],
+        ["click", str(click.__version__)],
         ["mysql-connector-python", mysql.connector.__version__],
         ["python-slugify", slugify.__version__],
         ["pytimeparse2", pytimeparse2.__version__],
