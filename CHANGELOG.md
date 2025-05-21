@@ -1,3 +1,7 @@
+# 2.4.1
+
+* [FIX] fix passwordless login
+
 # 2.4.0
 
 * [CHORE] drop support for Python 3.8
