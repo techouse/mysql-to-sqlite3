@@ -55,7 +55,8 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         else:
             self._sqlite_file = realpath(str(kwargs.get("sqlite_file")))
 
-        self._mysql_password = str(kwargs.get("mysql_password")) or None
+        password: t.Optional[t.Union[str, bool]] = kwargs.get("mysql_password")
+        self._mysql_password = password if isinstance(password, str) else None
 
         self._mysql_host = kwargs.get("mysql_host", "localhost") or "localhost"
 

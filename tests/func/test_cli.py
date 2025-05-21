@@ -642,3 +642,23 @@ class TestMySQLtoSQLite:
             "Error: Both -Z/--without-tables and -W/--without-data are set. There is nothing to do. Exiting..."
             in result.output
         )
+
+    def test_passwordless_login(
+        self, cli_runner: CliRunner, sqlite_database: "os.PathLike[t.Any]", mysql_credentials: MySQLCredentials
+    ) -> None:
+        result: Result = cli_runner.invoke(
+            mysql2sqlite,
+            [
+                "-f",
+                str(sqlite_database),
+                "-d",
+                mysql_credentials.database,
+                "-u",
+                mysql_credentials.user,
+                "-h",
+                mysql_credentials.host,
+                "-P",
+                str(mysql_credentials.port),
+            ],
+        )
+        assert "using password: NO" in result.output
