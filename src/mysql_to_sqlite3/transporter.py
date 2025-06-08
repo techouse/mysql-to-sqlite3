@@ -707,7 +707,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             else:
                 # If _mysql attribute is not available (e.g., in tests), use the original table list
                 ordered_tables = table_list
-        except Exception as e:
+        except Exception as e:  # pylint: disable=W0718
             # If anything goes wrong, fall back to the original table list
             self._logger.warning("Failed to compute table creation order: %s", str(e))
             ordered_tables = table_list

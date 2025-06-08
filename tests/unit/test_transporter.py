@@ -1,4 +1,5 @@
 import sqlite3
+import typing as t
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -228,3 +229,199 @@ class TestMySQLtoSQLiteTransporter:
         """Test _translate_default_from_mysql_to_sqlite with bytes default."""
         result = MySQLtoSQLite._translate_default_from_mysql_to_sqlite(b"abc", column_type="BLOB")
         assert result.startswith("DEFAULT x'")
+
+    @patch("mysql.connector.connect")
+    @patch("sqlite3.connect")
+    @patch("mysql_to_sqlite3.transporter.compute_creation_order")
+    def test_transfer_table_ordering(
+        self, mock_compute_creation_order: MagicMock, mock_sqlite_connect: MagicMock, mock_mysql_connect: MagicMock
+    ) -> None:
+        """Test that tables are transferred in the correct order respecting foreign key constraints."""
+        # Setup mock SQLite cursor
+        mock_sqlite_cursor: MagicMock = MagicMock()
+
+        # Setup mock SQLite connection
+        mock_sqlite_connection: MagicMock = MagicMock()
+        mock_sqlite_connection.cursor.return_value = mock_sqlite_cursor
+        mock_sqlite_connect.return_value = mock_sqlite_connection
+
+        # Setup mock MySQL cursor
+        mock_mysql_cursor: MagicMock = MagicMock()
+        mock_mysql_cursor.fetchall.return_value = [(b"table1",), (b"table2",), (b"table3",)]
+
+        # Setup mock MySQL connection
+        mock_mysql_connection: MagicMock = MagicMock()
+        mock_mysql_connection.cursor.return_value = mock_mysql_cursor
+        mock_mysql_connect.return_value = mock_mysql_connection
+
+        # Mock compute_creation_order to return a specific order
+        ordered_tables: t.List[str] = ["table2", "table1", "table3"]  # Specific order for testing
+        cyclic_edges: t.List[t.Tuple[str, str]] = []  # No cycles for this test
+        mock_compute_creation_order.return_value = (ordered_tables, cyclic_edges)
+
+        # Create a minimal instance with just what we need for the test
+        with patch.object(MySQLtoSQLite, "__init__", return_value=None):
+            instance = MySQLtoSQLite()
+            instance._mysql = mock_mysql_connection
+            instance._mysql_tables = []
+            instance._exclude_mysql_tables = []
+            instance._mysql_cur = mock_mysql_cursor
+            instance._mysql_cur_dict = MagicMock()
+            instance._mysql_cur_prepared = MagicMock()
+            instance._sqlite_cur = mock_sqlite_cursor
+            instance._without_data = True  # Skip data transfer for simplicity
+            instance._without_tables = False
+            instance._without_foreign_keys = False
+            instance._vacuum = False
+            instance._logger = MagicMock()
+            instance._create_table = MagicMock()  # Mock table creation
+
+            # Call the transfer method
+            instance.transfer()
+
+            # Verify compute_creation_order was called
+            mock_compute_creation_order.assert_called_once_with(mock_mysql_connection)
+
+            # Verify tables were created in the correct order
+            creation_calls: list[t.Any] = [call[0][0] for call in instance._create_table.call_args_list]
+            assert creation_calls == ordered_tables
+
+            # Verify foreign keys were disabled at start and enabled at end
+            mock_sqlite_cursor.execute.assert_any_call("PRAGMA foreign_keys=OFF")
+            mock_sqlite_cursor.execute.assert_any_call("PRAGMA foreign_keys=ON")
+
+            # Verify foreign key check was performed
+            mock_sqlite_cursor.execute.assert_any_call("PRAGMA foreign_key_check")
+
+    @patch("mysql.connector.connect")
+    @patch("sqlite3.connect")
+    @patch("mysql_to_sqlite3.transporter.compute_creation_order")
+    def test_transfer_with_circular_dependencies(
+        self, mock_compute_creation_order: MagicMock, mock_sqlite_connect: MagicMock, mock_mysql_connect: MagicMock
+    ) -> None:
+        """Test transfer with circular foreign key dependencies."""
+        # Setup mock SQLite cursor
+        mock_sqlite_cursor: MagicMock = MagicMock()
+
+        # Setup mock SQLite connection
+        mock_sqlite_connection: MagicMock = MagicMock()
+        mock_sqlite_connection.cursor.return_value = mock_sqlite_cursor
+        mock_sqlite_connect.return_value = mock_sqlite_connection
+
+        # Setup mock MySQL cursor
+        mock_mysql_cursor: MagicMock = MagicMock()
+        mock_mysql_cursor.fetchall.return_value = [(b"table1",), (b"table2",), (b"table3",)]
+
+        # Setup mock MySQL connection
+        mock_mysql_connection: MagicMock = MagicMock()
+        mock_mysql_connection.cursor.return_value = mock_mysql_cursor
+        mock_mysql_connect.return_value = mock_mysql_connection
+
+        # Mock compute_creation_order to return circular dependencies
+        ordered_tables: t.List[str] = ["table2", "table1", "table3"]
+        cyclic_edges: t.List[t.Tuple[str, str]] = [("table1", "table3"), ("table3", "table1")]  # Circular dependency
+        mock_compute_creation_order.return_value = (ordered_tables, cyclic_edges)
+
+        # Create a minimal instance with just what we need for the test
+        with patch.object(MySQLtoSQLite, "__init__", return_value=None):
+            instance = MySQLtoSQLite()
+            instance._mysql = mock_mysql_connection
+            instance._mysql_tables = []
+            instance._exclude_mysql_tables = []
+            instance._mysql_cur = mock_mysql_cursor
+            instance._mysql_cur_dict = MagicMock()
+            instance._mysql_cur_prepared = MagicMock()
+            instance._sqlite_cur = mock_sqlite_cursor
+            instance._without_data = True  # Skip data transfer for simplicity
+            instance._without_tables = False
+            instance._without_foreign_keys = False
+            instance._vacuum = False
+            instance._logger = MagicMock()
+            instance._create_table = MagicMock()  # Mock table creation
+
+            # Call the transfer method
+            instance.transfer()
+
+            # Verify compute_creation_order was called
+            mock_compute_creation_order.assert_called_once_with(mock_mysql_connection)
+
+            # Verify warning was logged about circular dependencies
+            instance._logger.warning.assert_any_call(
+                "Circular foreign key dependencies detected: %s", "table1 -> table3, table3 -> table1"
+            )
+
+            # Verify tables were still created in the computed order
+            creation_calls: t.List[t.Any] = [call[0][0] for call in instance._create_table.call_args_list]
+            assert creation_calls == ordered_tables
+
+            # Verify foreign keys were disabled at start and enabled at end
+            mock_sqlite_cursor.execute.assert_any_call("PRAGMA foreign_keys=OFF")
+            mock_sqlite_cursor.execute.assert_any_call("PRAGMA foreign_keys=ON")
+
+            # Verify foreign key check was performed
+            mock_sqlite_cursor.execute.assert_any_call("PRAGMA foreign_key_check")
+
+    @patch("mysql.connector.connect")
+    @patch("sqlite3.connect")
+    @patch("mysql_to_sqlite3.transporter.compute_creation_order")
+    def test_transfer_fallback_on_error(
+        self, mock_compute_creation_order: MagicMock, mock_sqlite_connect: MagicMock, mock_mysql_connect: MagicMock
+    ) -> None:
+        """Test transfer falls back to original table list if compute_creation_order fails."""
+        # Setup mock SQLite cursor
+        mock_sqlite_cursor: MagicMock = MagicMock()
+
+        # Setup mock SQLite connection
+        mock_sqlite_connection: MagicMock = MagicMock()
+        mock_sqlite_connection.cursor.return_value = mock_sqlite_cursor
+        mock_sqlite_connect.return_value = mock_sqlite_connection
+
+        # Setup mock MySQL cursor
+        mock_mysql_cursor: MagicMock = MagicMock()
+        mock_mysql_cursor.fetchall.return_value = [(b"table1",), (b"table2",), (b"table3",)]
+
+        # Setup mock MySQL connection
+        mock_mysql_connection: MagicMock = MagicMock()
+        mock_mysql_connection.cursor.return_value = mock_mysql_cursor
+        mock_mysql_connect.return_value = mock_mysql_connection
+
+        # Mock compute_creation_order to raise an exception
+        mock_compute_creation_order.side_effect = Exception("Test error in compute_creation_order")
+
+        # Create a minimal instance with just what we need for the test
+        with patch.object(MySQLtoSQLite, "__init__", return_value=None):
+            instance = MySQLtoSQLite()
+            instance._mysql = mock_mysql_connection
+            instance._mysql_tables = []
+            instance._exclude_mysql_tables = []
+            instance._mysql_cur = mock_mysql_cursor
+            instance._mysql_cur_dict = MagicMock()
+            instance._mysql_cur_prepared = MagicMock()
+            instance._sqlite_cur = mock_sqlite_cursor
+            instance._without_data = True  # Skip data transfer for simplicity
+            instance._without_tables = False
+            instance._without_foreign_keys = False
+            instance._vacuum = False
+            instance._logger = MagicMock()
+            instance._create_table = MagicMock()  # Mock table creation
+
+            # Call the transfer method
+            instance.transfer()
+
+            # Verify compute_creation_order was called
+            mock_compute_creation_order.assert_called_once_with(mock_mysql_connection)
+
+            # Verify warning was logged about the error
+            instance._logger.warning.assert_any_call(
+                "Failed to compute table creation order: %s", "Test error in compute_creation_order"
+            )
+
+            # Verify tables were still created (using the fallback order)
+            assert instance._create_table.call_count == 3
+
+            # Verify foreign keys were disabled at start and enabled at end
+            mock_sqlite_cursor.execute.assert_any_call("PRAGMA foreign_keys=OFF")
+            mock_sqlite_cursor.execute.assert_any_call("PRAGMA foreign_keys=ON")
+
+            # Verify foreign key check was performed
+            mock_sqlite_cursor.execute.assert_any_call("PRAGMA foreign_key_check")
