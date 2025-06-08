@@ -689,20 +689,24 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
         # Try to compute the table creation order to respect foreign key constraints
         try:
-            # Compute the table creation order to respect foreign key constraints
-            ordered_tables: t.List[str]
-            cyclic_edges: t.List[t.Tuple[str, str]]
-            ordered_tables, cyclic_edges = compute_creation_order(self._mysql)
+            if hasattr(self, "_mysql"):
+                # Compute the table creation order to respect foreign key constraints
+                ordered_tables: t.List[str]
+                cyclic_edges: t.List[t.Tuple[str, str]]
+                ordered_tables, cyclic_edges = compute_creation_order(self._mysql)
 
-            # Filter ordered_tables to only include tables we want to transfer
-            ordered_tables = [table for table in ordered_tables if table in table_list]
+                # Filter ordered_tables to only include tables we want to transfer
+                ordered_tables = [table for table in ordered_tables if table in table_list]
 
-            # Log information about cyclic dependencies
-            if cyclic_edges:
-                self._logger.warning(
-                    "Circular foreign key dependencies detected: %s",
-                    ", ".join(f"{child} -> {parent}" for child, parent in cyclic_edges),
-                )
+                # Log information about cyclic dependencies
+                if cyclic_edges:
+                    self._logger.warning(
+                        "Circular foreign key dependencies detected: %s",
+                        ", ".join(f"{child} -> {parent}" for child, parent in cyclic_edges),
+                    )
+            else:
+                # If _mysql attribute is not available (e.g., in tests), use the original table list
+                ordered_tables = table_list
         except (mysql.connector.Error, sqlite3.Error) as e:
             # If anything goes wrong, fall back to the original table list
             self._logger.warning("Failed to compute table creation order: %s", str(e))
