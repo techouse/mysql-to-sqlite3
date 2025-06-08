@@ -18,7 +18,7 @@ from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.types import RowItemType
 from tqdm import tqdm, trange
 
-from mysql_to_sqlite3.mysql_utils import CHARSET_INTRODUCERS
+from mysql_to_sqlite3.mysql_utils import CHARSET_INTRODUCERS, compute_creation_order
 from mysql_to_sqlite3.sqlite_utils import (
     CollatingSequences,
     Integer_Types,
@@ -678,14 +678,45 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             )
             tables = (row[0].decode() for row in self._mysql_cur.fetchall())  # type: ignore[union-attr]
 
+        # Convert tables iterable to a list for reuse
+        table_list: t.List[str] = []
+        for table_name in tables:
+            if isinstance(table_name, bytes):
+                table_name = table_name.decode()
+            # Ensure table_name is a string
+            table_str = str(table_name) if table_name is not None else ""
+            table_list.append(table_str)
+
+        # Try to compute the table creation order to respect foreign key constraints
+        try:
+            if hasattr(self, "_mysql"):
+                # Compute the table creation order to respect foreign key constraints
+                ordered_tables: t.List[str]
+                cyclic_edges: t.List[t.Tuple[str, str]]
+                ordered_tables, cyclic_edges = compute_creation_order(self._mysql)
+
+                # Filter ordered_tables to only include tables we want to transfer
+                ordered_tables = [table for table in ordered_tables if table in table_list]
+
+                # Log information about cyclic dependencies
+                if cyclic_edges:
+                    self._logger.warning(
+                        "Circular foreign key dependencies detected: %s",
+                        ", ".join(f"{child} -> {parent}" for child, parent in cyclic_edges),
+                    )
+            else:
+                # If _mysql attribute is not available (e.g., in tests), use the original table list
+                ordered_tables = table_list
+        except Exception as e:
+            # If anything goes wrong, fall back to the original table list
+            self._logger.warning("Failed to compute table creation order: %s", str(e))
+            ordered_tables = table_list
+
         try:
             # turn off foreign key checking in SQLite while transferring data
             self._sqlite_cur.execute("PRAGMA foreign_keys=OFF")
 
-            for table_name in tables:
-                if isinstance(table_name, bytes):
-                    table_name = table_name.decode()
-
+            for table_name in ordered_tables:
                 self._logger.info(
                     "%s%sTransferring table %s",
                     "[WITHOUT DATA] " if self._without_data else "",
@@ -748,6 +779,12 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         finally:
             # re-enable foreign key checking once done transferring
             self._sqlite_cur.execute("PRAGMA foreign_keys=ON")
+
+            # Check for any foreign key constraint violations
+            self._sqlite_cur.execute("PRAGMA foreign_key_check")
+            fk_violations: t.List[t.Tuple[t.Any, ...]] = self._sqlite_cur.fetchall()
+            if fk_violations:
+                self._logger.warning("Foreign key constraint violations detected: %s", fk_violations)
 
         if self._vacuum:
             self._logger.info("Vacuuming created SQLite database file.\nThis might take a while.")
