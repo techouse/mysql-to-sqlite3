@@ -782,7 +782,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
             # Check for any foreign key constraint violations
             self._sqlite_cur.execute("PRAGMA foreign_key_check")
-            fk_violations: t.List[t.Tuple[t.Any, ...]] = self._sqlite_cur.fetchall()
+            fk_violations: t.List[sqlite3.Row] = self._sqlite_cur.fetchall()
             if fk_violations:
                 self._logger.warning("Foreign key constraint violations detected: %s", fk_violations)
 

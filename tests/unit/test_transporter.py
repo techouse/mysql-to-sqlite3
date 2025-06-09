@@ -238,19 +238,19 @@ class TestMySQLtoSQLiteTransporter:
     ) -> None:
         """Test that tables are transferred in the correct order respecting foreign key constraints."""
         # Setup mock SQLite cursor
-        mock_sqlite_cursor: MagicMock = MagicMock()
+        mock_sqlite_cursor = MagicMock()
 
         # Setup mock SQLite connection
-        mock_sqlite_connection: MagicMock = MagicMock()
+        mock_sqlite_connection = MagicMock()
         mock_sqlite_connection.cursor.return_value = mock_sqlite_cursor
         mock_sqlite_connect.return_value = mock_sqlite_connection
 
         # Setup mock MySQL cursor
-        mock_mysql_cursor: MagicMock = MagicMock()
+        mock_mysql_cursor = MagicMock()
         mock_mysql_cursor.fetchall.return_value = [(b"table1",), (b"table2",), (b"table3",)]
 
         # Setup mock MySQL connection
-        mock_mysql_connection: MagicMock = MagicMock()
+        mock_mysql_connection = MagicMock()
         mock_mysql_connection.cursor.return_value = mock_mysql_cursor
         mock_mysql_connect.return_value = mock_mysql_connection
 
@@ -283,7 +283,7 @@ class TestMySQLtoSQLiteTransporter:
             mock_compute_creation_order.assert_called_once_with(mock_mysql_connection)
 
             # Verify tables were created in the correct order
-            creation_calls: list[t.Any] = [call[0][0] for call in instance._create_table.call_args_list]
+            creation_calls: t.List[t.Any] = [call[0][0] for call in instance._create_table.call_args_list]
             assert creation_calls == ordered_tables
 
             # Verify foreign keys were disabled at start and enabled at end
@@ -301,19 +301,19 @@ class TestMySQLtoSQLiteTransporter:
     ) -> None:
         """Test transfer with circular foreign key dependencies."""
         # Setup mock SQLite cursor
-        mock_sqlite_cursor: MagicMock = MagicMock()
+        mock_sqlite_cursor = MagicMock()
 
         # Setup mock SQLite connection
-        mock_sqlite_connection: MagicMock = MagicMock()
+        mock_sqlite_connection = MagicMock()
         mock_sqlite_connection.cursor.return_value = mock_sqlite_cursor
         mock_sqlite_connect.return_value = mock_sqlite_connection
 
         # Setup mock MySQL cursor
-        mock_mysql_cursor: MagicMock = MagicMock()
+        mock_mysql_cursor = MagicMock()
         mock_mysql_cursor.fetchall.return_value = [(b"table1",), (b"table2",), (b"table3",)]
 
         # Setup mock MySQL connection
-        mock_mysql_connection: MagicMock = MagicMock()
+        mock_mysql_connection = MagicMock()
         mock_mysql_connection.cursor.return_value = mock_mysql_cursor
         mock_mysql_connect.return_value = mock_mysql_connection
 
@@ -369,19 +369,19 @@ class TestMySQLtoSQLiteTransporter:
     ) -> None:
         """Test transfer falls back to original table list if compute_creation_order fails."""
         # Setup mock SQLite cursor
-        mock_sqlite_cursor: MagicMock = MagicMock()
+        mock_sqlite_cursor = MagicMock()
 
         # Setup mock SQLite connection
-        mock_sqlite_connection: MagicMock = MagicMock()
+        mock_sqlite_connection = MagicMock()
         mock_sqlite_connection.cursor.return_value = mock_sqlite_cursor
         mock_sqlite_connect.return_value = mock_sqlite_connection
 
         # Setup mock MySQL cursor
-        mock_mysql_cursor: MagicMock = MagicMock()
+        mock_mysql_cursor = MagicMock()
         mock_mysql_cursor.fetchall.return_value = [(b"table1",), (b"table2",), (b"table3",)]
 
         # Setup mock MySQL connection
-        mock_mysql_connection: MagicMock = MagicMock()
+        mock_mysql_connection = MagicMock()
         mock_mysql_connection.cursor.return_value = mock_mysql_cursor
         mock_mysql_connect.return_value = mock_mysql_connection
 
