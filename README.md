@@ -2,14 +2,14 @@
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/mysql-to-sqlite3)](https://pypistats.org/packages/mysql-to-sqlite3)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mysql-to-sqlite3)](https://pypi.org/project/mysql-to-sqlite3/)
 [![MySQL Support](https://img.shields.io/static/v1?label=MySQL&message=5.5+|+5.6+|+5.7+|+8.0+|+8.4&color=2b5d80)](https://img.shields.io/static/v1?label=MySQL&message=5.5+|+5.6+|+5.7+|+8.0+|+8.4&color=2b5d80)
-[![MariaDB Support](https://img.shields.io/static/v1?label=MariaDB&message=5.5+|+10.0+|+10.1+|+10.2+|+10.3+|+10.4+|+10.5+|+10.6|+10.11+|+11.4&color=C0765A)](https://img.shields.io/static/v1?label=MariaDB&message=5.5|+10.0+|+10.1+|+10.2+|+10.3+|+10.4+|+10.5|+11.4&color=C0765A)
+[![MariaDB Support](https://img.shields.io/static/v1?label=MariaDB&message=5.5+|+10.0+|+10.6+|+10.11+|+11.4+|+11.6+|+11.8&color=C0765A)](https://img.shields.io/static/v1?label=MariaDB&message=5.5+|+10.0+|+10.6+|+10.11+|+11.4+|+11.6+|+11.8&color=C0765A)
 [![GitHub license](https://img.shields.io/github/license/techouse/mysql-to-sqlite3)](https://github.com/techouse/mysql-to-sqlite3/blob/master/LICENSE)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE-OF-CONDUCT.md)
 [![PyPI - Format](https://img.shields.io/pypi/format/mysql-to-sqlite3)](https://pypi.org/project/sqlite3-to-mysql/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/64aae8e9599746d58d277852b35cc2bd)](https://www.codacy.com/manual/techouse/mysql-to-sqlite3?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=techouse/mysql-to-sqlite3&amp;utm_campaign=Badge_Grade)
 [![Test Status](https://github.com/techouse/mysql-to-sqlite3/actions/workflows/test.yml/badge.svg)](https://github.com/techouse/mysql-to-sqlite3/actions/workflows/test.yml)
-[![CodeQL Status](https://github.com/techouse/mysql-to-sqlite3/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/techouse/mysql-to-sqlite3/actions/workflows/codeql-analysis.yml)
+[![CodeQL Status](https://github.com/techouse/mysql-to-sqlite3/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/techouse/mysql-to-sqlite3/actions/workflows/github-code-scanning/codeql)
 [![Publish PyPI Package Status](https://github.com/techouse/mysql-to-sqlite3/actions/workflows/publish.yml/badge.svg)](https://github.com/techouse/mysql-to-sqlite3/actions/workflows/publish.yml)
 [![codecov](https://codecov.io/gh/techouse/mysql-to-sqlite3/branch/master/graph/badge.svg)](https://codecov.io/gh/techouse/mysql-to-sqlite3)
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/techouse)](https://github.com/sponsors/techouse)
@@ -102,7 +102,8 @@ docker run -it \
 This will mount your host current working directory (pwd) inside the Docker container as the current working directory.
 Any files Docker would write to the current working directory are written to the host directory where you did docker
 run. Note that you have to also use a
-[special hostname](https://docs.docker.com/desktop/networking/#use-cases-and-workarounds-for-all-platforms) `host.docker.internal`
+[special hostname](https://docs.docker.com/desktop/networking/#use-cases-and-workarounds-for-all-platforms)
+`host.docker.internal`
 to access your host machine from inside the Docker container.
 
 #### Homebrew
