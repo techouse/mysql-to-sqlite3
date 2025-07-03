@@ -326,6 +326,12 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 return "DEFAULT(FALSE)"
             return f"DEFAULT '{int(column_default)}'"
         if isinstance(column_default, str):
+            if column_default.lower() == "curtime()":
+                return f"DEFAULT CURRENT_TIME"
+            if column_default.lower() == "curdate()":
+                return f"DEFAULT CURRENT_DATE"
+            if column_default.lower() in {"current_timestamp()", "now()"}:
+                return f"DEFAULT CURRENT_TIMESTAMP"
             if column_extra in {"DEFAULT_GENERATED", "default_generated"}:
                 if column_default.upper() in {
                     "CURRENT_TIME",
