@@ -2,14 +2,15 @@
 
 import typing as t
 from unittest import mock
-
-import pytest
-from mysql.connector import CharacterSet
+from unittest.mock import MagicMock
 
 from mysql_to_sqlite3.mysql_utils import (
     CHARSET_INTRODUCERS,
     CharSet,
+    compute_creation_order,
+    fetch_schema_metadata,
     mysql_supported_character_sets,
+    topo_sort_tables,
 )
 
 
@@ -172,3 +173,249 @@ class TestMySQLUtils:
             # Now test with a specific charset to cover both branches
             results = list(mysql_supported_character_sets("utf8"))
             assert len(results) == 0
+
+    def test_topo_sort_tables_acyclic(self) -> None:
+        """Test topo_sort_tables with an acyclic graph."""
+        # Setup a simple acyclic graph
+        # users -> posts (posts references users)
+        # users -> comments (comments references users)
+        # posts -> comments (comments references posts)
+        tables: t.Set[str] = {"users", "posts", "comments"}
+        edges: t.List[t.Tuple[str, str]] = [
+            ("posts", "users"),  # posts depends on users
+            ("comments", "users"),  # comments depends on users
+            ("comments", "posts"),  # comments depends on posts
+        ]
+
+        ordered: t.List[str]
+        cyclic_edges: t.List[t.Tuple[str, str]]
+        ordered, cyclic_edges = topo_sort_tables(tables, edges)
+
+        # Check that the result is a valid topological sort
+        assert len(ordered) == 3  # All tables are included
+        assert len(cyclic_edges) == 0  # No cyclic edges
+
+        # Check that dependencies are respected
+        users_idx: int = ordered.index("users")
+        posts_idx: int = ordered.index("posts")
+        comments_idx: int = ordered.index("comments")
+
+        assert users_idx < posts_idx  # users comes before posts
+        assert users_idx < comments_idx  # users comes before comments
+        assert posts_idx < comments_idx  # posts comes before comments
+
+    def test_topo_sort_tables_cyclic(self) -> None:
+        """Test topo_sort_tables with a cyclic graph."""
+        # Setup a graph with a cycle
+        # users -> posts -> comments -> users (circular dependency)
+        tables: t.Set[str] = {"users", "posts", "comments"}
+        edges: t.List[t.Tuple[str, str]] = [
+            ("posts", "users"),  # posts depends on users
+            ("comments", "posts"),  # comments depends on posts
+            ("users", "comments"),  # users depends on comments (creates a cycle)
+        ]
+
+        ordered: t.List[str]
+        cyclic_edges: t.List[t.Tuple[str, str]]
+        ordered, cyclic_edges = topo_sort_tables(tables, edges)
+
+        # In a fully cyclic graph, no tables can be ordered without breaking cycles
+        # So the ordered list may be empty
+
+        # Check that cyclic edges are detected
+        assert len(cyclic_edges) > 0  # At least one cyclic edge
+
+        # The cyclic edges should be from the edges we defined
+        for edge in cyclic_edges:
+            assert edge in edges
+
+        # Verify that all tables in the cycle are accounted for in cyclic_edges
+        cycle_tables: t.Set[str] = set()
+        for child, parent in cyclic_edges:
+            cycle_tables.add(child)
+            cycle_tables.add(parent)
+
+        # All tables should be part of the cycle or in the ordered list
+        assert cycle_tables.union(set(ordered)) == tables
+
+    def test_topo_sort_tables_empty(self) -> None:
+        """Test topo_sort_tables with empty input."""
+        tables: t.Set[str] = set()
+        edges: t.List[t.Tuple[str, str]] = []
+
+        ordered, cyclic_edges = topo_sort_tables(tables, edges)
+
+        assert ordered == []
+        assert cyclic_edges == []
+
+    def test_fetch_schema_metadata(self) -> None:
+        """Test fetch_schema_metadata function."""
+        # Create a mock cursor
+        mock_cursor: MagicMock = mock.MagicMock()
+
+        # Mock the first query result (tables)
+        mock_cursor.fetchall.side_effect = [
+            # First call returns table names
+            [("users",), ("posts",), ("comments",)],
+            # Second call returns foreign key relationships
+            [("posts", "users"), ("comments", "users"), ("comments", "posts")],
+        ]
+
+        # Call the function
+        tables: t.Set[str]
+        edges: t.List[t.Tuple[str, str]]
+        tables, edges = fetch_schema_metadata(mock_cursor)
+
+        # Verify the cursor was called with the expected queries
+        assert mock_cursor.execute.call_count == 2
+
+        # Check the results
+        assert tables == {"users", "posts", "comments"}
+        assert edges == [("posts", "users"), ("comments", "users"), ("comments", "posts")]
+
+    def test_fetch_schema_metadata_with_different_row_formats(self) -> None:
+        """Test fetch_schema_metadata with different row formats."""
+        # Create a mock cursor
+        mock_cursor: MagicMock = mock.MagicMock()
+
+        # Create different types of row objects to test the robust row handling
+        class DictLikeRow:
+            def __init__(self, table_name=None, child=None, parent=None):
+                self.TABLE_NAME = table_name
+                self.child = child
+                self.parent = parent
+
+            def __str__(self):
+                return f"DictLikeRow({self.TABLE_NAME or ''},{self.child or ''},{self.parent or ''})"
+
+        # Mock the first query result with mixed row formats
+        table_rows: t.List[t.Any] = [
+            ("table1",),  # Tuple
+            [b"table2"],  # List with bytes
+            DictLikeRow(table_name="table3"),  # Object with attribute
+            None,  # None should be handled
+            42,  # Non-standard type
+        ]
+
+        # Mock the second query result with mixed row formats for FK relationships
+        fk_rows: t.List[t.Any] = [
+            ("child1", "parent1"),  # Tuple
+            ["child2", "parent2"],  # List
+            DictLikeRow(child="child3", parent="parent3"),  # Object with attributes
+            {"child": "child4", "parent": "parent4"},  # Dictionary
+            (None, "parent5"),  # Tuple with None
+            ("child6", None),  # Tuple with None
+            None,  # None should be skipped
+            42,  # Non-standard type should be skipped
+        ]
+
+        mock_cursor.fetchall.side_effect = [table_rows, fk_rows]
+
+        # Call the function
+        tables: t.Set[str]
+        edges: t.List[t.Tuple[str, str]]
+        tables, edges = fetch_schema_metadata(mock_cursor)
+
+        # Verify the cursor was called with the expected queries
+        assert mock_cursor.execute.call_count == 2
+
+        # Check that we have the expected number of tables and edges
+        assert len(tables) >= 4  # At least our valid inputs
+        assert len(edges) >= 4  # At least our valid edges
+
+        # Check that our valid tables are included (using substring matching for flexibility)
+        assert any("table1" in tbl for tbl in tables)
+        assert any("table2" in tbl for tbl in tables)
+        assert any("table3" in tbl for tbl in tables)
+
+        # Check that our valid edges are included
+        valid_edges: t.List[t.Tuple[str, str]] = [
+            ("child1", "parent1"),
+            ("child2", "parent2"),
+            ("child3", "parent3"),
+            ("child4", "parent4"),
+        ]
+
+        # For each valid edge, check that there's a corresponding edge in the result
+        for valid_child, valid_parent in valid_edges:
+            assert any(valid_child in child and valid_parent in parent for child, parent in edges)
+
+    def test_compute_creation_order(self) -> None:
+        """Test compute_creation_order function."""
+        # Create a mock MySQL connection
+        mock_conn: MagicMock = mock.MagicMock()
+        mock_cursor: MagicMock = mock.MagicMock()
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+
+        # Mock the fetch_schema_metadata function to return known values
+        tables: t.Set[str] = {"users", "posts", "comments"}
+        edges: t.List[t.Tuple[str, str]] = [
+            ("posts", "users"),  # posts depends on users
+            ("comments", "users"),  # comments depends on users
+            ("comments", "posts"),  # comments depends on posts
+        ]
+
+        with mock.patch("mysql_to_sqlite3.mysql_utils.fetch_schema_metadata", return_value=(tables, edges)):
+            # Call the function
+            tables: t.Set[str]
+            edges: t.List[t.Tuple[str, str]]
+            ordered_tables, cyclic_edges = compute_creation_order(mock_conn)
+
+            # Verify the connection's cursor was used
+            mock_conn.cursor.assert_called_once()
+
+            # Check the results
+            assert len(ordered_tables) == 3
+            assert len(cyclic_edges) == 0
+
+            # Check that dependencies are respected
+            users_idx: int = ordered_tables.index("users")
+            posts_idx: int = ordered_tables.index("posts")
+            comments_idx: int = ordered_tables.index("comments")
+
+            assert users_idx < posts_idx  # users comes before posts
+            assert users_idx < comments_idx  # users comes before comments
+            assert posts_idx < comments_idx  # posts comes before comments
+
+    def test_compute_creation_order_with_cycles(self) -> None:
+        """Test compute_creation_order with circular dependencies."""
+        # Create a mock MySQL connection
+        mock_conn: MagicMock = mock.MagicMock()
+        mock_cursor: MagicMock = mock.MagicMock()
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+
+        # Mock the fetch_schema_metadata function to return a graph with a cycle
+        tables: t.Set[str] = {"users", "posts", "comments"}
+        edges: t.List[t.Tuple[str, str]] = [
+            ("posts", "users"),  # posts depends on users
+            ("comments", "posts"),  # comments depends on posts
+            ("users", "comments"),  # users depends on comments (creates a cycle)
+        ]
+
+        with mock.patch("mysql_to_sqlite3.mysql_utils.fetch_schema_metadata", return_value=(tables, edges)):
+            # Call the function
+            tables: t.Set[str]
+            edges: t.List[t.Tuple[str, str]]
+            ordered_tables, cyclic_edges = compute_creation_order(mock_conn)
+
+            # Verify the connection's cursor was used
+            mock_conn.cursor.assert_called_once()
+
+            # In a fully cyclic graph, no tables can be ordered without breaking cycles
+            # So the ordered list may be empty
+
+            # Check that cyclic edges are detected
+            assert len(cyclic_edges) > 0
+
+            # The cyclic edges should be from the edges we defined
+            for edge in cyclic_edges:
+                assert edge in edges
+
+            # Verify that all tables in the cycle are accounted for in cyclic_edges
+            cycle_tables: t.Set[str] = set()
+            for child, parent in cyclic_edges:
+                cycle_tables.add(child)
+                cycle_tables.add(parent)
+
+            # All tables should be part of the cycle or in the ordered list
+            assert cycle_tables.union(set(ordered_tables)) == tables
