@@ -1,3 +1,10 @@
+# 2.4.2
+
+* [FIX] handle `curtime()`, `curdate()`, `current_timestamp()`, and `now()` MariaDB-specific translations in default
+  values
+* [CHORE] add MariaDB 11.8 LTS tests
+* [CHORE] drop redundant MariaDB 10.1, 10.2, 10.3, 10.4 and 10.5 tests
+
 # 2.4.1
 
 * [FIX] fix passwordless login
