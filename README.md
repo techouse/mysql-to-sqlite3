@@ -2,7 +2,7 @@
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/mysql-to-sqlite3)](https://pypistats.org/packages/mysql-to-sqlite3)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mysql-to-sqlite3)](https://pypi.org/project/mysql-to-sqlite3/)
 [![MySQL Support](https://img.shields.io/static/v1?label=MySQL&message=5.5+|+5.6+|+5.7+|+8.0+|+8.4&color=2b5d80)](https://img.shields.io/static/v1?label=MySQL&message=5.5+|+5.6+|+5.7+|+8.0+|+8.4&color=2b5d80)
-[![MariaDB Support](https://img.shields.io/static/v1?label=MariaDB&message=5.5+|+10.0+|+10.6|+10.11+|+11.4+|+11.6+|+11.8&color=C0765A)](https://img.shields.io/static/v1?label=MariaDB&message=5.5+|+10.0+|+10.6|+10.11+|+11.4+|+11.6+|+11.8&color=C0765A)
+[![MariaDB Support](https://img.shields.io/static/v1?label=MariaDB&message=5.5+|+10.0+|+10.6+|+10.11+|+11.4+|+11.6+|+11.8&color=C0765A)](https://img.shields.io/static/v1?label=MariaDB&message=5.5+|+10.0+|+10.6+|+10.11+|+11.4+|+11.6+|+11.8&color=C0765A)
 [![GitHub license](https://img.shields.io/github/license/techouse/mysql-to-sqlite3)](https://github.com/techouse/mysql-to-sqlite3/blob/master/LICENSE)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE-OF-CONDUCT.md)
 [![PyPI - Format](https://img.shields.io/pypi/format/mysql-to-sqlite3)](https://pypi.org/project/sqlite3-to-mysql/)
