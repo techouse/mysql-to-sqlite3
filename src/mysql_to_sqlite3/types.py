@@ -35,6 +35,7 @@ class MySQLtoSQLiteParams(tx.TypedDict):
     vacuum: t.Optional[bool]
     without_tables: t.Optional[bool]
     without_data: t.Optional[bool]
+    defer_foreign_keys: t.Optional[bool]
     without_foreign_keys: t.Optional[bool]
 
 
@@ -71,4 +72,5 @@ class MySQLtoSQLiteAttributes:
     _sqlite_json1_extension_enabled: bool
     _vacuum: bool
     _without_data: bool
+    _defer_foreign_keys: bool
     _without_foreign_keys: bool
