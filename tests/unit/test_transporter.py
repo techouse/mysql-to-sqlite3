@@ -225,3 +225,23 @@ class TestMySQLtoSQLiteTransporter:
         """Test _translate_default_from_mysql_to_sqlite with bytes default."""
         result = MySQLtoSQLite._translate_default_from_mysql_to_sqlite(b"abc", column_type="BLOB")
         assert result.startswith("DEFAULT x'")
+
+    def test_translate_default_from_mysql_to_sqlite_curtime(self) -> None:
+        """Test _translate_default_from_mysql_to_sqlite with curtime()."""
+        assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("curtime()") == "DEFAULT CURRENT_TIME"
+        assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("CURTIME()") == "DEFAULT CURRENT_TIME"
+
+    def test_translate_default_from_mysql_to_sqlite_curdate(self) -> None:
+        """Test _translate_default_from_mysql_to_sqlite with curdate()."""
+        assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("curdate()") == "DEFAULT CURRENT_DATE"
+        assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("CURDATE()") == "DEFAULT CURRENT_DATE"
+
+    def test_translate_default_from_mysql_to_sqlite_current_timestamp_with_parentheses(self) -> None:
+        """Test _translate_default_from_mysql_to_sqlite with current_timestamp()."""
+        assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("current_timestamp()") == "DEFAULT CURRENT_TIMESTAMP"
+        assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("CURRENT_TIMESTAMP()") == "DEFAULT CURRENT_TIMESTAMP"
+
+    def test_translate_default_from_mysql_to_sqlite_now(self) -> None:
+        """Test _translate_default_from_mysql_to_sqlite with now()."""
+        assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("now()") == "DEFAULT CURRENT_TIMESTAMP"
+        assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("NOW()") == "DEFAULT CURRENT_TIMESTAMP"
