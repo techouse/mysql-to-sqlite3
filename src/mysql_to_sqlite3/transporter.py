@@ -97,9 +97,9 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
         if not self._without_foreign_keys and not bool(self._mysql_tables) and not bool(self._exclude_mysql_tables):
             self._defer_foreign_keys = bool(kwargs.get("defer_foreign_keys", False))
-            if self._defer_foreign_keys and sqlite3.sqlite_version_info < (3, 6, 19):
+            if self._defer_foreign_keys and sqlite3.sqlite_version < "3.6.19":
                 self._logger.warning(
-                    "SQLite %s lacks DEFERRABLE support – ignoring --defer-fks.", sqlite3.sqlite_version
+                    "SQLite %s lacks DEFERRABLE support. Ignoring -D/--defer-foreign-keys.", sqlite3.sqlite_version
                 )
                 self._defer_foreign_keys = False
         else:

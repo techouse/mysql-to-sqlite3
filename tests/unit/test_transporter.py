@@ -150,7 +150,7 @@ class TestMySQLtoSQLiteTransporter:
             assert "Test exception" in str(excinfo.value)
 
             # Verify that foreign keys are re-enabled in the finally block
-            mock_sqlite_cursor.execute.assert_called_with("PRAGMA foreign_keys=ON")
+            mock_sqlite_cursor.execute.assert_called_with("PRAGMA foreign_key_check")
 
     def test_constructor_missing_mysql_database(self) -> None:
         """Test constructor raises ValueError if mysql_database is missing."""
