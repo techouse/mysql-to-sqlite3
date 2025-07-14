@@ -755,6 +755,29 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             # re-enable foreign key checking once done transferring
             self._sqlite_cur.execute("PRAGMA foreign_keys=ON")
 
+            # Check for any foreign key constraint violations
+            self._logger.info("Validating foreign key constraints in SQLite database.")
+            try:
+                self._sqlite_cur.execute("PRAGMA foreign_key_check")
+                fk_violations: t.List[sqlite3.Row] = self._sqlite_cur.fetchall()
+
+                if fk_violations:
+                    self._logger.warning(
+                        "Foreign key constraint violations found (%d violation%s):",
+                        len(fk_violations),
+                        "s" if len(fk_violations) != 1 else ""
+                    )
+                    for violation in fk_violations:
+                        self._logger.warning(
+                            "  → Table '%s' (row %s) references missing key in '%s' (constraint #%s)",
+                            violation[0], violation[1], violation[2], violation[3]
+                        )
+                else:
+                    self._logger.info("All foreign key constraints are valid.")
+
+            except sqlite3.Error as err:
+                self._logger.warning("Failed to validate foreign key constraints: %s", err)
+
         if self._vacuum:
             self._logger.info("Vacuuming created SQLite database file.\nThis might take a while.")
             self._sqlite_cur.execute("VACUUM")
