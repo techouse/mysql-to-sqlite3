@@ -238,8 +238,12 @@ class TestMySQLtoSQLiteTransporter:
 
     def test_translate_default_from_mysql_to_sqlite_current_timestamp_with_parentheses(self) -> None:
         """Test _translate_default_from_mysql_to_sqlite with current_timestamp()."""
-        assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("current_timestamp()") == "DEFAULT CURRENT_TIMESTAMP"
-        assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("CURRENT_TIMESTAMP()") == "DEFAULT CURRENT_TIMESTAMP"
+        assert (
+            MySQLtoSQLite._translate_default_from_mysql_to_sqlite("current_timestamp()") == "DEFAULT CURRENT_TIMESTAMP"
+        )
+        assert (
+            MySQLtoSQLite._translate_default_from_mysql_to_sqlite("CURRENT_TIMESTAMP()") == "DEFAULT CURRENT_TIMESTAMP"
+        )
 
     def test_translate_default_from_mysql_to_sqlite_now(self) -> None:
         """Test _translate_default_from_mysql_to_sqlite with now()."""
