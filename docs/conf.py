@@ -3,12 +3,17 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 import os
+import re
 import sys
+from pathlib import Path
 
 
-sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, os.path.abspath("../src"))
 
-from mysql_to_sqlite3 import __version__
+_ROOT = Path(__file__).resolve().parents[1]
+_ver_file = _ROOT / "src" / "mysql_to_sqlite3" / "__init__.py"
+_m = re.search(r'^__version__\s*=\s*[\'"]([^\'"]+)[\'"]', _ver_file.read_text(encoding="utf-8"), re.M)
+__version__ = _m.group(1) if _m else "0+unknown"
 
 
 # -- Project information -----------------------------------------------------
