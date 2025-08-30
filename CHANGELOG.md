@@ -1,3 +1,7 @@
+# 2.4.3
+
+* [CHORE] update pyproject.toml to improve metadata, dependency management, and wheel build config
+
 # 2.4.2
 
 * [FIX] handle `curtime()`, `curdate()`, `current_timestamp()`, and `now()` MariaDB-specific translations in default
