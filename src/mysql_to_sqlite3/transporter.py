@@ -95,6 +95,16 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         else:
             self._without_foreign_keys = bool(kwargs.get("without_foreign_keys", False))
 
+        if not self._without_foreign_keys and not bool(self._mysql_tables) and not bool(self._exclude_mysql_tables):
+            self._defer_foreign_keys = bool(kwargs.get("defer_foreign_keys", False))
+            if self._defer_foreign_keys and sqlite3.sqlite_version < "3.6.19":
+                self._logger.warning(
+                    "SQLite %s lacks DEFERRABLE support. Ignoring -D/--defer-foreign-keys.", sqlite3.sqlite_version
+                )
+                self._defer_foreign_keys = False
+        else:
+            self._defer_foreign_keys = False
+
         self._without_data = bool(kwargs.get("without_data", False))
         self._without_tables = bool(kwargs.get("without_tables", False))
 
@@ -557,10 +567,12 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             )
             for foreign_key in self._mysql_cur_dict.fetchall():
                 if foreign_key is not None:
+                    deferrable_clause = " DEFERRABLE INITIALLY DEFERRED" if self._defer_foreign_keys else ""
                     sql += (
                         ',\n\tFOREIGN KEY("{column}") REFERENCES "{ref_table}" ("{ref_column}") '
                         "ON UPDATE {on_update} "
-                        "ON DELETE {on_delete}".format(**foreign_key)  # type: ignore[str-bytes-safe]
+                        "ON DELETE {on_delete}"
+                        "{deferrable}".format(**foreign_key, deferrable=deferrable_clause)  # type: ignore[str-bytes-safe]
                     )
 
         sql += "\n);"
@@ -754,6 +766,32 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         finally:
             # re-enable foreign key checking once done transferring
             self._sqlite_cur.execute("PRAGMA foreign_keys=ON")
+
+            # Check for any foreign key constraint violations
+            self._logger.info("Validating foreign key constraints in SQLite database.")
+            try:
+                self._sqlite_cur.execute("PRAGMA foreign_key_check")
+                fk_violations: t.List[sqlite3.Row] = self._sqlite_cur.fetchall()
+
+                if fk_violations:
+                    self._logger.warning(
+                        "Foreign key constraint violations found (%d violation%s):",
+                        len(fk_violations),
+                        "s" if len(fk_violations) != 1 else "",
+                    )
+                    for violation in fk_violations:
+                        self._logger.warning(
+                            "  → Table '%s' (row %s) references missing key in '%s' (constraint #%s)",
+                            violation[0],
+                            violation[1],
+                            violation[2],
+                            violation[3],
+                        )
+                else:
+                    self._logger.info("All foreign key constraints are valid.")
+
+            except sqlite3.Error as err:
+                self._logger.warning("Failed to validate foreign key constraints: %s", err)
 
         if self._vacuum:
             self._logger.info("Vacuuming created SQLite database file.\nThis might take a while.")

@@ -93,6 +93,9 @@ _copyright_header: str = f"mysql2sqlite version {package_version} Copyright (c) 
     help="Prefix indices with their corresponding tables. "
     "This ensures that their names remain unique across the SQLite database.",
 )
+@click.option(
+    "-D", "--defer-foreign-keys", is_flag=True, help="Defer foreign key constraints until the end of the transfer."
+)
 @click.option("-X", "--without-foreign-keys", is_flag=True, help="Do not transfer foreign keys.")
 @click.option(
     "-Z",
@@ -164,6 +167,7 @@ def cli(
     limit_rows: int,
     collation: t.Optional[str],
     prefix_indices: bool,
+    defer_foreign_keys: bool,
     without_foreign_keys: bool,
     without_tables: bool,
     without_data: bool,
@@ -212,6 +216,11 @@ def cli(
             limit_rows=limit_rows,
             collation=collation,
             prefix_indices=prefix_indices,
+            defer_foreign_keys=(
+                defer_foreign_keys
+                if not without_foreign_keys and not (mysql_tables is not None and len(mysql_tables) > 0)
+                else False
+            ),
             without_foreign_keys=without_foreign_keys or (mysql_tables is not None and len(mysql_tables) > 0),
             without_tables=without_tables,
             without_data=without_data,
