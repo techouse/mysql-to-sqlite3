@@ -1,3 +1,7 @@
+# 2.4.4
+
+* [FIX] fix pyproject.toml build sources and specify package inclusion for sdist and wheel
+
 # 2.4.3
 
 * [CHORE] update pyproject.toml to improve metadata, dependency management, and wheel build config
