@@ -5,12 +5,19 @@ import typing as t
 from logging import Logger
 from sqlite3 import Connection, Cursor
 
-import typing_extensions as tx
 from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.cursor import MySQLCursorDict, MySQLCursorPrepared, MySQLCursorRaw
 
 
-class MySQLtoSQLiteParams(tx.TypedDict):
+try:
+    # Python 3.11+
+    from typing import TypedDict  # type: ignore[attr-defined]
+except ImportError:
+    # Python < 3.11
+    from typing_extensions import TypedDict
+
+
+class MySQLtoSQLiteParams(TypedDict):
     """MySQLtoSQLite parameters."""
 
     buffered: t.Optional[bool]

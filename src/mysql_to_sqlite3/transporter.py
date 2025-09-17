@@ -12,11 +12,18 @@ from os.path import realpath
 from sys import stdout
 
 import mysql.connector
-import typing_extensions as tx
 from mysql.connector import CharacterSet, errorcode
 from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.types import RowItemType
 from tqdm import tqdm, trange
+
+
+try:
+    # Python 3.11+
+    from typing import Unpack  # type: ignore[attr-defined]
+except ImportError:
+    # Python < 3.11
+    from typing_extensions import Unpack  # type: ignore
 
 from mysql_to_sqlite3.mysql_utils import CHARSET_INTRODUCERS
 from mysql_to_sqlite3.sqlite_utils import (
@@ -38,7 +45,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
     COLUMN_PATTERN: t.Pattern[str] = re.compile(r"^[^(]+")
     COLUMN_LENGTH_PATTERN: t.Pattern[str] = re.compile(r"\(\d+\)$")
 
-    def __init__(self, **kwargs: tx.Unpack[MySQLtoSQLiteParams]) -> None:
+    def __init__(self, **kwargs: Unpack[MySQLtoSQLiteParams]) -> None:
         """Constructor."""
         if kwargs.get("mysql_database") is not None:
             self._mysql_database = str(kwargs.get("mysql_database"))

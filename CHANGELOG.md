@@ -1,3 +1,7 @@
+# 2.4.5
+
+* [FIX] fix importing `typing_extensions` on Python >= 3.11
+
 # 2.4.4
 
 * [FIX] fix pyproject.toml build sources and specify package inclusion for sdist and wheel
