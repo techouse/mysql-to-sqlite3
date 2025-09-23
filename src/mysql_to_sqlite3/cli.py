@@ -212,7 +212,11 @@ def cli(
             limit_rows=limit_rows,
             collation=collation,
             prefix_indices=prefix_indices,
-            without_foreign_keys=without_foreign_keys or (mysql_tables is not None and len(mysql_tables) > 0),
+            without_foreign_keys=without_foreign_keys
+            or (
+                (mysql_tables is not None and len(mysql_tables) > 0)
+                or (exclude_mysql_tables is not None and len(exclude_mysql_tables) > 0)
+            ),
             without_tables=without_tables,
             without_data=without_data,
             mysql_host=mysql_host,
