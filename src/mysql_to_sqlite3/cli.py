@@ -199,7 +199,7 @@ def cli(
                 "Error: Both -Z/--without-tables and -W/--without-data are set. There is nothing to do. Exiting..."
             )
 
-        if mysql_tables and exclude_mysql_tables:
+        if mysql_tables is not None and exclude_mysql_tables is not None:
             raise click.UsageError("Illegal usage: --mysql-tables and --exclude-mysql-tables are mutually exclusive!")
 
         converter = MySQLtoSQLite(
@@ -212,11 +212,7 @@ def cli(
             limit_rows=limit_rows,
             collation=collation,
             prefix_indices=prefix_indices,
-            without_foreign_keys=without_foreign_keys
-            or (
-                (mysql_tables is not None and len(mysql_tables) > 0)
-                or (exclude_mysql_tables is not None and len(exclude_mysql_tables) > 0)
-            ),
+            without_foreign_keys=without_foreign_keys or bool(mysql_tables) or bool(exclude_mysql_tables),
             without_tables=without_tables,
             without_data=without_data,
             mysql_host=mysql_host,
