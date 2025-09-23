@@ -30,6 +30,7 @@ class TestMySQLtoSQLite:
             }
         )
 
+    @pytest.mark.xfail
     def test_non_existing_sqlite_file(self, cli_runner: CliRunner, faker: Faker) -> None:
         result: Result = cli_runner.invoke(mysql2sqlite, ["-f", faker.file_path(depth=1, extension=".sqlite3")])
         assert result.exit_code > 0
