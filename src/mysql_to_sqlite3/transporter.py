@@ -120,7 +120,16 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
         self._quiet = bool(kwargs.get("quiet", False))
 
+        self._sqlite_strict = bool(kwargs.get("sqlite_strict", False))
+
         self._logger = self._setup_logger(log_file=kwargs.get("log_file") or None, quiet=self._quiet)
+
+        if self._sqlite_strict and sqlite3.sqlite_version < "3.37.0":
+            self._logger.warning(
+                "SQLite version %s does not support STRICT tables. Tables will be created without strict mode.",
+                sqlite3.sqlite_version,
+            )
+            self._sqlite_strict = False
 
         sqlite3.register_adapter(Decimal, adapt_decimal)
         sqlite3.register_converter("DECIMAL", convert_decimal)
@@ -570,7 +579,10 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                         "ON DELETE {on_delete}".format(**foreign_key)  # type: ignore[str-bytes-safe]
                     )
 
-        sql += "\n);"
+        sql += "\n)"
+        if self._sqlite_strict:
+            sql += " STRICT"
+        sql += ";\n"
         sql += indices
 
         return sql

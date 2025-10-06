@@ -1,8 +1,11 @@
+import builtins
 import sqlite3
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pytest_mock import MockerFixture
 
+from mysql_to_sqlite3.sqlite_utils import CollatingSequences
 from mysql_to_sqlite3.transporter import MySQLtoSQLite
 
 
@@ -151,6 +154,155 @@ class TestMySQLtoSQLiteTransporter:
 
             # Verify that foreign keys are re-enabled in the finally block
             mock_sqlite_cursor.execute.assert_called_with("PRAGMA foreign_keys=ON")
+
+    @patch("mysql_to_sqlite3.transporter.sqlite3.connect")
+    @patch("mysql_to_sqlite3.transporter.mysql.connector.connect")
+    def test_sqlite_strict_supported_keeps_flag(
+        self,
+        mock_mysql_connect: MagicMock,
+        mock_sqlite_connect: MagicMock,
+        mocker: MockerFixture,
+    ) -> None:
+        """Ensure STRICT mode remains enabled when SQLite supports it."""
+
+        class FakeMySQLConnection:
+            def __init__(self) -> None:
+                self.database = None
+
+            def is_connected(self) -> bool:
+                return True
+
+            def cursor(self, *args, **kwargs) -> MagicMock:
+                return MagicMock()
+
+        mock_logger = MagicMock()
+        mocker.patch.object(MySQLtoSQLite, "_setup_logger", return_value=mock_logger)
+        mocker.patch("mysql_to_sqlite3.transporter.sqlite3.sqlite_version", "3.38.0")
+        mock_mysql_connect.return_value = FakeMySQLConnection()
+
+        mock_sqlite_cursor = MagicMock()
+        mock_sqlite_connection = MagicMock()
+        mock_sqlite_connection.cursor.return_value = mock_sqlite_cursor
+        mock_sqlite_connect.return_value = mock_sqlite_connection
+
+        from mysql_to_sqlite3 import transporter as transporter_module
+
+        original_isinstance = builtins.isinstance
+
+        def fake_isinstance(obj: object, classinfo: object) -> bool:
+            if classinfo is transporter_module.MySQLConnectionAbstract:
+                return True
+            return original_isinstance(obj, classinfo)
+
+        mocker.patch("mysql_to_sqlite3.transporter.isinstance", side_effect=fake_isinstance)
+
+        instance = MySQLtoSQLite(
+            sqlite_file="file.db",
+            mysql_user="user",
+            mysql_password=None,
+            mysql_database="db",
+            mysql_host="localhost",
+            mysql_port=3306,
+            sqlite_strict=True,
+        )
+
+        assert instance._sqlite_strict is True
+        mock_logger.warning.assert_not_called()
+
+    @patch("mysql_to_sqlite3.transporter.sqlite3.connect")
+    @patch("mysql_to_sqlite3.transporter.mysql.connector.connect")
+    def test_sqlite_strict_unsupported_disables_flag(
+        self,
+        mock_mysql_connect: MagicMock,
+        mock_sqlite_connect: MagicMock,
+        mocker: MockerFixture,
+    ) -> None:
+        """Ensure STRICT mode is disabled with a warning on old SQLite versions."""
+
+        class FakeMySQLConnection:
+            def __init__(self) -> None:
+                self.database = None
+
+            def is_connected(self) -> bool:
+                return True
+
+            def cursor(self, *args, **kwargs) -> MagicMock:
+                return MagicMock()
+
+        mock_logger = MagicMock()
+        mocker.patch.object(MySQLtoSQLite, "_setup_logger", return_value=mock_logger)
+        mocker.patch("mysql_to_sqlite3.transporter.sqlite3.sqlite_version", "3.36.0")
+        mock_mysql_connect.return_value = FakeMySQLConnection()
+
+        mock_sqlite_cursor = MagicMock()
+        mock_sqlite_connection = MagicMock()
+        mock_sqlite_connection.cursor.return_value = mock_sqlite_cursor
+        mock_sqlite_connect.return_value = mock_sqlite_connection
+
+        from mysql_to_sqlite3 import transporter as transporter_module
+
+        original_isinstance = builtins.isinstance
+
+        def fake_isinstance(obj: object, classinfo: object) -> bool:
+            if classinfo is transporter_module.MySQLConnectionAbstract:
+                return True
+            return original_isinstance(obj, classinfo)
+
+        mocker.patch("mysql_to_sqlite3.transporter.isinstance", side_effect=fake_isinstance)
+
+        instance = MySQLtoSQLite(
+            sqlite_file="file.db",
+            mysql_user="user",
+            mysql_password=None,
+            mysql_database="db",
+            mysql_host="localhost",
+            mysql_port=3306,
+            sqlite_strict=True,
+        )
+
+        assert instance._sqlite_strict is False
+        mock_logger.warning.assert_called_once()
+
+    def test_build_create_table_sql_appends_strict(self) -> None:
+        """Ensure STRICT is appended to CREATE TABLE statements when enabled."""
+        with patch.object(MySQLtoSQLite, "__init__", return_value=None):
+            instance = MySQLtoSQLite()
+
+        instance._sqlite_strict = True
+        instance._sqlite_json1_extension_enabled = False
+        instance._mysql_cur_dict = MagicMock()
+        instance._mysql_cur_dict.fetchall.side_effect = [
+            [
+                {
+                    "Field": "id",
+                    "Type": "INTEGER",
+                    "Null": "NO",
+                    "Default": None,
+                    "Key": "PRI",
+                    "Extra": "auto_increment",
+                },
+                {
+                    "Field": "name",
+                    "Type": "TEXT",
+                    "Null": "NO",
+                    "Default": None,
+                    "Key": "",
+                    "Extra": "",
+                },
+            ],
+            [],
+        ]
+        instance._mysql_cur_dict.fetchone.return_value = {"count": 0}
+        instance._mysql_database = "db"
+        instance._collation = CollatingSequences.BINARY
+        instance._prefix_indices = False
+        instance._without_tables = False
+        instance._without_foreign_keys = True
+        instance._logger = MagicMock()
+
+        sql = instance._build_create_table_sql("products")
+
+        assert "STRICT;" in sql
 
     def test_constructor_missing_mysql_database(self) -> None:
         """Test constructor raises ValueError if mysql_database is missing."""
