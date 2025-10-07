@@ -1,3 +1,7 @@
+# 2.5.0
+
+* [FEAT] add support for creating SQLite STRICT tables via `-M/--strict` CLI switch
+
 # 2.4.5
 
 * [FIX] fix importing `typing_extensions` on Python >= 3.11
