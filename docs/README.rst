@@ -38,6 +38,7 @@ Transfer Options
 - ``-X, --without-foreign-keys``: Do not transfer foreign keys.
 - ``-Z, --without-tables``: Do not transfer tables, data only.
 - ``-W, --without-data``: Do not transfer table data, DDL only.
+- ``-M, --strict``: Create SQLite STRICT tables when supported.
 
 Connection Options
 """"""""""""""""""

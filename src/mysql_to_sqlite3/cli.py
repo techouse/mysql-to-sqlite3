@@ -106,6 +106,12 @@ _copyright_header: str = f"mysql2sqlite version {package_version} Copyright (c) 
     is_flag=True,
     help="Do not transfer table data, DDL only.",
 )
+@click.option(
+    "-M",
+    "--strict",
+    is_flag=True,
+    help="Create SQLite STRICT tables when supported.",
+)
 @click.option("-h", "--mysql-host", default="localhost", help="MySQL host. Defaults to localhost.")
 @click.option("-P", "--mysql-port", type=int, default=3306, help="MySQL port. Defaults to 3306.")
 @click.option(
@@ -167,6 +173,7 @@ def cli(
     without_foreign_keys: bool,
     without_tables: bool,
     without_data: bool,
+    strict: bool,
     mysql_host: str,
     mysql_port: int,
     mysql_charset: str,
@@ -215,6 +222,7 @@ def cli(
             without_foreign_keys=without_foreign_keys or bool(mysql_tables) or bool(exclude_mysql_tables),
             without_tables=without_tables,
             without_data=without_data,
+            sqlite_strict=strict,
             mysql_host=mysql_host,
             mysql_port=mysql_port,
             mysql_charset=mysql_charset,
