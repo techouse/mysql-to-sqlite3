@@ -579,3 +579,28 @@ class TestMySQLtoSQLiteSQLExceptions:
 
         with pytest.raises((mysql.connector.Error, sqlite3.Error)):
             proc._transfer_table_data(table_name, sql)
+
+
+
+def test_get_unique_index_name_suffixing_sequence() -> None:
+    from unittest.mock import patch
+
+    # Create an instance without running the real constructor
+    with patch.object(MySQLtoSQLite, "__init__", return_value=None):
+        t = MySQLtoSQLite()
+        # minimal attributes required by the helper
+        t._seen_sqlite_index_names = set()
+        t._sqlite_index_name_counters = {}
+        t._prefix_indices = False
+
+        # First occurrence: no suffix
+        assert t._get_unique_index_name("idx_page_id") == "idx_page_id"
+        # Second occurrence: _2
+        assert t._get_unique_index_name("idx_page_id") == "idx_page_id_2"
+        # Third occurrence: _3
+        assert t._get_unique_index_name("idx_page_id") == "idx_page_id_3"
+
+        # A different base name should start without suffix
+        assert t._get_unique_index_name("idx_user_id") == "idx_user_id"
+        # And then suffix from 2
+        assert t._get_unique_index_name("idx_user_id") == "idx_user_id_2"
