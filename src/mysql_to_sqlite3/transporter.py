@@ -146,6 +146,11 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
         self._sqlite_json1_extension_enabled = not self._json_as_text and self._check_sqlite_json1_extension_enabled()
 
+        # Track seen SQLite index names to generate unique names when prefixing is disabled
+        self._seen_sqlite_index_names: t.Set[str] = set()
+        # Counter for duplicate index names to assign numeric suffixes (name_2, name_3, ...)
+        self._sqlite_index_name_counters: t.Dict[str, int] = {}
+
         try:
             _mysql_connection = mysql.connector.connect(
                 user=self._mysql_user,
@@ -409,6 +414,33 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         except sqlite3.Error:
             return False
 
+    def _get_unique_index_name(self, base_name: str) -> str:
+        """Return a unique SQLite index name based on base_name.
+
+        If base_name has not been used yet, it is returned as-is and recorded. If it has been
+        used, a numeric suffix is appended starting from 2 (e.g., name_2, name_3, ...), and the
+        chosen name is recorded as used. This behavior is only intended for cases where index
+        prefixing is not enabled and SQLite requires global uniqueness for index names.
+        """
+        if base_name not in self._seen_sqlite_index_names:
+            self._seen_sqlite_index_names.add(base_name)
+            return base_name
+        # Base name already seen — assign next available counter
+        next_num = self._sqlite_index_name_counters.get(base_name, 2)
+        candidate = f"{base_name}_{next_num}"
+        while candidate in self._seen_sqlite_index_names:
+            next_num += 1
+            candidate = f"{base_name}_{next_num}"
+        # Record chosen candidate and bump counter for the base name
+        self._seen_sqlite_index_names.add(candidate)
+        self._sqlite_index_name_counters[base_name] = next_num + 1
+        self._logger.info(
+            'Index "%s" renamed to "%s" to ensure uniqueness across the SQLite database.',
+            base_name,
+            candidate,
+        )
+        return candidate
+
     def _build_create_table_sql(self, table_name: str) -> str:
         sql: str = f'CREATE TABLE IF NOT EXISTS "{table_name}" ('
         primary: str = ""
@@ -523,13 +555,20 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                                 columns=", ".join(f'"{column}"' for column in columns.split(","))
                             )
                     else:
+                        # Determine the SQLite index name, considering table name collisions and prefix option
+                        proposed_index_name = (
+                            f"{table_name}_{index_name}"
+                            if (table_collisions > 0 or self._prefix_indices)
+                            else index_name
+                        )
+                        # Ensure index name is unique across the whole SQLite database when prefixing is disabled
+                        if not self._prefix_indices:
+                            unique_index_name = self._get_unique_index_name(proposed_index_name)
+                        else:
+                            unique_index_name = proposed_index_name
                         indices += """CREATE {unique} INDEX IF NOT EXISTS "{name}" ON "{table}" ({columns});""".format(
                             unique="UNIQUE" if index["unique"] in {1, "1"} else "",
-                            name=(
-                                f"{table_name}_{index_name}"
-                                if (table_collisions > 0 or self._prefix_indices)
-                                else index_name
-                            ),
+                            name=unique_index_name,
                             table=table_name,
                             columns=", ".join(f'"{column}"' for column in columns.split(",")),
                         )

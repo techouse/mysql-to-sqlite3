@@ -44,6 +44,27 @@ class TestMySQLtoSQLiteTransporter:
         assert MySQLtoSQLite._decode_column_type(None) == "None"
         assert MySQLtoSQLite._decode_column_type(True) == "True"
 
+    def test_get_unique_index_name_suffixing_sequence(self) -> None:
+        with patch.object(MySQLtoSQLite, "__init__", return_value=None):
+            instance = MySQLtoSQLite()
+            # minimal attributes required by the helper
+            instance._seen_sqlite_index_names = set()
+            instance._sqlite_index_name_counters = {}
+            instance._prefix_indices = False
+            instance._logger = MagicMock()
+
+            # First occurrence: no suffix
+            assert instance._get_unique_index_name("idx_page_id") == "idx_page_id"
+            # Second occurrence: _2
+            assert instance._get_unique_index_name("idx_page_id") == "idx_page_id_2"
+            # Third occurrence: _3
+            assert instance._get_unique_index_name("idx_page_id") == "idx_page_id_3"
+
+            # A different base name should start without suffix
+            assert instance._get_unique_index_name("idx_user_id") == "idx_user_id"
+            # And then suffix from 2
+            assert instance._get_unique_index_name("idx_user_id") == "idx_user_id_2"
+
     @patch("sqlite3.connect")
     def test_check_sqlite_json1_extension_enabled_success(self, mock_connect: MagicMock) -> None:
         """Test _check_sqlite_json1_extension_enabled when JSON1 is enabled."""
