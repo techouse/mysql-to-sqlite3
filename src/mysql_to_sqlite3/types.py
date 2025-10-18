@@ -81,3 +81,5 @@ class MySQLtoSQLiteAttributes:
     _vacuum: bool
     _without_data: bool
     _without_foreign_keys: bool
+    _seen_sqlite_index_names: t.Set[str]
+    _skipped_duplicate_sqlite_indexes: t.List[str]
