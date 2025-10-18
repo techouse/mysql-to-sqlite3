@@ -1,3 +1,7 @@
+# 2.5.1
+
+* [FIX] prevent non-unique SQLite indices from being quietly omitted
+
 # 2.5.0
 
 * [FEAT] add support for creating SQLite STRICT tables via `-M/--strict` CLI switch
