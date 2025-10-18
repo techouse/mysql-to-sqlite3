@@ -434,6 +434,11 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         # Record chosen candidate and bump counter for the base name
         self._seen_sqlite_index_names.add(candidate)
         self._sqlite_index_name_counters[base_name] = next_num + 1
+        self._logger.info(
+            'Index "%s" renamed to "%s" to ensure uniqueness across the SQLite database.',
+            base_name,
+            candidate,
+        )
         return candidate
 
     def _build_create_table_sql(self, table_name: str) -> str:
