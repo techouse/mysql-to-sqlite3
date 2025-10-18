@@ -581,7 +581,6 @@ class TestMySQLtoSQLiteSQLExceptions:
             proc._transfer_table_data(table_name, sql)
 
 
-
 def test_get_unique_index_name_suffixing_sequence() -> None:
     from unittest.mock import patch
 

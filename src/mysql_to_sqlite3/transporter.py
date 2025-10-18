@@ -561,13 +561,11 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                             unique_index_name = self._get_unique_index_name(proposed_index_name)
                         else:
                             unique_index_name = proposed_index_name
-                        indices += (
-                            """CREATE {unique} INDEX IF NOT EXISTS "{name}" ON "{table}" ({columns});""".format(
-                                unique="UNIQUE" if index["unique"] in {1, "1"} else "",
-                                name=unique_index_name,
-                                table=table_name,
-                                columns=", ".join(f'"{column}"' for column in columns.split(",")),
-                            )
+                        indices += """CREATE {unique} INDEX IF NOT EXISTS "{name}" ON "{table}" ({columns});""".format(
+                            unique="UNIQUE" if index["unique"] in {1, "1"} else "",
+                            name=unique_index_name,
+                            table=table_name,
+                            columns=", ".join(f'"{column}"' for column in columns.split(",")),
                         )
 
         sql += primary
@@ -809,7 +807,6 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         finally:
             # re-enable foreign key checking once done transferring
             self._sqlite_cur.execute("PRAGMA foreign_keys=ON")
-
 
         if self._vacuum:
             self._logger.info("Vacuuming created SQLite database file.\nThis might take a while.")
