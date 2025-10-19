@@ -143,6 +143,12 @@ _copyright_header: str = f"mysql2sqlite version {package_version} Copyright (c) 
 @click.option("-l", "--log-file", type=click.Path(), help="Log file")
 @click.option("--json-as-text", is_flag=True, help="Transfer JSON columns as TEXT.")
 @click.option(
+    "-T",
+    "--mysql-views-as-tables",
+    is_flag=True,
+    help="Materialize MySQL VIEWs as SQLite tables (legacy behavior).",
+)
+@click.option(
     "-V",
     "--vacuum",
     is_flag=True,
@@ -182,6 +188,7 @@ def cli(
     chunk: int,
     log_file: t.Union[str, "os.PathLike[t.Any]"],
     json_as_text: bool,
+    mysql_views_as_tables: bool,
     vacuum: bool,
     use_buffered_cursors: bool,
     quiet: bool,
@@ -230,6 +237,7 @@ def cli(
             mysql_ssl_disabled=skip_ssl,
             chunk=chunk,
             json_as_text=json_as_text,
+            views_as_views=not mysql_views_as_tables,
             vacuum=vacuum,
             buffered=use_buffered_cursors,
             log_file=log_file,
