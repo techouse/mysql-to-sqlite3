@@ -15,7 +15,7 @@ import mysql.connector
 from mysql.connector import CharacterSet, errorcode
 from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.types import RowItemType
-from sqlglot import exp, parse_one
+from sqlglot import Expression, exp, parse_one
 from sqlglot.errors import ParseError
 from tqdm import tqdm, trange
 
@@ -269,6 +269,16 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             "YEAR",
         }:
             return data_type
+        if data_type == "DOUBLE PRECISION":
+            return "DOUBLE"
+        if data_type == "FIXED":
+            return "DECIMAL"
+        if data_type in {"CHARACTER VARYING", "CHAR VARYING"}:
+            return "VARCHAR" + cls._column_type_length(_column_type)
+        if data_type in {"NATIONAL CHARACTER VARYING", "NATIONAL CHAR VARYING", "NATIONAL VARCHAR"}:
+            return "NVARCHAR" + cls._column_type_length(_column_type)
+        if data_type == "NATIONAL CHARACTER":
+            return "NCHAR" + cls._column_type_length(_column_type)
         if data_type in {
             "BIT",
             "BINARY",
@@ -288,7 +298,145 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             return "DATETIME"
         if data_type == "JSON" and sqlite_json1_extension_enabled:
             return "JSON"
+        # As a last resort, try sqlglot to derive a better SQLite-compatible type
+        sqlglot_type: t.Optional[str] = cls._transpile_mysql_type_to_sqlite(
+            _column_type, sqlite_json1_extension_enabled=sqlite_json1_extension_enabled
+        )
+        if sqlglot_type:
+            return sqlglot_type
         return "TEXT"
+
+    @classmethod
+    def _transpile_mysql_expr_to_sqlite(cls, expr_sql: str) -> t.Optional[str]:
+        """Transpile a MySQL scalar expression to SQLite using sqlglot.
+
+        Returns the SQLite SQL string on success, or None on failure.
+        """
+        cleaned: str = expr_sql.strip().rstrip(";")
+        try:
+            tree: Expression = parse_one(cleaned, read="mysql")
+            return tree.sql(dialect="sqlite")
+        except (ParseError, ValueError):
+            return None
+        except (AttributeError, TypeError):  # pragma: no cover - unexpected sqlglot failure
+            logging.getLogger(cls.__name__ if hasattr(cls, "__name__") else "MySQLtoSQLite").debug(
+                "sqlglot failed to transpile expr: %r", expr_sql
+            )
+            return None
+
+    @staticmethod
+    def _quote_sqlite_identifier(name: t.Union[str, bytes, bytearray]) -> str:
+        """Safely quote an identifier for SQLite using sqlglot.
+
+        Always returns a double-quoted identifier, doubling any embedded quotes.
+        Accepts bytes and decodes them to str when needed.
+        """
+        if isinstance(name, (bytes, bytearray)):
+            try:
+                s: str = name.decode()
+            except (UnicodeDecodeError, AttributeError):
+                s = str(name)
+        else:
+            s = str(name)
+        try:
+            # Normalize identifier using sqlglot, then wrap in quotes regardless
+            normalized: str = exp.to_identifier(s).name
+        except (AttributeError, ValueError, TypeError):  # pragma: no cover - extremely unlikely
+            normalized = s
+        replaced: str = normalized.replace('"', '""')
+        return f'"{replaced}"'
+
+    @staticmethod
+    def _escape_mysql_backticks(identifier: str) -> str:
+        """Escape backticks in a MySQL identifier for safe backtick quoting."""
+        return identifier.replace("`", "``")
+
+    @classmethod
+    def _transpile_mysql_type_to_sqlite(
+        cls, column_type: str, sqlite_json1_extension_enabled: bool = False
+    ) -> t.Optional[str]:
+        """Attempt to derive a suitable SQLite column type using sqlglot.
+
+        This is used as a last-resort fallback when the built-in mapper does not
+        recognize a MySQL type or synonym. It keeps existing behavior for known
+        types and only augments unknowns.
+        """
+        # Wrap the type in a CAST expression so sqlglot can parse it consistently.
+        expr_sql: str = f"CAST(NULL AS {column_type.strip()})"
+        try:
+            tree: Expression = parse_one(expr_sql, read="mysql")
+            rendered: str = tree.sql(dialect="sqlite")
+        except (ParseError, ValueError, AttributeError, TypeError):
+            return None
+
+        # Extract the type inside CAST(NULL AS ...)
+        m: t.Optional[t.Match[str]] = re.search(r"CAST\(NULL AS\s+([^)]+)\)", rendered, re.IGNORECASE)
+        if not m:
+            return None
+        extracted: str = m.group(1).strip()
+        upper: str = extracted.upper()
+
+        # JSON handling: respect availability of JSON1 extension
+        if "JSON" in upper:
+            return "JSON" if sqlite_json1_extension_enabled else "TEXT"
+
+        # Split out optional length suffix like (255) or (10,2)
+        base: str = upper
+        length_suffix: str = ""
+        paren: t.Optional[t.Match[str]] = re.match(r"^([A-Z ]+)(\(.*\))$", upper)
+        if paren:
+            base = paren.group(1).strip()
+            length_suffix = paren.group(2)
+
+        # Minimal synonym normalization
+        synonyms: t.Dict[str, str] = {
+            "DOUBLE PRECISION": "DOUBLE",
+            "FIXED": "DECIMAL",
+            "CHAR VARYING": "VARCHAR",
+            "CHARACTER VARYING": "VARCHAR",
+            "NATIONAL VARCHAR": "NVARCHAR",
+            "NATIONAL CHARACTER VARYING": "NVARCHAR",
+            "NATIONAL CHAR VARYING": "NVARCHAR",
+            "NATIONAL CHARACTER": "NCHAR",
+        }
+        base = synonyms.get(base, base)
+
+        # Decide the final SQLite type, aligning with existing conventions
+        if base in {"NCHAR", "NVARCHAR", "VARCHAR"} and length_suffix:
+            return f"{base}{length_suffix}"
+        if base in {"CHAR", "CHARACTER"}:
+            return f"CHARACTER{length_suffix}"
+        if base in {"DECIMAL", "NUMERIC"}:
+            # Keep without length to match the existing mapper's style
+            return base
+        if base in {
+            "DOUBLE",
+            "REAL",
+            "FLOAT",
+            "INTEGER",
+            "BIGINT",
+            "SMALLINT",
+            "MEDIUMINT",
+            "TINYINT",
+            "BLOB",
+            "DATE",
+            "DATETIME",
+            "TIME",
+            "YEAR",
+            "BOOLEAN",
+        }:
+            return base
+        if base in {"VARBINARY", "BINARY", "TINYBLOB", "MEDIUMBLOB", "LONGBLOB"}:
+            return "BLOB"
+        if base in {"TEXT", "TINYTEXT", "MEDIUMTEXT", "LONGTEXT", "CLOB"}:
+            return "TEXT"
+
+        # ENUM/SET and other complex types -> keep default behavior (TEXT)
+        if base in {"ENUM", "SET"}:
+            return "TEXT"
+
+        # If we reached here, we didn't find a better mapping
+        return None
 
     @classmethod
     def _translate_default_from_mysql_to_sqlite(
@@ -391,24 +539,84 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                         if is_hex:
                             return f"DEFAULT x'{column_default}'"
                         return f"DEFAULT '{column_default}'"
-            return "DEFAULT '{}'".format(column_default.replace(r"\'", r"''"))
-        return "DEFAULT '{}'".format(str(column_default).replace(r"\'", r"''"))
+                transpiled: t.Optional[str] = cls._transpile_mysql_expr_to_sqlite(column_default)
+                if transpiled:
+                    norm: str = transpiled.strip().rstrip(";")
+                    upper: str = norm.upper()
+                    if upper in {"CURRENT_TIME", "CURRENT_DATE", "CURRENT_TIMESTAMP"}:
+                        return f"DEFAULT {upper}"
+                    if upper == "NULL":
+                        return "DEFAULT NULL"
+                    # Allow blob hex literal X'..'
+                    if re.match(r"^[Xx]'[0-9A-Fa-f]+'$", norm):
+                        return f"DEFAULT {norm}"
+                    # Support boolean tokens when provided as generated strings
+                    if upper in {"TRUE", "FALSE"}:
+                        if column_type == "BOOLEAN" and sqlite3.sqlite_version >= "3.23.0":
+                            return f"DEFAULT({upper})"
+                        return f"DEFAULT '{1 if upper == 'TRUE' else 0}'"
+                    # Unwrap a single layer of parenthesis around a literal
+                    if norm.startswith("(") and norm.endswith(")"):
+                        inner = norm[1:-1].strip()
+                        if (inner.startswith("'") and inner.endswith("'")) or re.match(r"^-?\d+(?:\.\d+)?$", inner):
+                            return f"DEFAULT {inner}"
+                        # If the expression is arithmetic-only over numeric literals, allow as-is
+                        if re.match(r"^[\d\.\s\+\-\*/\(\)]+$", norm) and any(ch.isdigit() for ch in norm):
+                            return f"DEFAULT {norm}"
+                    # Allow numeric or single-quoted string literals as-is
+                    if (norm.startswith("'") and norm.endswith("'")) or re.match(r"^-?\d+(?:\.\d+)?$", norm):
+                        return f"DEFAULT {norm}"
+                    # Allow simple arithmetic constant expressions composed of numbers and + - * /
+                    if re.match(r"^[\d\.\s\+\-\*/\(\)]+$", norm) and any(ch.isdigit() for ch in norm):
+                        return f"DEFAULT {norm}"
+            # Robustly escape single quotes for plain string defaults
+            _escaped = column_default.replace("\\'", "'")
+            _escaped = _escaped.replace("'", "''")
+            return f"DEFAULT '{_escaped}'"
+        s = str(column_default)
+        s = s.replace("\\'", "'")
+        s = s.replace("'", "''")
+        return f"DEFAULT '{s}'"
 
     @classmethod
     def _data_type_collation_sequence(
         cls, collation: str = CollatingSequences.BINARY, column_type: t.Optional[str] = None
     ) -> str:
-        if column_type and collation != CollatingSequences.BINARY:
-            if column_type.startswith(
-                (
-                    "CHARACTER",
-                    "NCHAR",
-                    "NVARCHAR",
-                    "TEXT",
-                    "VARCHAR",
-                )
-            ):
+        """Return a SQLite COLLATE clause for textual affinity types.
+
+        Augmented with sqlglot: if the provided type string does not match the
+        quick textual prefixes, we attempt to transpile it to a SQLite type and
+        then apply SQLite's textual affinity rules (contains CHAR/CLOB/TEXT or
+        their NV*/VAR* variants). This improves handling of MySQL synonyms like
+        CHAR VARYING / CHARACTER VARYING / NATIONAL CHARACTER VARYING.
+        """
+        if not column_type or collation == CollatingSequences.BINARY:
+            return ""
+
+        ct: str = column_type.strip()
+        upper: str = ct.upper()
+
+        # Fast-path for already normalized SQLite textual types
+        if upper.startswith(("CHARACTER", "NCHAR", "NVARCHAR", "TEXT", "VARCHAR")):
+            return f"COLLATE {collation}"
+
+        # Avoid collations for JSON/BLOB explicitly
+        if "JSON" in upper or "BLOB" in upper:
+            return ""
+
+        # If the type string obviously denotes text affinity, apply collation
+        if any(tok in upper for tok in ("VARCHAR", "NVARCHAR", "NCHAR", "CHAR", "TEXT", "CLOB", "CHARACTER")):
+            return f"COLLATE {collation}"
+
+        # Try to map uncommon/synonym types to a SQLite type using sqlglot-based transpiler
+        mapped: t.Optional[str] = cls._transpile_mysql_type_to_sqlite(ct)
+        if mapped:
+            mu = mapped.upper()
+            if (
+                "CHAR" in mu or "VARCHAR" in mu or "NCHAR" in mu or "NVARCHAR" in mu or "TEXT" in mu or "CLOB" in mu
+            ) and not ("JSON" in mu or "BLOB" in mu):
                 return f"COLLATE {collation}"
+
         return ""
 
     def _check_sqlite_json1_extension_enabled(self) -> bool:
@@ -446,11 +654,13 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         return candidate
 
     def _build_create_table_sql(self, table_name: str) -> str:
-        sql: str = f'CREATE TABLE IF NOT EXISTS "{table_name}" ('
+        table_ident = self._quote_sqlite_identifier(table_name)
+        sql: str = f"CREATE TABLE IF NOT EXISTS {table_ident} ("
         primary: str = ""
         indices: str = ""
 
-        self._mysql_cur_dict.execute(f"SHOW COLUMNS FROM `{table_name}`")
+        safe_table = self._escape_mysql_backticks(table_name)
+        self._mysql_cur_dict.execute(f"SHOW COLUMNS FROM `{safe_table}`")
         rows: t.Sequence[t.Optional[t.Dict[str, RowItemType]]] = self._mysql_cur_dict.fetchall()
 
         primary_keys: int = sum(1 for row in rows if row is not None and row["Key"] == "PRI")
@@ -463,8 +673,14 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 )
                 if row["Key"] == "PRI" and row["Extra"] == "auto_increment" and primary_keys == 1:
                     if column_type in Integer_Types:
-                        sql += '\n\t"{name}" INTEGER PRIMARY KEY AUTOINCREMENT,'.format(
-                            name=row["Field"].decode() if isinstance(row["Field"], bytes) else row["Field"],
+                        sql += "\n\t{name} INTEGER PRIMARY KEY AUTOINCREMENT,".format(
+                            name=self._quote_sqlite_identifier(
+                                str(
+                                    row["Field"].decode()
+                                    if isinstance(row["Field"], (bytes, bytearray))
+                                    else row["Field"]
+                                )
+                            ),
                         )
                     else:
                         self._logger.warning(
@@ -473,8 +689,10 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                             table_name,
                         )
                 else:
-                    sql += '\n\t"{name}" {type} {notnull} {default} {collation},'.format(
-                        name=row["Field"].decode() if isinstance(row["Field"], bytes) else row["Field"],
+                    sql += "\n\t{name} {type} {notnull} {default} {collation},".format(
+                        name=self._quote_sqlite_identifier(
+                            str(row["Field"].decode() if isinstance(row["Field"], (bytes, bytearray)) else row["Field"])
+                        ),
                         type=column_type,
                         notnull="NULL" if row["Null"] == "YES" else "NOT NULL",
                         default=self._translate_default_from_mysql_to_sqlite(row["Default"], column_type, row["Extra"]),
@@ -556,7 +774,9 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                             for _type in types.split(",")
                         ):
                             primary += "\n\tPRIMARY KEY ({columns})".format(
-                                columns=", ".join(f'"{column}"' for column in columns.split(","))
+                                columns=", ".join(
+                                    self._quote_sqlite_identifier(column.strip()) for column in columns.split(",")
+                                )
                             )
                     else:
                         # Determine the SQLite index name, considering table name collisions and prefix option
@@ -570,11 +790,14 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                             unique_index_name = self._get_unique_index_name(proposed_index_name)
                         else:
                             unique_index_name = proposed_index_name
-                        indices += """CREATE {unique} INDEX IF NOT EXISTS "{name}" ON "{table}" ({columns});""".format(
-                            unique="UNIQUE" if index["unique"] in {1, "1"} else "",
-                            name=unique_index_name,
-                            table=table_name,
-                            columns=", ".join(f'"{column}"' for column in columns.split(",")),
+                        unique_kw = "UNIQUE " if index["unique"] in {1, "1"} else ""
+                        indices += """CREATE {unique}INDEX IF NOT EXISTS {name} ON {table} ({columns});""".format(
+                            unique=unique_kw,
+                            name=self._quote_sqlite_identifier(unique_index_name),
+                            table=self._quote_sqlite_identifier(table_name),
+                            columns=", ".join(
+                                self._quote_sqlite_identifier(column.strip()) for column in columns.split(",")
+                            ),
                         )
 
         sql += primary
@@ -616,10 +839,27 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             )
             for foreign_key in self._mysql_cur_dict.fetchall():
                 if foreign_key is not None:
+                    col = self._quote_sqlite_identifier(
+                        foreign_key["column"].decode()
+                        if isinstance(foreign_key["column"], (bytes, bytearray))
+                        else str(foreign_key["column"])  # type: ignore[index]
+                    )
+                    ref_table = self._quote_sqlite_identifier(
+                        foreign_key["ref_table"].decode()
+                        if isinstance(foreign_key["ref_table"], (bytes, bytearray))
+                        else str(foreign_key["ref_table"])  # type: ignore[index]
+                    )
+                    ref_col = self._quote_sqlite_identifier(
+                        foreign_key["ref_column"].decode()
+                        if isinstance(foreign_key["ref_column"], (bytes, bytearray))
+                        else str(foreign_key["ref_column"])  # type: ignore[index]
+                    )
+                    on_update = str(foreign_key["on_update"] or "NO ACTION").upper()  # type: ignore[index]
+                    on_delete = str(foreign_key["on_delete"] or "NO ACTION").upper()  # type: ignore[index]
                     sql += (
-                        ',\n\tFOREIGN KEY("{column}") REFERENCES "{ref_table}" ("{ref_column}") '
-                        "ON UPDATE {on_update} "
-                        "ON DELETE {on_delete}".format(**foreign_key)  # type: ignore[str-bytes-safe]
+                        f",\n\tFOREIGN KEY({col}) REFERENCES {ref_table} ({ref_col}) "
+                        f"ON UPDATE {on_update} "
+                        f"ON DELETE {on_delete}"
                     )
 
         sql += "\n)"
@@ -925,13 +1165,15 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                     # get the size of the data
                     if self._limit_rows > 0:
                         # limit to the requested number of rows
+                        safe_table = self._escape_mysql_backticks(table_name)
                         self._mysql_cur_dict.execute(
                             "SELECT COUNT(*) AS `total_records` "
-                            f"FROM (SELECT * FROM `{table_name}` LIMIT {self._limit_rows}) AS `table`"
+                            f"FROM (SELECT * FROM `{safe_table}` LIMIT {self._limit_rows}) AS `table`"
                         )
                     else:
                         # get all rows
-                        self._mysql_cur_dict.execute(f"SELECT COUNT(*) AS `total_records` FROM `{table_name}`")
+                        safe_table = self._escape_mysql_backticks(table_name)
+                        self._mysql_cur_dict.execute(f"SELECT COUNT(*) AS `total_records` FROM `{safe_table}`")
 
                     total_records: t.Optional[t.Dict[str, RowItemType]] = self._mysql_cur_dict.fetchone()
                     if total_records is not None:
@@ -942,9 +1184,10 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                     # only continue if there is anything to transfer
                     if total_records_count > 0:
                         # populate it
+                        safe_table = self._escape_mysql_backticks(table_name)
                         self._mysql_cur.execute(
                             "SELECT * FROM `{table_name}` {limit}".format(
-                                table_name=table_name,
+                                table_name=safe_table,
                                 limit=f"LIMIT {self._limit_rows}" if self._limit_rows > 0 else "",
                             )
                         )

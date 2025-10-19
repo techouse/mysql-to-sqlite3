@@ -40,6 +40,18 @@ class TestTypesAndDefaultsExtra:
     def test_translate_default_common_keywords(self, default: str, expected: str) -> None:
         assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(default) == expected
 
+    def test_translate_default_current_timestamp_precision_transpiled(self) -> None:
+        # MySQL allows fractional seconds: CURRENT_TIMESTAMP(6). Ensure it's normalized to SQLite token.
+        out = MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
+            "CURRENT_TIMESTAMP(6)", column_extra="DEFAULT_GENERATED"
+        )
+        assert out == "DEFAULT CURRENT_TIMESTAMP"
+
+    def test_translate_default_generated_expr_fallback_quotes(self) -> None:
+        # Unknown expressions should fall back to quoted string default for safety
+        out = MySQLtoSQLite._translate_default_from_mysql_to_sqlite("uuid()", column_extra="DEFAULT_GENERATED")
+        assert out == "DEFAULT 'uuid()'"
+
     def test_translate_default_charset_introducer_str_hex_and_bin(self) -> None:
         # DEFAULT_GENERATED with charset introducer and hex (escaped as in MySQL)
         s = "_utf8mb4 X\\'41\\'"  # hex for 'A'
