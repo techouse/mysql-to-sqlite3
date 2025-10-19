@@ -328,17 +328,18 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         """
         if isinstance(name, (bytes, bytearray)):
             try:
-                s = name.decode()
+                s: str = name.decode()
             except (UnicodeDecodeError, AttributeError):
                 s = str(name)
         else:
             s = str(name)
         try:
             # Normalize identifier using sqlglot, then wrap in quotes regardless
-            normalized = exp.to_identifier(s).name
+            normalized: str = exp.to_identifier(s).name
         except (AttributeError, ValueError, TypeError):  # pragma: no cover - extremely unlikely
             normalized = s
-        return f'"{normalized.replace("\"", "\"\"")}"'
+        replaced: str = normalized.replace('"', '""')
+        return f'"{replaced}"'
 
     @staticmethod
     def _escape_mysql_backticks(identifier: str) -> str:
