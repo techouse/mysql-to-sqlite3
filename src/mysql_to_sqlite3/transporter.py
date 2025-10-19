@@ -306,8 +306,8 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             return sqlglot_type
         return "TEXT"
 
-    @staticmethod
-    def _transpile_mysql_expr_to_sqlite(expr_sql: str) -> t.Optional[str]:
+    @classmethod
+    def _transpile_mysql_expr_to_sqlite(cls, expr_sql: str) -> t.Optional[str]:
         """Transpile a MySQL scalar expression to SQLite using sqlglot.
 
         Returns the SQLite SQL string on success, or None on failure.
@@ -316,7 +316,12 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         try:
             tree: Expression = parse_one(cleaned, read="mysql")
             return tree.sql(dialect="sqlite")
-        except (ParseError, ValueError, Exception):  # pylint: disable=W0718
+        except (ParseError, ValueError):
+            return None
+        except Exception:  # pragma: no cover
+            logging.getLogger(cls.__name__ if hasattr(cls, "__name__") else "MySQLtoSQLite").debug(
+                "sqlglot failed to transpile expr: %r", expr_sql
+            )
             return None
 
     @staticmethod
@@ -785,8 +790,9 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                             unique_index_name = self._get_unique_index_name(proposed_index_name)
                         else:
                             unique_index_name = proposed_index_name
-                        indices += """CREATE {unique} INDEX IF NOT EXISTS {name} ON {table} ({columns});""".format(
-                            unique="UNIQUE" if index["unique"] in {1, "1"} else "",
+                        unique_kw = "UNIQUE " if index["unique"] in {1, "1"} else ""
+                        indices += """CREATE {unique}INDEX IF NOT EXISTS {name} ON {table} ({columns});""".format(
+                            unique=unique_kw,
                             name=self._quote_sqlite_identifier(unique_index_name),
                             table=self._quote_sqlite_identifier(table_name),
                             columns=", ".join(
@@ -848,8 +854,8 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                         if isinstance(foreign_key["ref_column"], (bytes, bytearray))
                         else str(foreign_key["ref_column"])  # type: ignore[index]
                     )
-                    on_update = foreign_key["on_update"]  # type: ignore[index]
-                    on_delete = foreign_key["on_delete"]  # type: ignore[index]
+                    on_update = str(foreign_key["on_update"] or "NO ACTION").upper()  # type: ignore[index]
+                    on_delete = str(foreign_key["on_delete"] or "NO ACTION").upper()  # type: ignore[index]
                     sql += (
                         f",\n\tFOREIGN KEY({col}) REFERENCES {ref_table} ({ref_col}) "
                         f"ON UPDATE {on_update} "
@@ -1159,13 +1165,15 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                     # get the size of the data
                     if self._limit_rows > 0:
                         # limit to the requested number of rows
+                        safe_table = self._escape_mysql_backticks(table_name)
                         self._mysql_cur_dict.execute(
                             "SELECT COUNT(*) AS `total_records` "
-                            f"FROM (SELECT * FROM `{table_name}` LIMIT {self._limit_rows}) AS `table`"
+                            f"FROM (SELECT * FROM `{safe_table}` LIMIT {self._limit_rows}) AS `table`"
                         )
                     else:
                         # get all rows
-                        self._mysql_cur_dict.execute(f"SELECT COUNT(*) AS `total_records` FROM `{table_name}`")
+                        safe_table = self._escape_mysql_backticks(table_name)
+                        self._mysql_cur_dict.execute(f"SELECT COUNT(*) AS `total_records` FROM `{safe_table}`")
 
                     total_records: t.Optional[t.Dict[str, RowItemType]] = self._mysql_cur_dict.fetchone()
                     if total_records is not None:
@@ -1176,9 +1184,10 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                     # only continue if there is anything to transfer
                     if total_records_count > 0:
                         # populate it
+                        safe_table = self._escape_mysql_backticks(table_name)
                         self._mysql_cur.execute(
                             "SELECT * FROM `{table_name}` {limit}".format(
-                                table_name=table_name,
+                                table_name=safe_table,
                                 limit=f"LIMIT {self._limit_rows}" if self._limit_rows > 0 else "",
                             )
                         )
