@@ -89,7 +89,7 @@ class TestViewsSqlglot:
         assert 'FROM "prices"' in out or 'FROM ("prices"' in out or "FROM prices" in out
         assert out.strip().endswith(";")
 
-    def test_mysql_viewdef_to_sqlite_keep_schema_true_preserves_qualifiers(self) -> None:
+    def test_mysql_viewdef_to_sqlite_strips_matching_schema_qualifiers(self) -> None:
         mysql_select = "SELECT `u`.`id` FROM `db`.`users` AS `u`"
         # Use instance for consistent attribute access
         with patch.object(MySQLtoSQLite, "__init__", return_value=None):
