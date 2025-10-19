@@ -550,17 +550,41 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
     def _data_type_collation_sequence(
         cls, collation: str = CollatingSequences.BINARY, column_type: t.Optional[str] = None
     ) -> str:
-        if column_type and collation != CollatingSequences.BINARY:
-            if column_type.startswith(
-                (
-                    "CHARACTER",
-                    "NCHAR",
-                    "NVARCHAR",
-                    "TEXT",
-                    "VARCHAR",
-                )
-            ):
+        """Return a SQLite COLLATE clause for textual affinity types.
+
+        Augmented with sqlglot: if the provided type string does not match the
+        quick textual prefixes, we attempt to transpile it to a SQLite type and
+        then apply SQLite's textual affinity rules (contains CHAR/CLOB/TEXT or
+        their NV*/VAR* variants). This improves handling of MySQL synonyms like
+        CHAR VARYING / CHARACTER VARYING / NATIONAL CHARACTER VARYING.
+        """
+        if not column_type or collation == CollatingSequences.BINARY:
+            return ""
+
+        ct: str = column_type.strip()
+        upper: str = ct.upper()
+
+        # Fast-path for already normalized SQLite textual types
+        if upper.startswith(("CHARACTER", "NCHAR", "NVARCHAR", "TEXT", "VARCHAR")):
+            return f"COLLATE {collation}"
+
+        # Avoid collations for JSON/BLOB explicitly
+        if "JSON" in upper or "BLOB" in upper:
+            return ""
+
+        # If the type string obviously denotes text affinity, apply collation
+        if any(tok in upper for tok in ("VARCHAR", "NVARCHAR", "NCHAR", "CHAR", "TEXT", "CLOB", "CHARACTER")):
+            return f"COLLATE {collation}"
+
+        # Try to map uncommon/synonym types to a SQLite type using sqlglot-based transpiler
+        mapped: t.Optional[str] = cls._transpile_mysql_type_to_sqlite(ct)
+        if mapped:
+            mu = mapped.upper()
+            if (
+                "CHAR" in mu or "VARCHAR" in mu or "NCHAR" in mu or "NVARCHAR" in mu or "TEXT" in mu or "CLOB" in mu
+            ) and not ("JSON" in mu or "BLOB" in mu):
                 return f"COLLATE {collation}"
+
         return ""
 
     def _check_sqlite_json1_extension_enabled(self) -> bool:
