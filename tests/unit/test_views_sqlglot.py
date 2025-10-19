@@ -30,7 +30,7 @@ class TestViewsSqlglot:
         # Force parse_one to raise so we hit the fallback path
         from sqlglot.errors import ParseError
 
-        def boom(*args, **kwargs):
+        def boom(*_, **__):
             raise ParseError("boom")
 
         monkeypatch.setattr("mysql_to_sqlite3.transporter.parse_one", boom)
@@ -51,7 +51,7 @@ class TestViewsSqlglot:
         # Force parse_one to raise so we exercise the fallback path with schema qualifiers
         from sqlglot.errors import ParseError
 
-        def boom(*args, **kwargs):
+        def boom(*_, **__):
             raise ParseError("boom")
 
         monkeypatch.setattr("mysql_to_sqlite3.transporter.parse_one", boom)
