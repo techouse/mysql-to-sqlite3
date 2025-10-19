@@ -2,6 +2,7 @@ import sqlite3
 from unittest.mock import MagicMock, patch
 
 import mysql.connector
+import pytest
 from mysql.connector import errorcode
 
 from mysql_to_sqlite3.transporter import MySQLtoSQLite
@@ -43,12 +44,8 @@ def test_create_table_sqlite_error_is_logged_and_raised() -> None:
     inst._build_create_table_sql = MagicMock(return_value='CREATE TABLE "t" ("id" INTEGER);')
     inst._sqlite_cur.executescript.side_effect = sqlite3.Error("broken")
 
-    try:
+    with pytest.raises(sqlite3.Error):
         inst._create_table("t")
-    except sqlite3.Error:
-        pass
-    else:
-        raise AssertionError("Expected sqlite3.Error to be raised")
 
     inst._logger.error.assert_called()
 
