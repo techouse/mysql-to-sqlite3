@@ -915,12 +915,12 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         # Remove schema qualifiers that match schema_name on tables
         for tbl in tree.find_all(exp.Table):
             db = tbl.args.get("db")
-            if db and db.name.strip('`"') == self._mysql_database:
+            if db and db.name.strip('`"').lower() == self._mysql_database.lower():
                 tbl.set("db", None)
         # Also remove schema qualifiers on fully-qualified columns (db.table.column)
         for col in tree.find_all(exp.Column):
             db = col.args.get("db")
-            if db and db.name.strip('`"') == self._mysql_database:
+            if db and db.name.strip('`"').lower() == self._mysql_database.lower():
                 col.set("db", None)
 
         sqlite_select = tree.sql(dialect="sqlite")
