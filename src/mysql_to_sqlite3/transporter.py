@@ -15,7 +15,7 @@ import mysql.connector
 from mysql.connector import CharacterSet, errorcode
 from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.types import RowItemType
-from sqlglot import exp, parse_one
+from sqlglot import exp, parse_one, Expression
 from sqlglot.errors import ParseError
 from tqdm import tqdm, trange
 
@@ -290,6 +290,19 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             return "JSON"
         return "TEXT"
 
+    @staticmethod
+    def _transpile_mysql_expr_to_sqlite(expr_sql: str) -> t.Optional[str]:
+        """Transpile a MySQL scalar expression to SQLite using sqlglot.
+
+        Returns the SQLite SQL string on success, or None on failure.
+        """
+        cleaned: str = expr_sql.strip().rstrip(";")
+        try:
+            tree: Expression = parse_one(cleaned, read="mysql")
+            return tree.sql(dialect="sqlite")
+        except (ParseError, ValueError, Exception):  # pylint: disable=W0718
+            return None
+
     @classmethod
     def _translate_default_from_mysql_to_sqlite(
         cls,
@@ -391,6 +404,15 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                         if is_hex:
                             return f"DEFAULT x'{column_default}'"
                         return f"DEFAULT '{column_default}'"
+                transpiled: t.Optional[str] = cls._transpile_mysql_expr_to_sqlite(column_default)
+                if transpiled:
+                    norm: str = transpiled.strip().rstrip(";")
+                    upper: str = norm.upper()
+                    if upper in {"CURRENT_TIME", "CURRENT_DATE", "CURRENT_TIMESTAMP"}:
+                        return f"DEFAULT {upper}"
+                    # Allow numeric or single-quoted string literals as-is
+                    if (norm.startswith("'") and norm.endswith("'")) or re.match(r"^-?\d+(?:\.\d+)?$", norm):
+                        return f"DEFAULT {norm}"
             return "DEFAULT '{}'".format(column_default.replace(r"\'", r"''"))
         return "DEFAULT '{}'".format(str(column_default).replace(r"\'", r"''"))
 
