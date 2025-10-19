@@ -909,7 +909,8 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             sn = re.escape(self._mysql_database)
             for pat in (rf"`{sn}`\.", rf'"{sn}"\.', rf"\b{sn}\."):
                 stripped_sql = re.sub(pat, "", stripped_sql)
-            return f'CREATE VIEW IF NOT EXISTS "{view_name}" AS\n{stripped_sql};'
+            view_ident = self._quote_sqlite_identifier(view_name)
+            return f"CREATE VIEW IF NOT EXISTS {view_ident} AS\n{stripped_sql};"
 
         # Remove schema qualifiers that match schema_name on tables
         for tbl in tree.find_all(exp.Table):
@@ -923,7 +924,8 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 col.set("db", None)
 
         sqlite_select = tree.sql(dialect="sqlite")
-        return f'CREATE VIEW IF NOT EXISTS "{view_name}" AS\n{sqlite_select};'
+        view_ident = self._quote_sqlite_identifier(view_name)
+        return f"CREATE VIEW IF NOT EXISTS {view_ident} AS\n{sqlite_select};"
 
     def _build_create_view_sql(self, view_name: str) -> str:
         """Build a CREATE VIEW statement for SQLite from a MySQL VIEW definition."""
