@@ -318,7 +318,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             return tree.sql(dialect="sqlite")
         except (ParseError, ValueError):
             return None
-        except Exception:  # pragma: no cover
+        except (AttributeError, TypeError):  # pragma: no cover - unexpected sqlglot failure
             logging.getLogger(cls.__name__ if hasattr(cls, "__name__") else "MySQLtoSQLite").debug(
                 "sqlglot failed to transpile expr: %r", expr_sql
             )
