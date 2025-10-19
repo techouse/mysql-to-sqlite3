@@ -641,6 +641,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 if not attempting_reconnect:
                     self._logger.warning("Connection to MySQL server lost.\nAttempting to reconnect.")
                     self._create_table(table_name, True)
+                    return
                 else:
                     self._logger.warning("Connection to MySQL server lost.\nReconnection attempt aborted.")
                     raise
@@ -672,7 +673,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
         try:
             tree = parse_one(cleaned_sql, read="mysql")
-        except (ParseError, ValueError):
+        except (ParseError, ValueError, Exception):  # pylint: disable=W0718
             # Fallback: return a basic CREATE VIEW using the original SELECT
             return f'CREATE VIEW IF NOT EXISTS "{view_name}" AS\n{cleaned_sql};'
 
@@ -764,6 +765,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 if not attempting_reconnect:
                     self._logger.warning("Connection to MySQL server lost.\nAttempting to reconnect.")
                     self._create_view(view_name, True)
+                    return
                 else:
                     self._logger.warning("Connection to MySQL server lost.\nReconnection attempt aborted.")
                     raise
@@ -820,6 +822,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                         total_records=total_records,
                         attempting_reconnect=True,
                     )
+                    return
                 else:
                     self._logger.warning("Connection to MySQL server lost.\nReconnection attempt aborted.")
                     raise
