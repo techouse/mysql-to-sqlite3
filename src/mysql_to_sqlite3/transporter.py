@@ -895,34 +895,32 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             self._logger.error("SQLite failed creating table %s: %s", table_name, err)
             raise
 
-    @staticmethod
-    def _mysql_viewdef_to_sqlite(
-        view_select_sql: str,
-        view_name: str,
-        schema_name: t.Optional[str] = None,
-        keep_schema: bool = False,
-    ) -> str:
-        """
-        Convert a MySQL VIEW_DEFINITION (a SELECT ...) to a SQLite CREATE VIEW statement.
-
-        If keep_schema is False and schema_name is provided, strip qualifiers like `example`.table.
-        If keep_schema is True, you must ATTACH the SQLite database as that schema name before using the view.
-        """
+    def _mysql_viewdef_to_sqlite(self, view_select_sql: str, view_name: str) -> str:
+        """Convert a MySQL VIEW_DEFINITION (a SELECT ...) to a SQLite CREATE VIEW statement."""
         # Normalize whitespace and avoid double semicolons in output
         cleaned_sql = view_select_sql.strip().rstrip(";")
 
         try:
             tree = parse_one(cleaned_sql, read="mysql")
         except (ParseError, ValueError, Exception):  # pylint: disable=W0718
-            # Fallback: return a basic CREATE VIEW using the original SELECT
-            return f'CREATE VIEW IF NOT EXISTS "{view_name}" AS\n{cleaned_sql};'
+            # Fallback: try to remove schema qualifiers if requested, then return
+            stripped_sql = cleaned_sql
+            # Remove qualifiers `schema`.tbl or "schema".tbl or schema.tbl
+            sn = re.escape(self._mysql_database)
+            for pat in (rf"`{sn}`\\.", rf'"{sn}"\\.', rf"\\b{sn}\\."):
+                stripped_sql = re.sub(pat, "", stripped_sql)
+            return f'CREATE VIEW IF NOT EXISTS "{view_name}" AS\n{stripped_sql};'
 
-        if not keep_schema and schema_name:
-            # Remove schema qualifiers that match schema_name
-            for tbl in tree.find_all(exp.Table):
-                db = tbl.args.get("db")
-                if db and db.name.strip('`"') == schema_name:
-                    tbl.set("db", None)
+        # Remove schema qualifiers that match schema_name on tables
+        for tbl in tree.find_all(exp.Table):
+            db = tbl.args.get("db")
+            if db and db.name.strip('`"') == self._mysql_database:
+                tbl.set("db", None)
+        # Also remove schema qualifiers on fully-qualified columns (db.table.column)
+        for col in tree.find_all(exp.Column):
+            db = col.args.get("db")
+            if db and db.name.strip('`"') == self._mysql_database:
+                col.set("db", None)
 
         sqlite_select = tree.sql(dialect="sqlite")
         return f'CREATE VIEW IF NOT EXISTS "{view_name}" AS\n{sqlite_select};'
@@ -990,7 +988,6 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         return self._mysql_viewdef_to_sqlite(
             view_name=view_name,
             view_select_sql=definition,
-            schema_name=self._mysql_database,
         )
 
     def _create_view(self, view_name: str, attempting_reconnect: bool = False) -> None:
