@@ -1,3 +1,4 @@
+import re
 from unittest.mock import MagicMock, patch
 
 from mysql_to_sqlite3.transporter import MySQLtoSQLite
@@ -27,7 +28,7 @@ def test_show_columns_backticks_are_escaped_in_mysql_query() -> None:
     # Capture executed SQL
     executed_sql = []
 
-    def capture_execute(sql: str, *args, **kwargs):
+    def capture_execute(sql: str, *_, **__):
         executed_sql.append(sql)
 
     inst._mysql_cur_dict.execute.side_effect = capture_execute
@@ -92,7 +93,5 @@ def test_identifiers_with_double_quotes_are_safely_quoted_in_create_and_index() 
     assert '"na""me" VARCHAR(10)' in sql or '"na""me" TEXT' in sql
 
     # Index should quote table and column names with doubled quotes
-    assert (
-        'CREATE  INDEX IF NOT EXISTS "ta""ble_idx" ON "ta""ble" ("na""me");' in sql
-        or 'CREATE  INDEX IF NOT EXISTS "ta""ble_idx" ON "ta""ble" ("na""me")' in sql
-    )
+    norm = re.sub(r"\s+", " ", sql)
+    assert 'CREATE INDEX IF NOT EXISTS "ta""ble_idx" ON "ta""ble" ("na""me")' in norm
