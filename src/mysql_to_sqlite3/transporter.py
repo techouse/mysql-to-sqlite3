@@ -717,7 +717,9 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         if not definition:
             # Fallback: use SHOW CREATE VIEW and extract the SELECT part
             try:
-                self._mysql_cur.execute(f"SHOW CREATE VIEW `{view_name}`")
+                # Escape backticks in the MySQL view name for safe interpolation
+                safe_view_name = view_name.replace("`", "``")
+                self._mysql_cur.execute(f"SHOW CREATE VIEW `{safe_view_name}`")
                 res = self._mysql_cur.fetchone()
                 if res and len(res) >= 2:
                     create_stmt = res[1]
@@ -728,8 +730,8 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                             create_stmt_str = str(create_stmt)
                     else:
                         create_stmt_str = t.cast(str, create_stmt)
-                    # Extract the SELECT ... part after AS
-                    m = re.search(r"\\bAS\\b\\s*(.*)$", create_stmt_str, re.IGNORECASE | re.DOTALL)
+                    # Extract the SELECT ... part after AS (supporting newlines)
+                    m = re.search(r"\bAS\b\s*(.*)$", create_stmt_str, re.IGNORECASE | re.DOTALL)
                     if m:
                         definition = m.group(1).strip().rstrip(";")
                     else:
