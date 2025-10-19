@@ -48,6 +48,8 @@ Options:
                                   Implies --without-foreign-keys which
                                   inhibits the transfer of foreign keys. Can
                                   not be used together with --mysql-tables.
+  -T, --mysql-views-as-tables     Materialize MySQL VIEWs as SQLite tables
+                                  (legacy behavior).
   -L, --limit-rows INTEGER        Transfer only a limited number of rows from
                                   each table.
   -C, --collation [BINARY|NOCASE|RTRIM]

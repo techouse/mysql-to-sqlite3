@@ -32,6 +32,7 @@ Table Options
 Transfer Options
 """"""""""""""""
 
+- ``-T, --mysql-views-as-tables``: Materialize MySQL VIEWs as SQLite tables (legacy behavior).
 - ``-L, --limit-rows INTEGER``: Transfer only a limited number of rows from each table.
 - ``-C, --collation [BINARY|NOCASE|RTRIM]``: Create datatypes of TEXT affinity using a specified collation sequence. The default is BINARY.
 - ``-K, --prefix-indices``: Prefix indices with their corresponding tables. This ensures that their names remain unique across the SQLite database.
