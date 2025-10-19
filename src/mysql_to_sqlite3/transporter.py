@@ -319,6 +319,32 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         except (ParseError, ValueError, Exception):  # pylint: disable=W0718
             return None
 
+    @staticmethod
+    def _quote_sqlite_identifier(name: t.Union[str, bytes, bytearray]) -> str:
+        """Safely quote an identifier for SQLite using sqlglot.
+
+        Always returns a double-quoted identifier, doubling any embedded quotes.
+        Accepts bytes and decodes them to str when needed.
+        """
+        if isinstance(name, (bytes, bytearray)):
+            try:
+                s = name.decode()
+            except (UnicodeDecodeError, AttributeError):
+                s = str(name)
+        else:
+            s = str(name)
+        try:
+            # Normalize identifier using sqlglot, then wrap in quotes regardless
+            normalized = exp.to_identifier(s).name
+        except (AttributeError, ValueError, TypeError):  # pragma: no cover - extremely unlikely
+            normalized = s
+        return f'"{normalized.replace("\"", "\"\"")}"'
+
+    @staticmethod
+    def _escape_mysql_backticks(identifier: str) -> str:
+        """Escape backticks in a MySQL identifier for safe backtick quoting."""
+        return identifier.replace("`", "``")
+
     @classmethod
     def _transpile_mysql_type_to_sqlite(
         cls, column_type: str, sqlite_json1_extension_enabled: bool = False
@@ -622,11 +648,13 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         return candidate
 
     def _build_create_table_sql(self, table_name: str) -> str:
-        sql: str = f'CREATE TABLE IF NOT EXISTS "{table_name}" ('
+        table_ident = self._quote_sqlite_identifier(table_name)
+        sql: str = f"CREATE TABLE IF NOT EXISTS {table_ident} ("
         primary: str = ""
         indices: str = ""
 
-        self._mysql_cur_dict.execute(f"SHOW COLUMNS FROM `{table_name}`")
+        safe_table = self._escape_mysql_backticks(table_name)
+        self._mysql_cur_dict.execute(f"SHOW COLUMNS FROM `{safe_table}`")
         rows: t.Sequence[t.Optional[t.Dict[str, RowItemType]]] = self._mysql_cur_dict.fetchall()
 
         primary_keys: int = sum(1 for row in rows if row is not None and row["Key"] == "PRI")
@@ -639,8 +667,14 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 )
                 if row["Key"] == "PRI" and row["Extra"] == "auto_increment" and primary_keys == 1:
                     if column_type in Integer_Types:
-                        sql += '\n\t"{name}" INTEGER PRIMARY KEY AUTOINCREMENT,'.format(
-                            name=row["Field"].decode() if isinstance(row["Field"], bytes) else row["Field"],
+                        sql += "\n\t{name} INTEGER PRIMARY KEY AUTOINCREMENT,".format(
+                            name=self._quote_sqlite_identifier(
+                                str(
+                                    row["Field"].decode()
+                                    if isinstance(row["Field"], (bytes, bytearray))
+                                    else row["Field"]
+                                )
+                            ),
                         )
                     else:
                         self._logger.warning(
@@ -649,8 +683,10 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                             table_name,
                         )
                 else:
-                    sql += '\n\t"{name}" {type} {notnull} {default} {collation},'.format(
-                        name=row["Field"].decode() if isinstance(row["Field"], bytes) else row["Field"],
+                    sql += "\n\t{name} {type} {notnull} {default} {collation},".format(
+                        name=self._quote_sqlite_identifier(
+                            str(row["Field"].decode() if isinstance(row["Field"], (bytes, bytearray)) else row["Field"])
+                        ),
                         type=column_type,
                         notnull="NULL" if row["Null"] == "YES" else "NOT NULL",
                         default=self._translate_default_from_mysql_to_sqlite(row["Default"], column_type, row["Extra"]),
@@ -732,7 +768,9 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                             for _type in types.split(",")
                         ):
                             primary += "\n\tPRIMARY KEY ({columns})".format(
-                                columns=", ".join(f'"{column}"' for column in columns.split(","))
+                                columns=", ".join(
+                                    self._quote_sqlite_identifier(column.strip()) for column in columns.split(",")
+                                )
                             )
                     else:
                         # Determine the SQLite index name, considering table name collisions and prefix option
@@ -746,11 +784,13 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                             unique_index_name = self._get_unique_index_name(proposed_index_name)
                         else:
                             unique_index_name = proposed_index_name
-                        indices += """CREATE {unique} INDEX IF NOT EXISTS "{name}" ON "{table}" ({columns});""".format(
+                        indices += """CREATE {unique} INDEX IF NOT EXISTS {name} ON {table} ({columns});""".format(
                             unique="UNIQUE" if index["unique"] in {1, "1"} else "",
-                            name=unique_index_name,
-                            table=table_name,
-                            columns=", ".join(f'"{column}"' for column in columns.split(",")),
+                            name=self._quote_sqlite_identifier(unique_index_name),
+                            table=self._quote_sqlite_identifier(table_name),
+                            columns=", ".join(
+                                self._quote_sqlite_identifier(column.strip()) for column in columns.split(",")
+                            ),
                         )
 
         sql += primary
@@ -792,10 +832,27 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             )
             for foreign_key in self._mysql_cur_dict.fetchall():
                 if foreign_key is not None:
+                    col = self._quote_sqlite_identifier(
+                        foreign_key["column"].decode()
+                        if isinstance(foreign_key["column"], (bytes, bytearray))
+                        else str(foreign_key["column"])  # type: ignore[index]
+                    )
+                    ref_table = self._quote_sqlite_identifier(
+                        foreign_key["ref_table"].decode()
+                        if isinstance(foreign_key["ref_table"], (bytes, bytearray))
+                        else str(foreign_key["ref_table"])  # type: ignore[index]
+                    )
+                    ref_col = self._quote_sqlite_identifier(
+                        foreign_key["ref_column"].decode()
+                        if isinstance(foreign_key["ref_column"], (bytes, bytearray))
+                        else str(foreign_key["ref_column"])  # type: ignore[index]
+                    )
+                    on_update = foreign_key["on_update"]  # type: ignore[index]
+                    on_delete = foreign_key["on_delete"]  # type: ignore[index]
                     sql += (
-                        ',\n\tFOREIGN KEY("{column}") REFERENCES "{ref_table}" ("{ref_column}") '
-                        "ON UPDATE {on_update} "
-                        "ON DELETE {on_delete}".format(**foreign_key)  # type: ignore[str-bytes-safe]
+                        f",\n\tFOREIGN KEY({col}) REFERENCES {ref_table} ({ref_col}) "
+                        f"ON UPDATE {on_update} "
+                        f"ON DELETE {on_delete}"
                     )
 
         sql += "\n)"
