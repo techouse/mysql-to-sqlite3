@@ -907,7 +907,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             stripped_sql = cleaned_sql
             # Remove qualifiers `schema`.tbl or "schema".tbl or schema.tbl
             sn = re.escape(self._mysql_database)
-            for pat in (rf"`{sn}`\\.", rf'"{sn}"\\.', rf"\\b{sn}\\."):
+            for pat in (rf"`{sn}`\.", rf'"{sn}"\.', rf"\b{sn}\."):
                 stripped_sql = re.sub(pat, "", stripped_sql)
             return f'CREATE VIEW IF NOT EXISTS "{view_name}" AS\n{stripped_sql};'
 
