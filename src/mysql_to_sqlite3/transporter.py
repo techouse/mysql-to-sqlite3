@@ -15,7 +15,7 @@ import mysql.connector
 from mysql.connector import CharacterSet, errorcode
 from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.types import RowItemType
-from sqlglot import exp, parse_one, Expression
+from sqlglot import Expression, exp, parse_one
 from sqlglot.errors import ParseError
 from tqdm import tqdm, trange
 
@@ -513,11 +513,38 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                     upper: str = norm.upper()
                     if upper in {"CURRENT_TIME", "CURRENT_DATE", "CURRENT_TIMESTAMP"}:
                         return f"DEFAULT {upper}"
+                    if upper == "NULL":
+                        return "DEFAULT NULL"
+                    # Allow blob hex literal X'..'
+                    if re.match(r"^[Xx]'[0-9A-Fa-f]+'$", norm):
+                        return f"DEFAULT {norm}"
+                    # Support boolean tokens when provided as generated strings
+                    if upper in {"TRUE", "FALSE"}:
+                        if column_type == "BOOLEAN" and sqlite3.sqlite_version >= "3.23.0":
+                            return f"DEFAULT({upper})"
+                        return f"DEFAULT '{1 if upper == 'TRUE' else 0}'"
+                    # Unwrap a single layer of parenthesis around a literal
+                    if norm.startswith("(") and norm.endswith(")"):
+                        inner = norm[1:-1].strip()
+                        if (inner.startswith("'") and inner.endswith("'")) or re.match(r"^-?\d+(?:\.\d+)?$", inner):
+                            return f"DEFAULT {inner}"
+                        # If the expression is arithmetic-only over numeric literals, allow as-is
+                        if re.match(r"^[\d\.\s\+\-\*/\(\)]+$", norm) and any(ch.isdigit() for ch in norm):
+                            return f"DEFAULT {norm}"
                     # Allow numeric or single-quoted string literals as-is
                     if (norm.startswith("'") and norm.endswith("'")) or re.match(r"^-?\d+(?:\.\d+)?$", norm):
                         return f"DEFAULT {norm}"
-            return "DEFAULT '{}'".format(column_default.replace(r"\'", r"''"))
-        return "DEFAULT '{}'".format(str(column_default).replace(r"\'", r"''"))
+                    # Allow simple arithmetic constant expressions composed of numbers and + - * /
+                    if re.match(r"^[\d\.\s\+\-\*/\(\)]+$", norm) and any(ch.isdigit() for ch in norm):
+                        return f"DEFAULT {norm}"
+            # Robustly escape single quotes for plain string defaults
+            _escaped = column_default.replace("\\'", "'")
+            _escaped = _escaped.replace("'", "''")
+            return f"DEFAULT '{_escaped}'"
+        s = str(column_default)
+        s = s.replace("\\'", "'")
+        s = s.replace("'", "''")
+        return f"DEFAULT '{s}'"
 
     @classmethod
     def _data_type_collation_sequence(
