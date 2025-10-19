@@ -17,6 +17,7 @@ simplejson>=3.19.1
 types-simplejson
 sqlalchemy>=2.0.0
 sqlalchemy-utils
+sqlglot>=27.27.0
 types-sqlalchemy-utils
 tox
 tqdm>=4.65.0

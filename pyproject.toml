@@ -46,6 +46,7 @@ dependencies = [
     "python-dateutil>=2.9.0.post0",
     "python-slugify>=7.0.0",
     "simplejson>=3.19.0",
+    "sqlglot>=27.27.0",
     "tqdm>=4.65.0",
     "tabulate",
     "typing-extensions; python_version < \"3.11\"",
