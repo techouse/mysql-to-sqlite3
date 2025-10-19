@@ -38,13 +38,9 @@ def test_show_create_view_fallback_handles_newline_and_backticks(monkeypatch: "t
     # Capture the definition passed to _mysql_viewdef_to_sqlite and return a dummy SQL
     captured: t.Dict[str, str] = {}
 
-    def fake_mysql_viewdef_to_sqlite(
-        *, view_select_sql: str, view_name: str, schema_name: t.Optional[str] = None, keep_schema: bool = False
-    ) -> str:
+    def fake_mysql_viewdef_to_sqlite(*, view_select_sql: str, view_name: str) -> str:
         captured["select"] = view_select_sql
         captured["view_name"] = view_name
-        captured["schema_name"] = schema_name or ""
-        captured["keep_schema"] = str(keep_schema)
         return 'CREATE VIEW IF NOT EXISTS "dummy" AS SELECT 1;'
 
     monkeypatch.setattr(MySQLtoSQLite, "_mysql_viewdef_to_sqlite", staticmethod(fake_mysql_viewdef_to_sqlite))
@@ -64,5 +60,3 @@ def test_show_create_view_fallback_handles_newline_and_backticks(monkeypatch: "t
     assert captured["select"] == "SELECT 1 AS `x`"
     # Check view_name was threaded unchanged to the converter
     assert captured["view_name"] == "we`ird"
-    # Schema name also provided
-    assert captured["schema_name"] == "db"
