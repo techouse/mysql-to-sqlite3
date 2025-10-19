@@ -10,6 +10,34 @@ from mysql_to_sqlite3.transporter import MySQLtoSQLite
 
 
 class TestMySQLtoSQLiteTransporter:
+    def test_transfer_creates_view_when_flag_enabled(self) -> None:
+        """When views_as_views is True, encountering a MySQL VIEW should create a SQLite VIEW and skip data transfer."""
+        with patch.object(MySQLtoSQLite, "__init__", return_value=None):
+            instance = MySQLtoSQLite()
+        # Configure minimal attributes used by transfer()
+        instance._mysql_tables = []
+        instance._exclude_mysql_tables = []
+        instance._mysql_cur = MagicMock()
+        # All-tables branch returns one VIEW
+        instance._mysql_cur.fetchall.return_value = [(b"my_view", b"VIEW")]
+        instance._sqlite_cur = MagicMock()
+        instance._without_data = False
+        instance._without_tables = False
+        instance._views_as_views = True
+        instance._vacuum = False
+        instance._logger = MagicMock()
+
+        # Spy on methods to ensure correct calls
+        instance._create_view = MagicMock()
+        instance._create_table = MagicMock()
+        instance._transfer_table_data = MagicMock()
+
+        instance.transfer()
+
+        instance._create_view.assert_called_once_with("my_view")
+        instance._create_table.assert_not_called()
+        instance._transfer_table_data.assert_not_called()
+
     def test_decode_column_type_with_string(self) -> None:
         """Test _decode_column_type with string input."""
         assert MySQLtoSQLite._decode_column_type("VARCHAR") == "VARCHAR"

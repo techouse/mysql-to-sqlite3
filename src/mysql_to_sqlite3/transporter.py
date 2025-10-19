@@ -15,6 +15,8 @@ import mysql.connector
 from mysql.connector import CharacterSet, errorcode
 from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.types import RowItemType
+from sqlglot import exp, parse_one
+from sqlglot.errors import ParseError
 from tqdm import tqdm, trange
 
 
@@ -119,6 +121,8 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         self._vacuum = bool(kwargs.get("vacuum", False))
 
         self._quiet = bool(kwargs.get("quiet", False))
+
+        self._views_as_views = bool(kwargs.get("views_as_views", True))
 
         self._sqlite_strict = bool(kwargs.get("sqlite_strict", False))
 
@@ -650,6 +654,127 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             self._logger.error("SQLite failed creating table %s: %s", table_name, err)
             raise
 
+    @staticmethod
+    def _mysql_viewdef_to_sqlite(
+        view_select_sql: str,
+        view_name: str,
+        schema_name: t.Optional[str] = None,
+        keep_schema: bool = False,
+    ) -> str:
+        """
+        Convert a MySQL VIEW_DEFINITION (a SELECT ...) to a SQLite CREATE VIEW statement.
+
+        If keep_schema is False and schema_name is provided, strip qualifiers like `example`.table.
+        If keep_schema is True, you must ATTACH the SQLite database as that schema name before using the view.
+        """
+        # Normalize whitespace and avoid double semicolons in output
+        cleaned_sql = view_select_sql.strip().rstrip(";")
+
+        try:
+            tree = parse_one(cleaned_sql, read="mysql")
+        except (ParseError, ValueError):
+            # Fallback: return a basic CREATE VIEW using the original SELECT
+            return f'CREATE VIEW IF NOT EXISTS "{view_name}" AS\n{cleaned_sql};'
+
+        if not keep_schema and schema_name:
+            # Remove schema qualifiers that match schema_name
+            for tbl in tree.find_all(exp.Table):
+                db = tbl.args.get("db")
+                if db and db.name.strip('`"') == schema_name:
+                    tbl.set("db", None)
+
+        sqlite_select = tree.sql(dialect="sqlite")
+        return f'CREATE VIEW IF NOT EXISTS "{view_name}" AS\n{sqlite_select};'
+
+    def _build_create_view_sql(self, view_name: str) -> str:
+        """Build a CREATE VIEW statement for SQLite from a MySQL VIEW definition."""
+        # Try to obtain the view definition from information_schema.VIEWS
+        definition: t.Optional[str] = None
+        try:
+            self._mysql_cur_dict.execute(
+                """
+                SELECT VIEW_DEFINITION AS `definition`
+                FROM information_schema.VIEWS
+                WHERE TABLE_SCHEMA = %s
+                  AND TABLE_NAME = %s
+                """,
+                (self._mysql_database, view_name),
+            )
+            row: t.Optional[t.Dict[str, RowItemType]] = self._mysql_cur_dict.fetchone()
+            if row is not None and row.get("definition") is not None:
+                val = row["definition"]
+                if isinstance(val, bytes):
+                    try:
+                        definition = val.decode()
+                    except UnicodeDecodeError:
+                        definition = str(val)
+                else:
+                    definition = t.cast(str, val)
+        except mysql.connector.Error:
+            # Fall back to SHOW CREATE VIEW below
+            definition = None
+
+        if not definition:
+            # Fallback: use SHOW CREATE VIEW and extract the SELECT part
+            try:
+                self._mysql_cur.execute(f"SHOW CREATE VIEW `{view_name}`")
+                res = self._mysql_cur.fetchone()
+                if res and len(res) >= 2:
+                    create_stmt = res[1]
+                    if isinstance(create_stmt, bytes):
+                        try:
+                            create_stmt_str = create_stmt.decode()
+                        except UnicodeDecodeError:
+                            create_stmt_str = str(create_stmt)
+                    else:
+                        create_stmt_str = t.cast(str, create_stmt)
+                    # Extract the SELECT ... part after AS
+                    m = re.search(r"\\bAS\\b\\s*(.*)$", create_stmt_str, re.IGNORECASE | re.DOTALL)
+                    if m:
+                        definition = m.group(1).strip().rstrip(";")
+                    else:
+                        # As a last resort, try to use the full statement replacing the prefix
+                        # Not ideal, but better than failing outright
+                        idx = create_stmt_str.upper().find(" AS ")
+                        if idx != -1:
+                            definition = create_stmt_str[idx + 4 :].strip().rstrip(";")
+            except mysql.connector.Error:
+                pass
+
+        if not definition:
+            raise sqlite3.Error(f"Unable to fetch definition for MySQL view '{view_name}'")
+
+        return self._mysql_viewdef_to_sqlite(
+            view_name=view_name,
+            view_select_sql=definition,
+            schema_name=self._mysql_database,
+        )
+
+    def _create_view(self, view_name: str, attempting_reconnect: bool = False) -> None:
+        try:
+            if attempting_reconnect:
+                self._mysql.reconnect()
+            sql = self._build_create_view_sql(view_name)
+            self._sqlite_cur.execute(sql)
+            self._sqlite.commit()
+        except mysql.connector.Error as err:
+            if err.errno == errorcode.CR_SERVER_LOST:
+                if not attempting_reconnect:
+                    self._logger.warning("Connection to MySQL server lost.\nAttempting to reconnect.")
+                    self._create_view(view_name, True)
+                else:
+                    self._logger.warning("Connection to MySQL server lost.\nReconnection attempt aborted.")
+                    raise
+            self._logger.error(
+                "MySQL failed reading view definition from view %s: %s",
+                view_name,
+                err,
+            )
+            raise
+        except sqlite3.Error as err:
+            self._logger.error("SQLite failed creating view %s: %s", view_name, err)
+            raise
+
     def _transfer_table_data(
         self, table_name: str, sql: str, total_records: int = 0, attempting_reconnect: bool = False
     ) -> None:
@@ -720,7 +845,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
             self._mysql_cur_prepared.execute(
                 """
-                SELECT TABLE_NAME
+                SELECT TABLE_NAME, TABLE_TYPE
                 FROM information_schema.TABLES
                 WHERE TABLE_SCHEMA = SCHEMA()
                 AND TABLE_NAME {exclude} IN ({placeholders})
@@ -730,25 +855,49 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 ),
                 specific_tables,
             )
-            tables: t.Iterable[RowItemType] = (row[0] for row in self._mysql_cur_prepared.fetchall())
+            tables: t.Iterable[t.Tuple[str, str]] = (
+                (
+                    str(row[0].decode() if isinstance(row[0], (bytes, bytearray)) else row[0]),
+                    str(row[1].decode() if isinstance(row[1], (bytes, bytearray)) else row[1]),
+                )
+                for row in self._mysql_cur_prepared.fetchall()
+            )
         else:
             # transfer all tables
             self._mysql_cur.execute(
                 """
-                SELECT TABLE_NAME
+                SELECT TABLE_NAME, TABLE_TYPE
                 FROM information_schema.TABLES
                 WHERE TABLE_SCHEMA = SCHEMA()
             """
             )
-            tables = (row[0].decode() for row in self._mysql_cur.fetchall())  # type: ignore[union-attr]
+
+            def _coerce_row(row: t.Any) -> t.Tuple[str, str]:
+                try:
+                    # Row like (name, type)
+                    name = row[0].decode() if isinstance(row[0], (bytes, bytearray)) else row[0]
+                    ttype = (
+                        row[1].decode()
+                        if (isinstance(row, (list, tuple)) and len(row) > 1 and isinstance(row[1], (bytes, bytearray)))
+                        else (row[1] if (isinstance(row, (list, tuple)) and len(row) > 1) else "BASE TABLE")
+                    )
+                    return str(name), str(ttype)
+                except (TypeError, IndexError, UnicodeDecodeError):
+                    # Fallback: treat as a single value name when row is not a 2-tuple or decoding fails
+                    name = row.decode() if isinstance(row, (bytes, bytearray)) else str(row)
+                    return name, "BASE TABLE"
+
+            tables = (_coerce_row(row) for row in self._mysql_cur.fetchall())
 
         try:
             # turn off foreign key checking in SQLite while transferring data
             self._sqlite_cur.execute("PRAGMA foreign_keys=OFF")
 
-            for table_name in tables:
+            for table_name, table_type in tables:
                 if isinstance(table_name, bytes):
                     table_name = table_name.decode()
+                if isinstance(table_type, bytes):
+                    table_type = table_type.decode()
 
                 self._logger.info(
                     "%s%sTransferring table %s",
@@ -761,10 +910,13 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 self._current_chunk_number = 0
 
                 if not self._without_tables:
-                    # create the table
-                    self._create_table(table_name)  # type: ignore[arg-type]
+                    # create the table or view
+                    if table_type == "VIEW" and self._views_as_views:
+                        self._create_view(table_name)  # type: ignore[arg-type]
+                    else:
+                        self._create_table(table_name)  # type: ignore[arg-type]
 
-                if not self._without_data:
+                if not self._without_data and not (table_type == "VIEW" and self._views_as_views):
                     # get the size of the data
                     if self._limit_rows > 0:
                         # limit to the requested number of rows

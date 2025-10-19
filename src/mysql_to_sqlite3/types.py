@@ -44,6 +44,7 @@ class MySQLtoSQLiteParams(TypedDict):
     without_tables: t.Optional[bool]
     without_data: t.Optional[bool]
     without_foreign_keys: t.Optional[bool]
+    views_as_views: t.Optional[bool]
 
 
 class MySQLtoSQLiteAttributes:
@@ -81,6 +82,7 @@ class MySQLtoSQLiteAttributes:
     _vacuum: bool
     _without_data: bool
     _without_foreign_keys: bool
+    _views_as_views: bool
     # Tracking of SQLite index names and counters to ensure uniqueness when prefixing is disabled
     _seen_sqlite_index_names: t.Set[str]
     _sqlite_index_name_counters: t.Dict[str, int]
