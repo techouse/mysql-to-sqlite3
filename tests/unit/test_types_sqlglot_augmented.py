@@ -4,7 +4,7 @@ from mysql_to_sqlite3.transporter import MySQLtoSQLite
 
 
 class TestSqlglotAugmentedTypeTranslation:
-    @pytest.mark.parametrize("mysql_type", ["double precision", "DOUBLE PRECISION", "DoUbLe PrEcIsIoN"]) 
+    @pytest.mark.parametrize("mysql_type", ["double precision", "DOUBLE PRECISION", "DoUbLe PrEcIsIoN"])
     def test_double_precision_maps_to_numeric_type(self, mysql_type: str) -> None:
         # Prior mapper would resolve this to TEXT; sqlglot fallback should improve it
         out = MySQLtoSQLite._translate_type_from_mysql_to_sqlite(mysql_type)
@@ -61,9 +61,7 @@ class TestSqlglotAugmentedTypeTranslation:
         assert (
             MySQLtoSQLite._translate_type_from_mysql_to_sqlite("json", sqlite_json1_extension_enabled=False) == "TEXT"
         )
-        assert (
-            MySQLtoSQLite._translate_type_from_mysql_to_sqlite("json", sqlite_json1_extension_enabled=True) == "JSON"
-        )
+        assert MySQLtoSQLite._translate_type_from_mysql_to_sqlite("json", sqlite_json1_extension_enabled=True) == "JSON"
 
     def test_fallback_to_text_on_unknown_type(self) -> None:
         out = MySQLtoSQLite._translate_type_from_mysql_to_sqlite("geography")
