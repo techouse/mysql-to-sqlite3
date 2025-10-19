@@ -902,7 +902,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
         try:
             tree = parse_one(cleaned_sql, read="mysql")
-        except (ParseError, ValueError, Exception):  # pylint: disable=W0718
+        except (ParseError, ValueError, AttributeError, TypeError):
             # Fallback: try to remove schema qualifiers if requested, then return
             stripped_sql = cleaned_sql
             # Remove qualifiers `schema`.tbl or "schema".tbl or schema.tbl
