@@ -426,3 +426,29 @@ class TestMySQLtoSQLiteTransporter:
         """Test _translate_default_from_mysql_to_sqlite with bytes default."""
         result = MySQLtoSQLite._translate_default_from_mysql_to_sqlite(b"abc", column_type="BLOB")
         assert result.startswith("DEFAULT x'")
+
+
+def test_transfer_coerce_row_fallback_non_subscriptable() -> None:
+    """Ensure transfer() handles rows that are not indexable by using fallback path in _coerce_row."""
+    with patch.object(MySQLtoSQLite, "__init__", return_value=None):
+        instance = MySQLtoSQLite()
+    # Configure minimal attributes used by transfer()
+    instance._mysql_tables = []
+    instance._exclude_mysql_tables = []
+    instance._mysql_cur = MagicMock()
+    # Return a non-subscriptable row (int) to trigger the except fallback branch
+    instance._mysql_cur.fetchall.return_value = [123]
+    instance._sqlite_cur = MagicMock()
+    # Skip creating tables/data to keep the test isolated
+    instance._without_data = True
+    instance._without_tables = True
+    instance._views_as_views = True
+    instance._vacuum = False
+    instance._logger = MagicMock()
+
+    instance.transfer()
+
+    # Confirm the logger received a transfer message with the coerced table name "123"
+    # The info call is like: ("%s%sTransferring table %s", prefix1, prefix2, table_name)
+    called_with_123 = any(call.args and call.args[-1] == "123" for call in instance._logger.info.call_args_list)
+    assert called_with_123

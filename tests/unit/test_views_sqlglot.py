@@ -40,3 +40,15 @@ class TestViewsSqlglot:
         assert out.startswith('CREATE VIEW IF NOT EXISTS "v1" AS')
         assert "SELECT 1" in out
         assert out.strip().endswith(";")
+
+    def test_mysql_viewdef_to_sqlite_keep_schema_true_preserves_qualifiers(self) -> None:
+        mysql_select = "SELECT `u`.`id` FROM `db`.`users` AS `u`"
+        sql = MySQLtoSQLite._mysql_viewdef_to_sqlite(
+            view_select_sql=mysql_select,
+            view_name="v_users",
+            schema_name="db",
+            keep_schema=True,
+        )
+        # Should not strip the schema when keep_schema=True
+        assert "`db`." in sql or '"db".' in sql
+        assert sql.strip().endswith(";")
