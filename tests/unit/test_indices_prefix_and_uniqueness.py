@@ -49,7 +49,7 @@ def test_build_create_table_sql_prefix_indices_true_prefixes_index_names() -> No
     sql = inst._build_create_table_sql("users")
 
     # With prefix_indices=True, the index name should be prefixed with table name
-    assert 'CREATE  INDEX IF NOT EXISTS "users_idx_name" ON "users" ("name");' in sql
+    assert 'CREATE INDEX IF NOT EXISTS "users_idx_name" ON "users" ("name");' in sql
 
 
 def test_build_create_table_sql_collision_renamed_and_uniqueness_suffix() -> None:
