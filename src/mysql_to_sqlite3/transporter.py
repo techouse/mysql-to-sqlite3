@@ -901,14 +901,14 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         cleaned_sql = view_select_sql.strip().rstrip(";")
 
         try:
-            tree = parse_one(cleaned_sql, read="mysql")
+            tree: Expression = parse_one(cleaned_sql, read="mysql")
         except (ParseError, ValueError, AttributeError, TypeError):
             # Fallback: try to remove schema qualifiers if requested, then return
             stripped_sql = cleaned_sql
             # Remove qualifiers `schema`.tbl or "schema".tbl or schema.tbl
-            sn = re.escape(self._mysql_database)
+            sn: str = re.escape(self._mysql_database)
             for pat in (rf"`{sn}`\.", rf'"{sn}"\.', rf"\b{sn}\."):
-                stripped_sql = re.sub(pat, "", stripped_sql)
+                stripped_sql = re.sub(pat, "", stripped_sql, flags=re.IGNORECASE)
             view_ident = self._quote_sqlite_identifier(view_name)
             return f"CREATE VIEW IF NOT EXISTS {view_ident} AS\n{stripped_sql};"
 
@@ -923,7 +923,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             if db and db.name.strip('`"').lower() == self._mysql_database.lower():
                 col.set("db", None)
 
-        sqlite_select = tree.sql(dialect="sqlite")
+        sqlite_select: str = tree.sql(dialect="sqlite")
         view_ident = self._quote_sqlite_identifier(view_name)
         return f"CREATE VIEW IF NOT EXISTS {view_ident} AS\n{sqlite_select};"
 
