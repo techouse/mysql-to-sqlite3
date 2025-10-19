@@ -269,6 +269,16 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             "YEAR",
         }:
             return data_type
+        if data_type == "DOUBLE PRECISION":
+            return "DOUBLE"
+        if data_type == "FIXED":
+            return "DECIMAL"
+        if data_type in {"CHARACTER VARYING", "CHAR VARYING"}:
+            return "VARCHAR" + cls._column_type_length(_column_type)
+        if data_type in {"NATIONAL CHARACTER VARYING", "NATIONAL CHAR VARYING", "NATIONAL VARCHAR"}:
+            return "NVARCHAR" + cls._column_type_length(_column_type)
+        if data_type == "NATIONAL CHARACTER":
+            return "NCHAR" + cls._column_type_length(_column_type)
         if data_type in {
             "BIT",
             "BINARY",
@@ -288,6 +298,12 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             return "DATETIME"
         if data_type == "JSON" and sqlite_json1_extension_enabled:
             return "JSON"
+        # As a last resort, try sqlglot to derive a better SQLite-compatible type
+        sqlglot_type: t.Optional[str] = cls._transpile_mysql_type_to_sqlite(
+            _column_type, sqlite_json1_extension_enabled=sqlite_json1_extension_enabled
+        )
+        if sqlglot_type:
+            return sqlglot_type
         return "TEXT"
 
     @staticmethod
@@ -302,6 +318,93 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             return tree.sql(dialect="sqlite")
         except (ParseError, ValueError, Exception):  # pylint: disable=W0718
             return None
+
+    @classmethod
+    def _transpile_mysql_type_to_sqlite(
+        cls, column_type: str, sqlite_json1_extension_enabled: bool = False
+    ) -> t.Optional[str]:
+        """Attempt to derive a suitable SQLite column type using sqlglot.
+
+        This is used as a last-resort fallback when the built-in mapper does not
+        recognize a MySQL type or synonym. It keeps existing behavior for known
+        types and only augments unknowns.
+        """
+        # Wrap the type in a CAST expression so sqlglot can parse it consistently.
+        expr_sql: str = f"CAST(NULL AS {column_type.strip()})"
+        try:
+            tree: Expression = parse_one(expr_sql, read="mysql")
+            rendered: str = tree.sql(dialect="sqlite")
+        except (ParseError, ValueError, Exception):  # pylint: disable=W0718
+            return None
+
+        # Extract the type inside CAST(NULL AS ...)
+        m: t.Optional[t.Match[str]] = re.search(r"CAST\(NULL AS\s+([^)]+)\)", rendered, re.IGNORECASE)
+        if not m:
+            return None
+        extracted: str = m.group(1).strip()
+        upper: str = extracted.upper()
+
+        # JSON handling: respect availability of JSON1 extension
+        if "JSON" in upper:
+            return "JSON" if sqlite_json1_extension_enabled else "TEXT"
+
+        # Split out optional length suffix like (255) or (10,2)
+        base: str = upper
+        length_suffix: str = ""
+        paren: t.Optional[t.Match[str]] = re.match(r"^([A-Z ]+)(\(.*\))$", upper)
+        if paren:
+            base = paren.group(1).strip()
+            length_suffix = paren.group(2)
+
+        # Minimal synonym normalization
+        synonyms: t.Dict[str, str] = {
+            "DOUBLE PRECISION": "DOUBLE",
+            "FIXED": "DECIMAL",
+            "CHAR VARYING": "VARCHAR",
+            "CHARACTER VARYING": "VARCHAR",
+            "NATIONAL VARCHAR": "NVARCHAR",
+            "NATIONAL CHARACTER VARYING": "NVARCHAR",
+            "NATIONAL CHAR VARYING": "NVARCHAR",
+            "NATIONAL CHARACTER": "NCHAR",
+        }
+        base = synonyms.get(base, base)
+
+        # Decide the final SQLite type, aligning with existing conventions
+        if base in {"NCHAR", "NVARCHAR", "VARCHAR"} and length_suffix:
+            return f"{base}{length_suffix}"
+        if base in {"CHAR", "CHARACTER"}:
+            return f"CHARACTER{length_suffix}"
+        if base in {"DECIMAL", "NUMERIC"}:
+            # Keep without length to match the existing mapper's style
+            return base
+        if base in {
+            "DOUBLE",
+            "REAL",
+            "FLOAT",
+            "INTEGER",
+            "BIGINT",
+            "SMALLINT",
+            "MEDIUMINT",
+            "TINYINT",
+            "BLOB",
+            "DATE",
+            "DATETIME",
+            "TIME",
+            "YEAR",
+            "BOOLEAN",
+        }:
+            return base
+        if base in {"VARBINARY", "BINARY", "TINYBLOB", "MEDIUMBLOB", "LONGBLOB"}:
+            return "BLOB"
+        if base in {"TEXT", "TINYTEXT", "MEDIUMTEXT", "LONGTEXT", "CLOB"}:
+            return "TEXT"
+
+        # ENUM/SET and other complex types -> keep default behavior (TEXT)
+        if base in {"ENUM", "SET"}:
+            return "TEXT"
+
+        # If we reached here, we didn't find a better mapping
+        return None
 
     @classmethod
     def _translate_default_from_mysql_to_sqlite(
