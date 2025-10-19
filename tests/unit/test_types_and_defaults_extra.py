@@ -62,7 +62,7 @@ class TestTypesAndDefaultsExtra:
         )
         assert out == "DEFAULT x'41'"
 
-    def test_translate_default_bool_non_boolean_type(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_translate_default_bool_non_boolean_type(self) -> None:
         # When column_type is not BOOLEAN, booleans become '1'/'0'
         assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(True, column_type="INTEGER") == "DEFAULT '1'"
         assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(False, column_type="INTEGER") == "DEFAULT '0'"
