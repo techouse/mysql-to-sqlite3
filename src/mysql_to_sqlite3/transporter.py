@@ -366,7 +366,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         try:
             tree: Expression = parse_one(expr_sql, read="mysql")
             rendered: str = tree.sql(dialect="sqlite")
-        except (ParseError, ValueError, Exception):  # pylint: disable=W0718
+        except (ParseError, ValueError, AttributeError, TypeError):
             return None
 
         # Extract the type inside CAST(NULL AS ...)
