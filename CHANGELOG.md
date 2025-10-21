@@ -1,3 +1,8 @@
+# 2.5.2
+
+* [FEAT] transfer MySQL views as native SQLite views
+* [CHORE] improve robustness of data transfer by leveraging sqlglot for SQL translation
+
 # 2.5.1
 
 * [FIX] prevent non-unique SQLite indices from being quietly omitted
