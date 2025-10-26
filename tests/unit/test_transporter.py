@@ -1,15 +1,75 @@
 import builtins
+import importlib.util
 import sqlite3
+import sys
+import types as pytypes
 from unittest.mock import MagicMock, patch
 
 import pytest
 from pytest_mock import MockerFixture
+from typing_extensions import Unpack as ExtensionsUnpack
 
 from mysql_to_sqlite3.sqlite_utils import CollatingSequences
 from mysql_to_sqlite3.transporter import MySQLtoSQLite
 
 
 class TestMySQLtoSQLiteTransporter:
+    def test_transporter_uses_typing_extensions_unpack_when_missing(self) -> None:
+        """Reload transporter without typing.Unpack to exercise fallback branch."""
+        import mysql_to_sqlite3.transporter as transporter_module
+
+        module_path = transporter_module.__file__
+        assert module_path is not None
+
+        real_typing = sys.modules["typing"]
+        fake_typing = pytypes.ModuleType("typing")
+        fake_typing.__dict__.update({k: v for k, v in real_typing.__dict__.items() if k != "Unpack"})
+        sys.modules["typing"] = fake_typing
+
+        try:
+            spec = importlib.util.spec_from_file_location("mysql_to_sqlite3.transporter_fallback", module_path)
+            assert spec and spec.loader
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+        finally:
+            sys.modules["typing"] = real_typing
+            sys.modules.pop("mysql_to_sqlite3.transporter_fallback", None)
+
+        assert module.Unpack is ExtensionsUnpack
+
+    def test_transpile_mysql_expr_to_sqlite_parse_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Gracefully handle sqlglot parse errors when evaluating expressions."""
+
+        def explode(*args, **kwargs):
+            raise ValueError("boom")
+
+        monkeypatch.setattr("mysql_to_sqlite3.transporter.parse_one", explode)
+        assert MySQLtoSQLite._transpile_mysql_expr_to_sqlite("invalid SQL") is None
+
+    def test_quote_sqlite_identifier_handles_non_utf8_bytes(self) -> None:
+        """Bytes that are not UTF-8 decodable should still be quoted safely."""
+        quoted = MySQLtoSQLite._quote_sqlite_identifier(b"\xff")
+        assert quoted.startswith('"')
+        assert "xff" in quoted
+
+    def test_translate_default_bytes_binary_literal(self) -> None:
+        """Binary defaults encoded with charset introducers should be converted."""
+        column_default = b"_utf8mb4 b\\'1000001\\'"
+        result = MySQLtoSQLite._translate_default_from_mysql_to_sqlite(column_default, "VARBINARY", "DEFAULT_GENERATED")
+        assert result == "DEFAULT 'A'"
+
+    def test_translate_default_bytes_hex_literal(self) -> None:
+        """Hex defaults encoded with charset introducers should be preserved."""
+        column_default = b"_utf8mb4 x\\'41\\'"
+        result = MySQLtoSQLite._translate_default_from_mysql_to_sqlite(column_default, "VARBINARY", "DEFAULT_GENERATED")
+        assert result == "DEFAULT x'41'"
+
+    def test_translate_default_bytes_decode_error(self) -> None:
+        """Un-decodable bytes should fall back to their repr-safe form."""
+        column_default = b"\xff"
+        result = MySQLtoSQLite._translate_default_from_mysql_to_sqlite(column_default, "TEXT")
+        assert result == "DEFAULT 'b''\\xff'''"
+
     def test_transfer_creates_view_when_flag_enabled(self) -> None:
         """When views_as_views is True, encountering a MySQL VIEW should create a SQLite VIEW and skip data transfer."""
         with patch.object(MySQLtoSQLite, "__init__", return_value=None):
