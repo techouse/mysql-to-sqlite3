@@ -114,7 +114,7 @@ mysql2sqlite = "mysql_to_sqlite3.cli:cli"
 
 [tool.black]
 line-length = 120
-target-version = ["py39", "py310", "py311", "py312", "py313"]
+target-version = ["py39", "py310", "py311", "py312", "py313", "py314"]
 include = '\.pyi?$'
 exclude = '''
 (
