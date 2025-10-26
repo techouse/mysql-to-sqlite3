@@ -13,6 +13,7 @@ from mysql.connector import errorcode
 from pytest_mock import MockerFixture
 from typing_extensions import Unpack as ExtensionsUnpack
 
+from tests.conftest import MySQLCredentials
 from mysql_to_sqlite3.sqlite_utils import CollatingSequences
 from mysql_to_sqlite3.transporter import MySQLtoSQLite
 
@@ -41,7 +42,12 @@ class TestMySQLtoSQLiteTransporter:
 
         assert module.Unpack is ExtensionsUnpack
 
-    def test_constructor_normalizes_default_utf8mb4_collation(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_constructor_normalizes_default_utf8mb4_collation(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """Ensure utf8mb4_0900_ai_ci defaults downgrade to utf8mb4_unicode_ci."""
         from mysql_to_sqlite3 import transporter as transporter_module
 
@@ -85,17 +91,22 @@ class TestMySQLtoSQLiteTransporter:
         monkeypatch.setattr("mysql_to_sqlite3.transporter.isinstance", fake_isinstance, raising=False)
 
         instance = MySQLtoSQLite(
-            sqlite_file="file.db",
-            mysql_user="user",
-            mysql_password=None,
-            mysql_database="db",
-            mysql_host="localhost",
-            mysql_port=3306,
+            sqlite_file=sqlite_database,
+            mysql_user=mysql_credentials.user,
+            mysql_password=mysql_credentials.password,
+            mysql_host=mysql_credentials.host,
+            mysql_port=mysql_credentials.port,
+            mysql_database=mysql_credentials.database,
         )
 
         assert instance._mysql_collation == "utf8mb4_unicode_ci"
 
-    def test_constructor_raises_when_mysql_not_connected(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_constructor_raises_when_mysql_not_connected(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """Raise ConnectionError when mysql.connector.connect returns disconnected handle."""
         from mysql_to_sqlite3 import transporter as transporter_module
 
@@ -134,12 +145,12 @@ class TestMySQLtoSQLiteTransporter:
 
         with pytest.raises(ConnectionError, match="Unable to connect to MySQL"):
             MySQLtoSQLite(
-                sqlite_file="file.db",
-                mysql_user="user",
-                mysql_password=None,
-                mysql_database="db",
-                mysql_host="localhost",
-                mysql_port=3306,
+                sqlite_file=sqlite_database,
+                mysql_user=mysql_credentials.user,
+                mysql_password=mysql_credentials.password,
+                mysql_host=mysql_credentials.host,
+                mysql_port=mysql_credentials.port,
+                mysql_database=mysql_credentials.database,
             )
 
     def test_transpile_mysql_expr_to_sqlite_parse_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -599,6 +610,8 @@ class TestMySQLtoSQLiteTransporter:
         self,
         mock_mysql_connect: MagicMock,
         mock_sqlite_connect: MagicMock,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
         mocker: MockerFixture,
     ) -> None:
         """Ensure STRICT mode remains enabled when SQLite supports it."""
@@ -635,12 +648,12 @@ class TestMySQLtoSQLiteTransporter:
         mocker.patch("mysql_to_sqlite3.transporter.isinstance", side_effect=fake_isinstance)
 
         instance = MySQLtoSQLite(
-            sqlite_file="file.db",
-            mysql_user="user",
-            mysql_password=None,
-            mysql_database="db",
-            mysql_host="localhost",
-            mysql_port=3306,
+            sqlite_file=sqlite_database,
+            mysql_user=mysql_credentials.user,
+            mysql_password=mysql_credentials.password,
+            mysql_host=mysql_credentials.host,
+            mysql_port=mysql_credentials.port,
+            mysql_database=mysql_credentials.database,
             sqlite_strict=True,
         )
 
@@ -653,6 +666,8 @@ class TestMySQLtoSQLiteTransporter:
         self,
         mock_mysql_connect: MagicMock,
         mock_sqlite_connect: MagicMock,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
         mocker: MockerFixture,
     ) -> None:
         """Ensure STRICT mode is disabled with a warning on old SQLite versions."""
@@ -689,12 +704,12 @@ class TestMySQLtoSQLiteTransporter:
         mocker.patch("mysql_to_sqlite3.transporter.isinstance", side_effect=fake_isinstance)
 
         instance = MySQLtoSQLite(
-            sqlite_file="file.db",
-            mysql_user="user",
-            mysql_password=None,
-            mysql_database="db",
-            mysql_host="localhost",
-            mysql_port=3306,
+            sqlite_file=sqlite_database,
+            mysql_user=mysql_credentials.user,
+            mysql_password=mysql_credentials.password,
+            mysql_host=mysql_credentials.host,
+            mysql_port=mysql_credentials.port,
+            mysql_database=mysql_credentials.database,
             sqlite_strict=True,
         )
 
