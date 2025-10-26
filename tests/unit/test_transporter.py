@@ -1,11 +1,15 @@
 import builtins
 import importlib.util
+import re
 import sqlite3
 import sys
 import types as pytypes
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import mysql.connector
 import pytest
+from mysql.connector import errorcode
 from pytest_mock import MockerFixture
 from typing_extensions import Unpack as ExtensionsUnpack
 
@@ -37,6 +41,107 @@ class TestMySQLtoSQLiteTransporter:
 
         assert module.Unpack is ExtensionsUnpack
 
+    def test_constructor_normalizes_default_utf8mb4_collation(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Ensure utf8mb4_0900_ai_ci defaults downgrade to utf8mb4_unicode_ci."""
+        from mysql_to_sqlite3 import transporter as transporter_module
+
+        class FakeMySQLConnection:
+            def __init__(self) -> None:
+                self.database = None
+
+            def is_connected(self) -> bool:
+                return True
+
+            def cursor(self, *args, **kwargs) -> MagicMock:
+                return MagicMock()
+
+            def get_server_version(self):
+                return (8, 0, 21)
+
+            def reconnect(self) -> None:
+                return None
+
+        fake_conn = FakeMySQLConnection()
+
+        fake_charset = SimpleNamespace(
+            get_default_collation=lambda charset: ("utf8mb4_0900_ai_ci", None),
+            get_supported=lambda: ("utf8mb4",),
+        )
+
+        monkeypatch.setattr("mysql_to_sqlite3.transporter.CharacterSet", lambda: fake_charset)
+        monkeypatch.setattr(
+            "mysql_to_sqlite3.transporter.mysql.connector.connect",
+            lambda **kwargs: fake_conn,
+        )
+        monkeypatch.setattr(MySQLtoSQLite, "_setup_logger", MagicMock(return_value=MagicMock()))
+
+        original_isinstance = builtins.isinstance
+
+        def fake_isinstance(obj: object, classinfo: object) -> bool:
+            if obj is fake_conn and classinfo is transporter_module.MySQLConnectionAbstract:
+                return True
+            return original_isinstance(obj, classinfo)
+
+        monkeypatch.setattr("mysql_to_sqlite3.transporter.isinstance", fake_isinstance, raising=False)
+
+        instance = MySQLtoSQLite(
+            sqlite_file="file.db",
+            mysql_user="user",
+            mysql_password=None,
+            mysql_database="db",
+            mysql_host="localhost",
+            mysql_port=3306,
+        )
+
+        assert instance._mysql_collation == "utf8mb4_unicode_ci"
+
+    def test_constructor_raises_when_mysql_not_connected(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Raise ConnectionError when mysql.connector.connect returns disconnected handle."""
+        from mysql_to_sqlite3 import transporter as transporter_module
+
+        class FakeMySQLConnection:
+            def __init__(self) -> None:
+                self.database = None
+
+            def is_connected(self) -> bool:
+                return False
+
+            def cursor(self, *args, **kwargs) -> MagicMock:
+                return MagicMock()
+
+        fake_conn = FakeMySQLConnection()
+
+        fake_charset = SimpleNamespace(
+            get_default_collation=lambda charset: ("utf8mb4_0900_ai_ci", None),
+            get_supported=lambda: ("utf8mb4",),
+        )
+
+        monkeypatch.setattr("mysql_to_sqlite3.transporter.CharacterSet", lambda: fake_charset)
+        monkeypatch.setattr(
+            "mysql_to_sqlite3.transporter.mysql.connector.connect",
+            lambda **kwargs: fake_conn,
+        )
+        monkeypatch.setattr(MySQLtoSQLite, "_setup_logger", MagicMock(return_value=MagicMock()))
+
+        original_isinstance = builtins.isinstance
+
+        def fake_isinstance(obj: object, classinfo: object) -> bool:
+            if obj is fake_conn and classinfo is transporter_module.MySQLConnectionAbstract:
+                return True
+            return original_isinstance(obj, classinfo)
+
+        monkeypatch.setattr("mysql_to_sqlite3.transporter.isinstance", fake_isinstance, raising=False)
+
+        with pytest.raises(ConnectionError, match="Unable to connect to MySQL"):
+            MySQLtoSQLite(
+                sqlite_file="file.db",
+                mysql_user="user",
+                mysql_password=None,
+                mysql_database="db",
+                mysql_host="localhost",
+                mysql_port=3306,
+            )
+
     def test_transpile_mysql_expr_to_sqlite_parse_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Gracefully handle sqlglot parse errors when evaluating expressions."""
 
@@ -45,6 +150,43 @@ class TestMySQLtoSQLiteTransporter:
 
         monkeypatch.setattr("mysql_to_sqlite3.transporter.parse_one", explode)
         assert MySQLtoSQLite._transpile_mysql_expr_to_sqlite("invalid SQL") is None
+
+    def test_transpile_mysql_type_to_sqlite_handles_length_and_synonyms(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Ensure sqlglot-assisted mapper preserves length suffixes and synonyms."""
+
+        def fake_parse_one(expr_sql: str, read: str):
+            class FakeExpression:
+                def __init__(self, text: str) -> None:
+                    self._text = text
+
+                def sql(self, dialect: str) -> str:
+                    return self._text
+
+            return FakeExpression(expr_sql)
+
+        real_search = re.search
+
+        def fake_search(pattern: str, string: str, flags: int = 0):
+            if string.startswith("CAST(NULL AS"):
+                extracted = string[len("CAST(NULL AS ") : -1]
+
+                class FakeMatch:
+                    def __init__(self, value: str) -> None:
+                        self._value = value
+
+                    def group(self, index: int) -> str:
+                        return self._value
+
+                return FakeMatch(extracted)
+            return real_search(pattern, string, flags)
+
+        monkeypatch.setattr("mysql_to_sqlite3.transporter.parse_one", fake_parse_one)
+        monkeypatch.setattr("mysql_to_sqlite3.transporter.re.search", fake_search)
+
+        assert MySQLtoSQLite._transpile_mysql_type_to_sqlite("VARCHAR(42)") == "VARCHAR(42)"
+        assert MySQLtoSQLite._transpile_mysql_type_to_sqlite("CHAR(5)") == "CHARACTER(5)"
+        assert MySQLtoSQLite._transpile_mysql_type_to_sqlite("DECIMAL(10,2)") == "DECIMAL"
+        assert MySQLtoSQLite._transpile_mysql_type_to_sqlite("VARBINARY(8)") == "BLOB"
 
     def test_quote_sqlite_identifier_handles_non_utf8_bytes(self) -> None:
         """Bytes that are not UTF-8 decodable should still be quoted safely."""
@@ -69,6 +211,193 @@ class TestMySQLtoSQLiteTransporter:
         column_default = b"\xff"
         result = MySQLtoSQLite._translate_default_from_mysql_to_sqlite(column_default, "TEXT")
         assert result == "DEFAULT 'b''\\xff'''"
+
+    def test_translate_default_bytes_without_literal_prefix(self) -> None:
+        """Charset introducer without hex/bin prefix should fall back to hex literal."""
+        column_default = b"_utf8mb4'abc'"
+        result = MySQLtoSQLite._translate_default_from_mysql_to_sqlite(
+            column_default,
+            "BLOB",
+            "DEFAULT_GENERATED",
+        )
+        assert result == "DEFAULT x'616263'"
+
+    def test_translate_default_generated_expression_variants(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Generated defaults should handle arithmetic inside parentheses and plain expressions."""
+        monkeypatch.setattr(
+            MySQLtoSQLite,
+            "_transpile_mysql_expr_to_sqlite",
+            lambda expr: "(1+2)",
+        )
+        assert (
+            MySQLtoSQLite._translate_default_from_mysql_to_sqlite("expr", column_extra="DEFAULT_GENERATED")
+            == "DEFAULT (1+2)"
+        )
+
+        monkeypatch.setattr(
+            MySQLtoSQLite,
+            "_transpile_mysql_expr_to_sqlite",
+            lambda expr: "123",
+        )
+        assert (
+            MySQLtoSQLite._translate_default_from_mysql_to_sqlite("expr", column_extra="DEFAULT_GENERATED")
+            == "DEFAULT 123"
+        )
+
+        monkeypatch.setattr(
+            MySQLtoSQLite,
+            "_transpile_mysql_expr_to_sqlite",
+            lambda expr: "1 + 3",
+        )
+        assert (
+            MySQLtoSQLite._translate_default_from_mysql_to_sqlite("expr", column_extra="DEFAULT_GENERATED")
+            == "DEFAULT 1 + 3"
+        )
+
+    def test_data_type_collation_sequence_uses_transpiled_mapping(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Apply collation when sqlglot-based mapping yields textual type."""
+
+        def fake_transpile(cls, column_type: str, sqlite_json1_extension_enabled: bool = False) -> str:
+            return "varchar(10)"
+
+        monkeypatch.setattr(
+            MySQLtoSQLite,
+            "_transpile_mysql_type_to_sqlite",
+            classmethod(fake_transpile),
+        )
+
+        result = MySQLtoSQLite._data_type_collation_sequence(
+            collation=CollatingSequences.NOCASE,
+            column_type="custom type",
+        )
+        assert result == f"COLLATE {CollatingSequences.NOCASE}"
+
+    def test_get_unique_index_name_handles_existing_suffixes(self) -> None:
+        """Ensure duplicate index names increment suffix until free slot is found."""
+        with patch.object(MySQLtoSQLite, "__init__", return_value=None):
+            instance = MySQLtoSQLite()
+
+        instance._seen_sqlite_index_names = {"idx_name", "idx_name_2"}
+        instance._sqlite_index_name_counters = {"idx_name": 2}
+        instance._prefix_indices = False
+        instance._logger = MagicMock()
+
+        result = instance._get_unique_index_name("idx_name")
+        assert result == "idx_name_3"
+        instance._logger.info.assert_called_once()
+
+    def test_build_create_table_sql_warns_on_non_integer_auto_increment(self) -> None:
+        """Auto increment primary keys with non-integer types should trigger warning and index decoding branches."""
+        with patch.object(MySQLtoSQLite, "__init__", return_value=None):
+            instance = MySQLtoSQLite()
+
+        instance._sqlite_strict = False
+        instance._sqlite_json1_extension_enabled = False
+        instance._mysql_cur_dict = MagicMock()
+        instance._mysql_cur = MagicMock()
+        instance._mysql = MagicMock()
+        instance._sqlite = MagicMock()
+        instance._mysql_database = "demo"
+        instance._collation = CollatingSequences.NOCASE
+        instance._prefix_indices = False
+        instance._without_tables = False
+        instance._without_foreign_keys = True
+        instance._logger = MagicMock()
+
+        columns_rows = [
+            {
+                "Field": "id",
+                "Type": "TEXT",
+                "Null": "NO",
+                "Default": None,
+                "Key": "PRI",
+                "Extra": "auto_increment",
+            }
+        ]
+        index_rows = [
+            {
+                "name": b"idx_primary",
+                "primary": 0,
+                "unique": 0,
+                "auto_increment": 0,
+                "columns": b"name",
+                "types": b"VARCHAR(10)",
+            },
+            {
+                "name": 123,
+                "primary": 0,
+                "unique": 1,
+                "auto_increment": 0,
+                "columns": "email",
+                "types": "INT",
+            },
+        ]
+
+        instance._mysql_cur_dict.fetchall.side_effect = [columns_rows, index_rows]
+        instance._mysql_cur_dict.fetchone.side_effect = [{"count": 1}, {"count": 0}]
+        instance._get_unique_index_name = MagicMock(side_effect=lambda name: f"{name}_unique")
+
+        sql = instance._build_create_table_sql("users")
+        assert "CREATE TABLE" in sql
+        instance._logger.warning.assert_called_once()
+        assert instance._mysql_cur_dict.fetchone.call_count == 2
+
+    def test_build_create_view_sql_fallbacks_to_show_create(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """When information_schema lookup fails, SHOW CREATE VIEW fallback should decode bytes safely."""
+        with patch.object(MySQLtoSQLite, "__init__", return_value=None):
+            instance = MySQLtoSQLite()
+
+        instance._mysql_database = "demo"
+        instance._mysql_cur_dict = MagicMock()
+        instance._mysql_cur = MagicMock()
+        instance._logger = MagicMock()
+
+        error = mysql.connector.Error(msg="boom")
+        instance._mysql_cur_dict.execute.side_effect = error
+
+        create_stmt = b"CREATE VIEW \xff AS SELECT 1"
+        instance._mysql_cur.fetchone.return_value = ("demo", create_stmt)
+
+        real_search = re.search
+
+        def fake_search(pattern: str, string: str, flags: int = 0):
+            if pattern == r"\bAS\b\s*(.*)$":
+                return None
+            return real_search(pattern, string, flags)
+
+        monkeypatch.setattr("mysql_to_sqlite3.transporter.re.search", fake_search)
+
+        instance._mysql_viewdef_to_sqlite = MagicMock(return_value="CREATE VIEW demo AS SELECT 1")
+
+        result = instance._build_create_view_sql("demo_view")
+
+        assert result == "CREATE VIEW demo AS SELECT 1"
+        instance._mysql_viewdef_to_sqlite.assert_called_once()
+        view_sql = instance._mysql_viewdef_to_sqlite.call_args.kwargs["view_select_sql"]
+        assert "SELECT" in view_sql
+
+    def test_create_view_reconnect_aborts_after_retry(self) -> None:
+        """Lost connections during retry should warn and propagate the mysql error."""
+        with patch.object(MySQLtoSQLite, "__init__", return_value=None):
+            instance = MySQLtoSQLite()
+
+        class LostError(mysql.connector.Error):
+            def __init__(self, msg: str = "lost") -> None:
+                super().__init__(msg)
+                self.errno = errorcode.CR_SERVER_LOST
+
+        instance._mysql = MagicMock()
+        instance._mysql_cur = MagicMock()
+        instance._sqlite_cur = MagicMock()
+        instance._sqlite = MagicMock()
+        instance._logger = MagicMock()
+        instance._build_create_view_sql = MagicMock(side_effect=LostError())
+
+        with pytest.raises(LostError):
+            instance._create_view("demo_view", attempting_reconnect=True)
+
+        instance._mysql.reconnect.assert_called_once()
+        instance._logger.warning.assert_called_with("Connection to MySQL server lost.\nReconnection attempt aborted.")
 
     def test_transfer_creates_view_when_flag_enabled(self) -> None:
         """When views_as_views is True, encountering a MySQL VIEW should create a SQLite VIEW and skip data transfer."""
