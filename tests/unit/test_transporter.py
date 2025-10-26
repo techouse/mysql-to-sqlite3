@@ -13,9 +13,9 @@ from mysql.connector import errorcode
 from pytest_mock import MockerFixture
 from typing_extensions import Unpack as ExtensionsUnpack
 
-from tests.conftest import MySQLCredentials
 from mysql_to_sqlite3.sqlite_utils import CollatingSequences
 from mysql_to_sqlite3.transporter import MySQLtoSQLite
+from tests.conftest import MySQLCredentials
 
 
 class TestMySQLtoSQLiteTransporter:
