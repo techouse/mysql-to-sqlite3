@@ -757,47 +757,86 @@ class TestMySQLtoSQLiteTransporter:
 
         assert "STRICT;" in sql
 
-    def test_constructor_missing_mysql_database(self) -> None:
+    def test_constructor_missing_mysql_database(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+    ) -> None:
         """Test constructor raises ValueError if mysql_database is missing."""
         from mysql_to_sqlite3.transporter import MySQLtoSQLite
 
         with pytest.raises(ValueError, match="Please provide a MySQL database"):
-            MySQLtoSQLite(mysql_user="user", sqlite_file="file.db")
+            MySQLtoSQLite(
+                sqlite_file=sqlite_database,
+                mysql_user=mysql_credentials.user,
+            )
 
-    def test_constructor_missing_mysql_user(self) -> None:
+    def test_constructor_missing_mysql_user(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+    ) -> None:
         """Test constructor raises ValueError if mysql_user is missing."""
         from mysql_to_sqlite3.transporter import MySQLtoSQLite
 
         with pytest.raises(ValueError, match="Please provide a MySQL user"):
-            MySQLtoSQLite(mysql_database="db", sqlite_file="file.db")
+            MySQLtoSQLite(
+                mysql_database=mysql_credentials.database,
+                sqlite_file=sqlite_database,
+            )
 
-    def test_constructor_missing_sqlite_file(self) -> None:
+    def test_constructor_missing_sqlite_file(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+    ) -> None:
         """Test constructor raises ValueError if sqlite_file is missing."""
         from mysql_to_sqlite3.transporter import MySQLtoSQLite
 
         with pytest.raises(ValueError, match="Please provide an SQLite file"):
-            MySQLtoSQLite(mysql_database="db", mysql_user="user")
+            MySQLtoSQLite(
+                mysql_database=mysql_credentials.database,
+                mysql_user=mysql_credentials.user,
+            )
 
-    def test_constructor_mutually_exclusive_tables(self) -> None:
+    def test_constructor_mutually_exclusive_tables(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+    ) -> None:
         """Test constructor raises ValueError if both mysql_tables and exclude_mysql_tables are provided."""
         from mysql_to_sqlite3.transporter import MySQLtoSQLite
 
         with pytest.raises(ValueError, match="mutually exclusive"):
             MySQLtoSQLite(
-                mysql_database="db",
-                mysql_user="user",
-                sqlite_file="file.db",
+                sqlite_file=sqlite_database,
+                mysql_user=mysql_credentials.user,
+                mysql_password=mysql_credentials.password,
+                mysql_host=mysql_credentials.host,
+                mysql_port=mysql_credentials.port,
+                mysql_database=mysql_credentials.database,
                 mysql_tables=["a"],
                 exclude_mysql_tables=["b"],
             )
 
-    def test_constructor_without_tables_and_data(self) -> None:
+    def test_constructor_without_tables_and_data(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+    ) -> None:
         """Test constructor raises ValueError if both without_tables and without_data are True."""
         from mysql_to_sqlite3.transporter import MySQLtoSQLite
 
         with pytest.raises(ValueError, match="Unable to continue without transferring data or creating tables!"):
             MySQLtoSQLite(
-                mysql_database="db", mysql_user="user", sqlite_file="file.db", without_tables=True, without_data=True
+                sqlite_file=sqlite_database,
+                mysql_user=mysql_credentials.user,
+                mysql_password=mysql_credentials.password,
+                mysql_host=mysql_credentials.host,
+                mysql_port=mysql_credentials.port,
+                mysql_database=mysql_credentials.database,
+                without_tables=True,
+                without_data=True,
             )
 
     def test_translate_default_from_mysql_to_sqlite_none(self) -> None:
