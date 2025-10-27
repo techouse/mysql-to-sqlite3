@@ -1,3 +1,7 @@
+# 2.5.3
+
+* [CHORE] add Python 3.14 support
+
 # 2.5.2
 
 * [FEAT] transfer MySQL views as native SQLite views
