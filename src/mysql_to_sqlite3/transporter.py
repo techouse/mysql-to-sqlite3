@@ -324,6 +324,20 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             )
             return None
 
+    @classmethod
+    def _normalize_literal_with_sqlglot(cls, expr_sql: str) -> t.Optional[str]:
+        """Normalize a MySQL literal using sqlglot, returning SQLite SQL if literal-like."""
+        cleaned: str = expr_sql.strip().rstrip(";")
+        try:
+            node: Expression = parse_one(cleaned, read="mysql")
+        except (ParseError, ValueError):
+            return None
+        if isinstance(node, exp.Literal):
+            return node.sql(dialect="sqlite")
+        if isinstance(node, exp.Paren) and isinstance(node.this, exp.Literal):
+            return node.this.sql(dialect="sqlite")
+        return None
+
     @staticmethod
     def _quote_sqlite_identifier(name: t.Union[str, bytes, bytearray]) -> str:
         """Safely quote an identifier for SQLite using sqlglot.
@@ -569,7 +583,15 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                     # Allow simple arithmetic constant expressions composed of numbers and + - * /
                     if re.match(r"^[\d\.\s\+\-\*/\(\)]+$", norm) and any(ch.isdigit() for ch in norm):
                         return f"DEFAULT {norm}"
-            # Robustly escape single quotes for plain string defaults
+            stripped_default = column_default.strip()
+            if stripped_default.startswith("'") or (
+                stripped_default.startswith("(") and stripped_default.endswith(")")
+            ):
+                normalized_literal: t.Optional[str] = cls._normalize_literal_with_sqlglot(column_default)
+                if normalized_literal is not None:
+                    return f"DEFAULT {normalized_literal}"
+
+            # Fallback: robustly escape single quotes for plain string defaults
             _escaped = column_default.replace("\\'", "'")
             _escaped = _escaped.replace("'", "''")
             return f"DEFAULT '{_escaped}'"
