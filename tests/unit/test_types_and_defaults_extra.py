@@ -90,3 +90,6 @@ class TestTypesAndDefaultsExtra:
         assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("'[]'") == "DEFAULT '[]'"
         assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("'It''s'") == "DEFAULT 'It''s'"
         assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("'a\\'b'") == "DEFAULT 'a''b'"
+        assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("''") == "DEFAULT ''"
+        assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("('value')") == "DEFAULT 'value'"
+        assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("'tab\\there'") == "DEFAULT 'tab\there'"
