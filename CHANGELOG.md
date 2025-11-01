@@ -1,3 +1,7 @@
+# 2.5.4
+
+* [FIX] enhance handling of MySQL string literals and default values
+
 # 2.5.3
 
 * [CHORE] add Python 3.14 support
