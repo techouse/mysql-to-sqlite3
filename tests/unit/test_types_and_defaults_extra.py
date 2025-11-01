@@ -84,3 +84,9 @@ class TestTypesAndDefaultsExtra:
         monkeypatch.setattr(sqlite3, "sqlite_version", "3.40.0")
         assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(True, column_type="BOOLEAN") == "DEFAULT(TRUE)"
         assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite(False, column_type="BOOLEAN") == "DEFAULT(FALSE)"
+
+    def test_translate_default_prequoted_string_literal(self) -> None:
+        # MariaDB can report TEXT defaults already wrapped in single quotes; ensure they're normalized
+        assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("'[]'") == "DEFAULT '[]'"
+        assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("'It''s'") == "DEFAULT 'It''s'"
+        assert MySQLtoSQLite._translate_default_from_mysql_to_sqlite("'a\\'b'") == "DEFAULT 'a''b'"
