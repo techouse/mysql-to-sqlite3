@@ -1,3 +1,8 @@
+# 2.5.5
+
+* [FIX] removed the Hatch `sources = ["src"]` rewrite so `sdists` now keep the `src/mysql_to_sqlite3` tree, letting
+  wheels built from the sdist include the actual package
+
 # 2.5.4
 
 * [FIX] enhance handling of MySQL string literals and default values
