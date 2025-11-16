@@ -9,6 +9,11 @@ from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.cursor import MySQLCursorDict, MySQLCursorPrepared, MySQLCursorRaw
 
 
+if t.TYPE_CHECKING:
+    from mysql_to_sqlite3.data_transfer import DataTransferManager
+    from mysql_to_sqlite3.schema_writer import SchemaWriter
+
+
 try:
     # Python 3.11+
     from typing import TypedDict  # type: ignore[attr-defined]
@@ -86,3 +91,5 @@ class MySQLtoSQLiteAttributes:
     # Tracking of SQLite index names and counters to ensure uniqueness when prefixing is disabled
     _seen_sqlite_index_names: t.Set[str]
     _sqlite_index_name_counters: t.Dict[str, int]
+    _schema_writer: "SchemaWriter"
+    _data_transfer: "DataTransferManager"
