@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>mysql_to_sqlite3 &#8212; mysql-to-sqlite3 2.5.5 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=644f8b71"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="mysql_to_sqlite3 package" href="mysql_to_sqlite3.html" />
+    <link rel="prev" title="Usage" href="README.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="mysql-to-sqlite3">
+<h1>mysql_to_sqlite3<a class="headerlink" href="#mysql-to-sqlite3" title="Link to this heading">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="mysql_to_sqlite3.html">mysql_to_sqlite3 package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="mysql_to_sqlite3.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mysql_to_sqlite3.html#module-mysql_to_sqlite3.cli">mysql_to_sqlite3.cli module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mysql_to_sqlite3.html#module-mysql_to_sqlite3.click_utils">mysql_to_sqlite3.click_utils module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.click_utils.OptionEatAll"><code class="docutils literal notranslate"><span class="pre">OptionEatAll</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.click_utils.OptionEatAll.__init__"><code class="docutils literal notranslate"><span class="pre">OptionEatAll.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.click_utils.OptionEatAll.add_to_parser"><code class="docutils literal notranslate"><span class="pre">OptionEatAll.add_to_parser()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.click_utils.prompt_password"><code class="docutils literal notranslate"><span class="pre">prompt_password()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.click_utils.validate_positive_integer"><code class="docutils literal notranslate"><span class="pre">validate_positive_integer()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mysql_to_sqlite3.html#module-mysql_to_sqlite3.debug_info">mysql_to_sqlite3.debug_info module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.debug_info.info"><code class="docutils literal notranslate"><span class="pre">info()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mysql_to_sqlite3.html#module-mysql_to_sqlite3.mysql_utils">mysql_to_sqlite3.mysql_utils module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.mysql_utils.CharSet"><code class="docutils literal notranslate"><span class="pre">CharSet</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.mysql_utils.CharSet.charset"><code class="docutils literal notranslate"><span class="pre">CharSet.charset</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.mysql_utils.CharSet.collation"><code class="docutils literal notranslate"><span class="pre">CharSet.collation</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.mysql_utils.CharSet.id"><code class="docutils literal notranslate"><span class="pre">CharSet.id</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.mysql_utils.mysql_supported_character_sets"><code class="docutils literal notranslate"><span class="pre">mysql_supported_character_sets()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mysql_to_sqlite3.html#module-mysql_to_sqlite3.sqlite_utils">mysql_to_sqlite3.sqlite_utils module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.sqlite_utils.CollatingSequences"><code class="docutils literal notranslate"><span class="pre">CollatingSequences</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.sqlite_utils.CollatingSequences.BINARY"><code class="docutils literal notranslate"><span class="pre">CollatingSequences.BINARY</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.sqlite_utils.CollatingSequences.NOCASE"><code class="docutils literal notranslate"><span class="pre">CollatingSequences.NOCASE</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.sqlite_utils.CollatingSequences.RTRIM"><code class="docutils literal notranslate"><span class="pre">CollatingSequences.RTRIM</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.sqlite_utils.adapt_decimal"><code class="docutils literal notranslate"><span class="pre">adapt_decimal()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.sqlite_utils.adapt_timedelta"><code class="docutils literal notranslate"><span class="pre">adapt_timedelta()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.sqlite_utils.convert_date"><code class="docutils literal notranslate"><span class="pre">convert_date()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.sqlite_utils.convert_decimal"><code class="docutils literal notranslate"><span class="pre">convert_decimal()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.sqlite_utils.convert_timedelta"><code class="docutils literal notranslate"><span class="pre">convert_timedelta()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.sqlite_utils.encode_data_for_sqlite"><code class="docutils literal notranslate"><span class="pre">encode_data_for_sqlite()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mysql_to_sqlite3.html#module-mysql_to_sqlite3.transporter">mysql_to_sqlite3.transporter module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.transporter.MySQLtoSQLite"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLite</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.transporter.MySQLtoSQLite.COLUMN_LENGTH_PATTERN"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLite.COLUMN_LENGTH_PATTERN</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.transporter.MySQLtoSQLite.COLUMN_PATTERN"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLite.COLUMN_PATTERN</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.transporter.MySQLtoSQLite.__init__"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLite.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.transporter.MySQLtoSQLite.transfer"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLite.transfer()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mysql_to_sqlite3.html#module-mysql_to_sqlite3.types">mysql_to_sqlite3.types module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteAttributes"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteAttributes</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.buffered"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.buffered</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.chunk"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.chunk</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.collation"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.collation</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.exclude_mysql_tables"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.exclude_mysql_tables</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.json_as_text"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.json_as_text</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.limit_rows"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.limit_rows</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.log_file"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.log_file</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.mysql_charset"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.mysql_charset</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.mysql_collation"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.mysql_collation</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.mysql_database"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.mysql_database</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.mysql_host"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.mysql_host</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.mysql_password"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.mysql_password</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.mysql_port"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.mysql_port</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.mysql_ssl_disabled"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.mysql_ssl_disabled</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.mysql_tables"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.mysql_tables</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.mysql_user"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.mysql_user</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.prefix_indices"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.prefix_indices</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.quiet"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.quiet</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.sqlite_file"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.sqlite_file</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.sqlite_strict"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.sqlite_strict</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.vacuum"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.vacuum</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.views_as_views"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.views_as_views</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.without_data"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.without_data</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.without_foreign_keys"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.without_foreign_keys</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mysql_to_sqlite3.html#mysql_to_sqlite3.types.MySQLtoSQLiteParams.without_tables"><code class="docutils literal notranslate"><span class="pre">MySQLtoSQLiteParams.without_tables</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mysql_to_sqlite3.html#module-mysql_to_sqlite3">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">mysql-to-sqlite3</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="README.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">mysql_to_sqlite3</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="mysql_to_sqlite3.html">mysql_to_sqlite3 package</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="README.html" title="previous chapter">Usage</a></li>
+      <li>Next: <a href="mysql_to_sqlite3.html" title="next chapter">mysql_to_sqlite3 package</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Klemen Tusar.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/modules.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
