@@ -7,7 +7,6 @@ import re
 import sys
 from pathlib import Path
 
-
 sys.path.insert(0, os.path.abspath("../src"))
 
 _ROOT = Path(__file__).resolve().parents[1]

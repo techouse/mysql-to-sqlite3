@@ -19,7 +19,6 @@ from sqlglot import Expression, exp, parse_one
 from sqlglot.errors import ParseError
 from tqdm import tqdm, trange
 
-
 try:
     # Python 3.11+
     from typing import Unpack  # type: ignore[attr-defined]
@@ -1130,13 +1129,11 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             )
         else:
             # transfer all tables
-            self._mysql_cur.execute(
-                """
+            self._mysql_cur.execute("""
                 SELECT TABLE_NAME, TABLE_TYPE
                 FROM information_schema.TABLES
                 WHERE TABLE_SCHEMA = SCHEMA()
-            """
-            )
+            """)
 
             def _coerce_row(row: t.Any) -> t.Tuple[str, str]:
                 try:

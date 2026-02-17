@@ -16,7 +16,6 @@ from .debug_info import info
 from .mysql_utils import mysql_supported_character_sets
 from .sqlite_utils import CollatingSequences
 
-
 _copyright_header: str = f"mysql2sqlite version {package_version} Copyright (c) 2019-{datetime.now().year} Klemen Tusar"
 
 
