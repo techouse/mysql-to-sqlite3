@@ -23,7 +23,7 @@ from docker.errors import NotFound
 from docker.models.containers import Container
 from faker import Faker
 from mysql.connector import MySQLConnection, errorcode
-from mysql.connector.connection_cext import CMySQLConnection
+from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.pooling import PooledMySQLConnection
 from requests import HTTPError
 from sqlalchemy.exc import IntegrityError
@@ -194,7 +194,7 @@ def mysql_credentials(pytestconfig: Config) -> MySQLCredentials:
 @pytest.fixture(scope="session")
 def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) -> t.Iterator[MySQLConnection]:
     container: t.Optional[Container] = None
-    mysql_connection: t.Optional[t.Union[PooledMySQLConnection, MySQLConnection, CMySQLConnection]] = None
+    mysql_connection: t.Optional[t.Union[PooledMySQLConnection, MySQLConnectionAbstract]] = None
     mysql_available: bool = False
     mysql_connection_retries: int = 15  # failsafe
 

@@ -14,7 +14,7 @@ from _pytest._py.path import LocalPath
 from _pytest.logging import LogCaptureFixture
 from faker import Faker
 from mysql.connector import MySQLConnection, errorcode
-from mysql.connector.connection_cext import CMySQLConnection
+from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.cursor import MySQLCursor
 from mysql.connector.pooling import PooledMySQLConnection
 from pytest_mock import MockFixture
@@ -457,7 +457,7 @@ class TestMySQLtoSQLite:
         mysql_inspect: Inspector = inspect(mysql_engine)
         mysql_tables: t.List[str] = mysql_inspect.get_table_names()
 
-        mysql_connector_connection: t.Union[PooledMySQLConnection, MySQLConnection, CMySQLConnection] = (
+        mysql_connector_connection: t.Union[PooledMySQLConnection, MySQLConnectionAbstract] = (
             mysql.connector.connect(
                 user=mysql_credentials.user,
                 password=mysql_credentials.password,
@@ -1207,7 +1207,7 @@ class TestMySQLtoSQLite:
         mysql_inspect: Inspector = inspect(mysql_engine)
         mysql_tables: t.List[str] = mysql_inspect.get_table_names()
 
-        mysql_connector_connection: t.Union[PooledMySQLConnection, MySQLConnection, CMySQLConnection] = (
+        mysql_connector_connection: t.Union[PooledMySQLConnection, MySQLConnectionAbstract] = (
             mysql.connector.connect(
                 user=mysql_credentials.user,
                 password=mysql_credentials.password,
