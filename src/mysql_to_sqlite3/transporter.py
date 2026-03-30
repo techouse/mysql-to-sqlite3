@@ -15,8 +15,9 @@ import mysql.connector
 from mysql.connector import CharacterSet, errorcode
 from mysql.connector.abstracts import MySQLConnectionAbstract
 from mysql.connector.types import RowItemType
-from sqlglot import Expression, exp, parse_one
+from sqlglot import exp, parse_one
 from sqlglot.errors import ParseError
+from sqlglot.expressions import Expr
 from tqdm import tqdm, trange
 
 try:
@@ -313,7 +314,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         """
         cleaned: str = expr_sql.strip().rstrip(";")
         try:
-            tree: Expression = parse_one(cleaned, read="mysql")
+            tree: Expr = parse_one(cleaned, read="mysql")
             return tree.sql(dialect="sqlite")
         except (ParseError, ValueError):
             return None
@@ -328,7 +329,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         """Normalize a MySQL literal using sqlglot, returning SQLite SQL if literal-like."""
         cleaned: str = expr_sql.strip().rstrip(";")
         try:
-            node: Expression = parse_one(cleaned, read="mysql")
+            node: Expr = parse_one(cleaned, read="mysql")
         except (ParseError, ValueError):
             return None
         if isinstance(node, exp.Literal):
@@ -377,7 +378,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         # Wrap the type in a CAST expression so sqlglot can parse it consistently.
         expr_sql: str = f"CAST(NULL AS {column_type.strip()})"
         try:
-            tree: Expression = parse_one(expr_sql, read="mysql")
+            tree: Expr = parse_one(expr_sql, read="mysql")
             rendered: str = tree.sql(dialect="sqlite")
         except (ParseError, ValueError, AttributeError, TypeError):
             return None
@@ -922,7 +923,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         cleaned_sql = view_select_sql.strip().rstrip(";")
 
         try:
-            tree: Expression = parse_one(cleaned_sql, read="mysql")
+            tree: Expr = parse_one(cleaned_sql, read="mysql")
         except (ParseError, ValueError, AttributeError, TypeError):
             # Fallback: try to remove schema qualifiers if requested, then return
             stripped_sql = cleaned_sql
