@@ -457,16 +457,14 @@ class TestMySQLtoSQLite:
         mysql_inspect: Inspector = inspect(mysql_engine)
         mysql_tables: t.List[str] = mysql_inspect.get_table_names()
 
-        mysql_connector_connection: t.Union[PooledMySQLConnection, MySQLConnectionAbstract] = (
-            mysql.connector.connect(
-                user=mysql_credentials.user,
-                password=mysql_credentials.password,
-                host=mysql_credentials.host,
-                port=mysql_credentials.port,
-                database=mysql_credentials.database,
-                charset="utf8mb4",
-                collation="utf8mb4_unicode_ci",
-            )
+        mysql_connector_connection: t.Union[PooledMySQLConnection, MySQLConnectionAbstract] = mysql.connector.connect(
+            user=mysql_credentials.user,
+            password=mysql_credentials.password,
+            host=mysql_credentials.host,
+            port=mysql_credentials.port,
+            database=mysql_credentials.database,
+            charset="utf8mb4",
+            collation="utf8mb4_unicode_ci",
         )
         server_version: t.Tuple[int, ...] = mysql_connector_connection.get_server_version()
 
@@ -1207,16 +1205,14 @@ class TestMySQLtoSQLite:
         mysql_inspect: Inspector = inspect(mysql_engine)
         mysql_tables: t.List[str] = mysql_inspect.get_table_names()
 
-        mysql_connector_connection: t.Union[PooledMySQLConnection, MySQLConnectionAbstract] = (
-            mysql.connector.connect(
-                user=mysql_credentials.user,
-                password=mysql_credentials.password,
-                host=mysql_credentials.host,
-                port=mysql_credentials.port,
-                database=mysql_credentials.database,
-                charset="utf8mb4",
-                collation="utf8mb4_unicode_ci",
-            )
+        mysql_connector_connection: t.Union[PooledMySQLConnection, MySQLConnectionAbstract] = mysql.connector.connect(
+            user=mysql_credentials.user,
+            password=mysql_credentials.password,
+            host=mysql_credentials.host,
+            port=mysql_credentials.port,
+            database=mysql_credentials.database,
+            charset="utf8mb4",
+            collation="utf8mb4_unicode_ci",
         )
         server_version: t.Tuple[int, ...] = mysql_connector_connection.get_server_version()
 
