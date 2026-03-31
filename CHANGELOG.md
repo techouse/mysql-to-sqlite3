@@ -1,3 +1,8 @@
+# 2.5.6
+
+* [FIX] update sqlglot expression imports for consistency
+* [CHORE] streamline MySQL connection setup in tests for clarity
+
 # 2.5.5
 
 * [FIX] removed the Hatch `sources = ["src"]` rewrite so `sdists` now keep the `src/mysql_to_sqlite3` tree, letting
