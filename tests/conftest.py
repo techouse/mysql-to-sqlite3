@@ -1,6 +1,8 @@
+import io
 import json
 import os
 import socket
+import tarfile
 import typing as t
 from codecs import open
 from contextlib import contextmanager
@@ -269,6 +271,71 @@ def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) ->
 
     if use_docker and container is not None:
         container.kill()
+
+
+class MySQLSSLCerts(t.NamedTuple):
+    """Paths to MySQL SSL certificate files extracted from the Docker container."""
+
+    ca: str
+    client_cert: str
+    client_key: str
+
+
+@pytest.fixture(scope="session")
+def mysql_ssl_certs(
+    mysql_instance: MySQLConnection,
+    pytestconfig: Config,
+    tmp_path_factory: pytest.TempPathFactory,
+) -> t.Optional[MySQLSSLCerts]:
+    db_credentials_file = abspath(join(dirname(__file__), "db_credentials.json"))
+    if isfile(db_credentials_file):
+        return None
+
+    if not pytestconfig.getoption("use_docker"):
+        return None
+
+    try:
+        client: DockerClient = docker.from_env()
+        container: t.Optional[Container] = None
+        for c in client.containers.list():
+            if c.name == "pytest_mysql_to_sqlite3":
+                container = c
+                break
+
+        if container is None:
+            return None
+
+        ssl_dir = tmp_path_factory.mktemp("mysql_ssl_certs")
+
+        cert_files = {
+            "ca.pem": "ca.pem",
+            "client-cert.pem": "client-cert.pem",
+            "client-key.pem": "client-key.pem",
+        }
+
+        extracted: t.Dict[str, str] = {}
+        for filename, dest_name in cert_files.items():
+            data_stream, _stat = container.get_archive(f"/var/lib/mysql/{filename}")
+            buf = io.BytesIO()
+            for chunk in data_stream:
+                buf.write(chunk)
+            buf.seek(0)
+            with tarfile.open(fileobj=buf) as tar:
+                member = tar.getmember(filename)
+                fobj = tar.extractfile(member)
+                if fobj is None:
+                    return None
+                dest_path = ssl_dir / dest_name
+                dest_path.write_bytes(fobj.read())
+                extracted[filename] = str(dest_path)
+
+        return MySQLSSLCerts(
+            ca=extracted["ca.pem"],
+            client_cert=extracted["client-cert.pem"],
+            client_key=extracted["client-key.pem"],
+        )
+    except Exception:
+        return None
 
 
 @pytest.fixture(scope="session")
