@@ -801,6 +801,34 @@ class TestMySQLtoSQLiteTransporter:
                 mysql_user=mysql_credentials.user,
             )
 
+    @pytest.mark.parametrize(
+        ("kwargs", "message"),
+        [
+            ({"mysql_database": "   "}, "Please provide a MySQL database"),
+            ({"mysql_user": "   "}, "Please provide a MySQL user"),
+            ({"sqlite_file": "   "}, "Please provide an SQLite file"),
+        ],
+    )
+    def test_constructor_blank_required_values(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        kwargs: t.Dict[str, object],
+        message: str,
+    ) -> None:
+        """Test constructor rejects blank required values."""
+        from mysql_to_sqlite3.transporter import MySQLtoSQLite
+
+        params: t.Dict[str, object] = {
+            "mysql_database": mysql_credentials.database,
+            "mysql_user": mysql_credentials.user,
+            "sqlite_file": sqlite_database,
+        }
+        params.update(kwargs)
+
+        with pytest.raises(ValueError, match=message):
+            MySQLtoSQLite(**params)  # type: ignore[arg-type]
+
     def test_constructor_mutually_exclusive_tables(
         self,
         sqlite_database: "os.PathLike[t.Any]",
@@ -897,3 +925,24 @@ def test_transfer_coerce_row_fallback_non_subscriptable() -> None:
     # The info call is like: ("%s%sTransferring table %s", prefix1, prefix2, table_name)
     called_with_123 = any(call.args and call.args[-1] == "123" for call in instance._logger.info.call_args_list)
     assert called_with_123
+
+
+def test_transfer_coerce_row_fallback_invalid_bytes() -> None:
+    """Ensure fallback stringification does not re-raise on undecodable bytes."""
+    with patch.object(MySQLtoSQLite, "__init__", return_value=None):
+        instance = MySQLtoSQLite()
+    instance._mysql_tables = []
+    instance._exclude_mysql_tables = []
+    instance._mysql_cur = MagicMock()
+    instance._mysql_cur.fetchall.return_value = [b"\xff"]
+    instance._sqlite_cur = MagicMock()
+    instance._without_data = True
+    instance._without_tables = True
+    instance._views_as_views = True
+    instance._vacuum = False
+    instance._logger = MagicMock()
+
+    instance.transfer()
+
+    logged_table_names = [call.args[-1] for call in instance._logger.info.call_args_list if call.args]
+    assert "\ufffd" in logged_table_names

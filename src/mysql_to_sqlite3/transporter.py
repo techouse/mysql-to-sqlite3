@@ -49,20 +49,31 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
     def __init__(self, **kwargs: Unpack[MySQLtoSQLiteParams]) -> None:
         """Constructor."""
+        raw_kwargs: t.Mapping[str, object] = t.cast(t.Mapping[str, object], kwargs)
+
         try:
-            self._mysql_database = str(kwargs["mysql_database"])
+            mysql_database = raw_kwargs["mysql_database"]
         except KeyError as err:
             raise ValueError("Please provide a MySQL database") from err
+        if mysql_database is None or str(mysql_database).strip() == "":
+            raise ValueError("Please provide a MySQL database")
+        self._mysql_database = str(mysql_database)
 
         try:
-            self._mysql_user = str(kwargs["mysql_user"])
+            mysql_user = raw_kwargs["mysql_user"]
         except KeyError as err:
             raise ValueError("Please provide a MySQL user") from err
+        if mysql_user is None or str(mysql_user).strip() == "":
+            raise ValueError("Please provide a MySQL user")
+        self._mysql_user = str(mysql_user)
 
         try:
-            self._sqlite_file = realpath(str(kwargs["sqlite_file"]))
+            sqlite_file = raw_kwargs["sqlite_file"]
         except KeyError as err:
             raise ValueError("Please provide an SQLite file") from err
+        if sqlite_file is None or str(sqlite_file).strip() == "":
+            raise ValueError("Please provide an SQLite file")
+        self._sqlite_file = realpath(str(sqlite_file))
 
         password: t.Optional[t.Union[str, bool]] = kwargs.get("mysql_password")
         self._mysql_password = password if isinstance(password, str) else None
@@ -1140,9 +1151,9 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 WHERE TABLE_SCHEMA = SCHEMA()
             """)
 
-            def _stringify_row_item(value: object) -> str:
+            def _stringify_row_item(value: object, safe: bool = False) -> str:
                 if isinstance(value, (bytes, bytearray)):
-                    return value.decode()
+                    return value.decode(errors="replace") if safe else value.decode()
                 return str(value)
 
             def _coerce_row(row: object) -> t.Tuple[str, str]:
@@ -1155,7 +1166,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                     raise TypeError
                 except (TypeError, IndexError, UnicodeDecodeError):
                     # Fallback: treat as a single value name when row is not a 2-tuple or decoding fails
-                    return _stringify_row_item(row), "BASE TABLE"
+                    return _stringify_row_item(row, safe=True), "BASE TABLE"
 
             tables = (_coerce_row(row) for row in self._mysql_cur.fetchall())
 
