@@ -946,3 +946,24 @@ def test_transfer_coerce_row_fallback_invalid_bytes() -> None:
 
     logged_table_names = [call.args[-1] for call in instance._logger.info.call_args_list if call.args]
     assert "\ufffd" in logged_table_names
+
+
+def test_transfer_specific_tables_invalid_bytes() -> None:
+    """Ensure specific-table transfer path also handles undecodable bytes safely."""
+    with patch.object(MySQLtoSQLite, "__init__", return_value=None):
+        instance = MySQLtoSQLite()
+    instance._mysql_tables = ["target"]
+    instance._exclude_mysql_tables = []
+    instance._mysql_cur_prepared = MagicMock()
+    instance._mysql_cur_prepared.fetchall.return_value = [(b"\xff", b"\xfe")]
+    instance._sqlite_cur = MagicMock()
+    instance._without_data = True
+    instance._without_tables = True
+    instance._views_as_views = True
+    instance._vacuum = False
+    instance._logger = MagicMock()
+
+    instance.transfer()
+
+    logged_table_names = [call.args[-1] for call in instance._logger.info.call_args_list if call.args]
+    assert "(b'\\xff', b'\\xfe')" in logged_table_names

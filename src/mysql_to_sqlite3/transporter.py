@@ -1118,6 +1118,24 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
     def transfer(self) -> None:
         """The primary and only method with which we transfer all the data."""
+
+        def _stringify_row_item(value: object, safe: bool = False) -> str:
+            if isinstance(value, (bytes, bytearray)):
+                return value.decode(errors="replace") if safe else value.decode()
+            return str(value)
+
+        def _coerce_row(row: object) -> t.Tuple[str, str]:
+            try:
+                if isinstance(row, (list, tuple)):
+                    values = t.cast(t.Sequence[object], row)
+                    name = _stringify_row_item(values[0])
+                    table_type = _stringify_row_item(values[1]) if len(values) > 1 else "BASE TABLE"
+                    return name, table_type
+                raise TypeError
+            except (TypeError, IndexError, UnicodeDecodeError):
+                # Fallback: treat as a single value name when row is not a 2-tuple or decoding fails
+                return _stringify_row_item(row, safe=True), "BASE TABLE"
+
         if len(self._mysql_tables) > 0 or len(self._exclude_mysql_tables) > 0:
             # transfer only specific tables
             specific_tables: t.Sequence[str] = (
@@ -1136,13 +1154,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 ),
                 specific_tables,
             )
-            tables: t.Iterable[t.Tuple[str, str]] = (
-                (
-                    str(row[0].decode() if isinstance(row[0], (bytes, bytearray)) else row[0]),
-                    str(row[1].decode() if isinstance(row[1], (bytes, bytearray)) else row[1]),
-                )
-                for row in self._mysql_cur_prepared.fetchall()
-            )
+            tables: t.Iterable[t.Tuple[str, str]] = (_coerce_row(row) for row in self._mysql_cur_prepared.fetchall())
         else:
             # transfer all tables
             self._mysql_cur.execute("""
@@ -1150,23 +1162,6 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 FROM information_schema.TABLES
                 WHERE TABLE_SCHEMA = SCHEMA()
             """)
-
-            def _stringify_row_item(value: object, safe: bool = False) -> str:
-                if isinstance(value, (bytes, bytearray)):
-                    return value.decode(errors="replace") if safe else value.decode()
-                return str(value)
-
-            def _coerce_row(row: object) -> t.Tuple[str, str]:
-                try:
-                    if isinstance(row, (list, tuple)):
-                        values = t.cast(t.Sequence[object], row)
-                        name = _stringify_row_item(values[0])
-                        table_type = _stringify_row_item(values[1]) if len(values) > 1 else "BASE TABLE"
-                        return name, table_type
-                    raise TypeError
-                except (TypeError, IndexError, UnicodeDecodeError):
-                    # Fallback: treat as a single value name when row is not a 2-tuple or decoding fails
-                    return _stringify_row_item(row, safe=True), "BASE TABLE"
 
             tables = (_coerce_row(row) for row in self._mysql_cur.fetchall())
 
