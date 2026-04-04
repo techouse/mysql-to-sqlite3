@@ -18,7 +18,7 @@ class OptionEatAll(click.Option):
         self._previous_parser_process = None
         self._eat_all_parser = None
 
-    def add_to_parser(self, parser, ctx) -> None:
+    def add_to_parser(self, parser, ctx: click.core.Context) -> None:
         """Override."""
 
         def parser_process(value, state):
