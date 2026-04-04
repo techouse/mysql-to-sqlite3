@@ -68,12 +68,15 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         self._mysql_user = str(mysql_user)
 
         try:
-            sqlite_file = raw_kwargs["sqlite_file"]
+            sqlite_file = t.cast(t.Union[str, "os.PathLike[t.Any]"], raw_kwargs["sqlite_file"])
         except KeyError as err:
             raise ValueError("Please provide an SQLite file") from err
-        if sqlite_file is None or str(sqlite_file).strip() == "":
+        if sqlite_file is None:
             raise ValueError("Please provide an SQLite file")
-        self._sqlite_file = realpath(str(sqlite_file))
+        sqlite_file_path = os.fspath(sqlite_file)
+        if str(sqlite_file_path).strip() == "":
+            raise ValueError("Please provide an SQLite file")
+        self._sqlite_file = realpath(sqlite_file_path)
 
         password: t.Optional[t.Union[str, bool]] = kwargs.get("mysql_password")
         self._mysql_password = password if isinstance(password, str) else None
@@ -195,7 +198,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 errno: int = t.cast(int, getattr(err, "errno", -1))
                 if errno == errorcode.ER_BAD_DB_ERROR:
                     self._logger.error("MySQL Database does not exist!")
-                    raise
+                    raise ValueError(f'Invalid mysql_database "{self._mysql_database}": {err}') from err
                 self._logger.error(err)
                 raise
             except Exception as err:
@@ -1133,7 +1136,12 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                     return name, table_type
                 raise TypeError
             except (TypeError, IndexError, UnicodeDecodeError):
-                # Fallback: treat as a single value name when row is not a 2-tuple or decoding fails
+                # Preserve tuple shape on decode failures; only collapse truly non-sequence rows.
+                if isinstance(row, (list, tuple)):
+                    values = t.cast(t.Sequence[object], row)
+                    name = _stringify_row_item(values[0], safe=True) if len(values) > 0 else ""
+                    table_type = _stringify_row_item(values[1], safe=True) if len(values) > 1 else "BASE TABLE"
+                    return name, table_type
                 return _stringify_row_item(row, safe=True), "BASE TABLE"
 
         if len(self._mysql_tables) > 0 or len(self._exclude_mysql_tables) > 0:

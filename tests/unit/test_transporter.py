@@ -1,6 +1,7 @@
 import builtins
 import importlib.util
 import os
+import pathlib
 import re
 import sqlite3
 import sys
@@ -804,8 +805,11 @@ class TestMySQLtoSQLiteTransporter:
     @pytest.mark.parametrize(
         ("kwargs", "message"),
         [
+            ({"mysql_database": None}, "Please provide a MySQL database"),
             ({"mysql_database": "   "}, "Please provide a MySQL database"),
+            ({"mysql_user": None}, "Please provide a MySQL user"),
             ({"mysql_user": "   "}, "Please provide a MySQL user"),
+            ({"sqlite_file": None}, "Please provide an SQLite file"),
             ({"sqlite_file": "   "}, "Please provide an SQLite file"),
         ],
     )
@@ -828,6 +832,129 @@ class TestMySQLtoSQLiteTransporter:
 
         with pytest.raises(ValueError, match=message):
             MySQLtoSQLite(**params)  # type: ignore[arg-type]
+
+    def test_constructor_uses_pathlike_sqlite_file(
+        self,
+        mysql_credentials: MySQLCredentials,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: pathlib.Path,
+    ) -> None:
+        """Test constructor resolves sqlite_file via os.fspath for PathLike values."""
+
+        class FakePathLike:
+            def __init__(self, path: str) -> None:
+                self._path = path
+                self.used = False
+
+            def __fspath__(self) -> str:
+                self.used = True
+                return self._path
+
+        class FakeMySQLConnection:
+            def __init__(self) -> None:
+                self.database = None
+
+            def is_connected(self) -> bool:
+                return True
+
+            def cursor(self, *args, **kwargs) -> MagicMock:
+                return MagicMock()
+
+        sqlite_path = tmp_path / "test.db"
+        fake_sqlite_file = FakePathLike(str(sqlite_path))
+
+        monkeypatch.setattr(
+            "mysql_to_sqlite3.transporter.mysql.connector.connect",
+            lambda **kwargs: FakeMySQLConnection(),
+        )
+        monkeypatch.setattr(MySQLtoSQLite, "_setup_logger", MagicMock(return_value=MagicMock()))
+
+        import mysql_to_sqlite3.transporter as transporter_module
+
+        original_isinstance = builtins.isinstance
+
+        def fake_isinstance(obj: object, classinfo: object) -> bool:
+            if (
+                obj.__class__.__name__ == "FakeMySQLConnection"
+                and classinfo is transporter_module.MySQLConnectionAbstract
+            ):
+                return True
+            return original_isinstance(obj, classinfo)
+
+        monkeypatch.setattr("mysql_to_sqlite3.transporter.isinstance", fake_isinstance, raising=False)
+
+        instance = MySQLtoSQLite(
+            sqlite_file=fake_sqlite_file,  # type: ignore[arg-type]
+            mysql_user=mysql_credentials.user,
+            mysql_password=mysql_credentials.password,
+            mysql_host=mysql_credentials.host,
+            mysql_port=mysql_credentials.port,
+            mysql_database=mysql_credentials.database,
+        )
+
+        assert fake_sqlite_file.used is True
+        assert instance._sqlite_file == os.path.realpath(os.fspath(fake_sqlite_file))
+
+    def test_constructor_bad_mysql_database_raises_value_error(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test ER_BAD_DB_ERROR becomes a single-log ValueError."""
+        from mysql_to_sqlite3 import transporter as transporter_module
+
+        class FakeMySQLConnection:
+            def __init__(self) -> None:
+                self._database = ""
+
+            @property
+            def database(self) -> str:
+                return self._database
+
+            @database.setter
+            def database(self, value: str) -> None:
+                self._database = value
+                raise mysql.connector.Error(
+                    msg=f"Unknown database '{value}'",
+                    errno=errorcode.ER_BAD_DB_ERROR,
+                )
+
+            def is_connected(self) -> bool:
+                return True
+
+            def cursor(self, *args, **kwargs) -> MagicMock:
+                return MagicMock()
+
+        fake_conn = FakeMySQLConnection()
+        mock_logger = MagicMock()
+        monkeypatch.setattr(
+            "mysql_to_sqlite3.transporter.mysql.connector.connect",
+            lambda **kwargs: fake_conn,
+        )
+        monkeypatch.setattr(MySQLtoSQLite, "_setup_logger", MagicMock(return_value=mock_logger))
+
+        original_isinstance = builtins.isinstance
+
+        def fake_isinstance(obj: object, classinfo: object) -> bool:
+            if obj is fake_conn and classinfo is transporter_module.MySQLConnectionAbstract:
+                return True
+            return original_isinstance(obj, classinfo)
+
+        monkeypatch.setattr("mysql_to_sqlite3.transporter.isinstance", fake_isinstance, raising=False)
+
+        with pytest.raises(ValueError, match='Invalid mysql_database "'):
+            MySQLtoSQLite(
+                sqlite_file=sqlite_database,
+                mysql_user=mysql_credentials.user,
+                mysql_password=mysql_credentials.password,
+                mysql_host=mysql_credentials.host,
+                mysql_port=mysql_credentials.port,
+                mysql_database=mysql_credentials.database,
+            )
+
+        assert len(mock_logger.error.call_args_list) == 1
+        assert mock_logger.error.call_args_list[0].args == ("MySQL Database does not exist!",)
 
     def test_constructor_mutually_exclusive_tables(
         self,
@@ -949,21 +1076,23 @@ def test_transfer_coerce_row_fallback_invalid_bytes() -> None:
 
 
 def test_transfer_specific_tables_invalid_bytes() -> None:
-    """Ensure specific-table transfer path also handles undecodable bytes safely."""
+    """Ensure specific-table fallback preserves table type when decoding bytes fails."""
     with patch.object(MySQLtoSQLite, "__init__", return_value=None):
         instance = MySQLtoSQLite()
     instance._mysql_tables = ["target"]
     instance._exclude_mysql_tables = []
     instance._mysql_cur_prepared = MagicMock()
-    instance._mysql_cur_prepared.fetchall.return_value = [(b"\xff", b"\xfe")]
+    instance._mysql_cur_prepared.fetchall.return_value = [(b"\xff", "VIEW")]
     instance._sqlite_cur = MagicMock()
     instance._without_data = True
-    instance._without_tables = True
+    instance._without_tables = False
     instance._views_as_views = True
     instance._vacuum = False
     instance._logger = MagicMock()
+    instance._create_view = MagicMock()
+    instance._create_table = MagicMock()
 
     instance.transfer()
 
-    logged_table_names = [call.args[-1] for call in instance._logger.info.call_args_list if call.args]
-    assert "(b'\\xff', b'\\xfe')" in logged_table_names
+    instance._create_view.assert_called_once_with("\ufffd")
+    instance._create_table.assert_not_called()

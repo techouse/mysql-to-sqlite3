@@ -187,7 +187,10 @@ class TestMySQLtoSQLite:
 
         caplog.set_level(logging.DEBUG)
         mocker.patch.object(mysql.connector, "connect", return_value=FakeMySQLConnection())
-        with pytest.raises((mysql.connector.Error, Exception)) as excinfo:
+        expected_exception: t.Type[BaseException] = (
+            ValueError if isinstance(exception, mysql.connector.Error) else type(exception)
+        )
+        with pytest.raises(expected_exception) as excinfo:
             MySQLtoSQLite(  # type: ignore[call-arg]
                 sqlite_file=sqlite_database,
                 mysql_user=mysql_credentials.user,
