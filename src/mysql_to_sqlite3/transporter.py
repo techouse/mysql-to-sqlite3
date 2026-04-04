@@ -1178,11 +1178,6 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             self._sqlite_cur.execute("PRAGMA foreign_keys=OFF")
 
             for table_name, table_type in tables:
-                if isinstance(table_name, bytes):
-                    table_name = table_name.decode()
-                if isinstance(table_type, bytes):
-                    table_type = table_type.decode()
-
                 self._logger.info(
                     "%s%sTransferring table %s",
                     "[WITHOUT DATA] " if self._without_data else "",
