@@ -1,3 +1,7 @@
+# 2.5.7
+
+* [CHORE] pin sqlglot to >=30.0.0,<31.0.0
+
 # 2.5.6
 
 * [FIX] update sqlglot expression imports for consistency
