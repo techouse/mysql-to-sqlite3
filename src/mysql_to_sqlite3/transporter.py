@@ -49,20 +49,20 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
     def __init__(self, **kwargs: Unpack[MySQLtoSQLiteParams]) -> None:
         """Constructor."""
-        if kwargs.get("mysql_database") is not None:
-            self._mysql_database = str(kwargs.get("mysql_database"))
-        else:
-            raise ValueError("Please provide a MySQL database")
+        try:
+            self._mysql_database = str(kwargs["mysql_database"])
+        except KeyError as err:
+            raise ValueError("Please provide a MySQL database") from err
 
-        if kwargs.get("mysql_user") is not None:
-            self._mysql_user = str(kwargs.get("mysql_user"))
-        else:
-            raise ValueError("Please provide a MySQL user")
+        try:
+            self._mysql_user = str(kwargs["mysql_user"])
+        except KeyError as err:
+            raise ValueError("Please provide a MySQL user") from err
 
-        if kwargs.get("sqlite_file") is None:
-            raise ValueError("Please provide an SQLite file")
-        else:
-            self._sqlite_file = realpath(str(kwargs.get("sqlite_file")))
+        try:
+            self._sqlite_file = realpath(str(kwargs["sqlite_file"]))
+        except KeyError as err:
+            raise ValueError("Please provide an SQLite file") from err
 
         password: t.Optional[t.Union[str, bool]] = kwargs.get("mysql_password")
         self._mysql_password = password if isinstance(password, str) else None
@@ -180,10 +180,14 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
             )
             try:
                 self._mysql.database = self._mysql_database
-            except (mysql.connector.Error, Exception) as err:
-                if hasattr(err, "errno") and err.errno == errorcode.ER_BAD_DB_ERROR:
+            except mysql.connector.Error as err:
+                errno: int = t.cast(int, getattr(err, "errno", -1))
+                if errno == errorcode.ER_BAD_DB_ERROR:
                     self._logger.error("MySQL Database does not exist!")
                     raise
+                self._logger.error(err)
+                raise
+            except Exception as err:
                 self._logger.error(err)
                 raise
         except mysql.connector.Error as err:
@@ -236,7 +240,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
 
     @classmethod
     def _translate_type_from_mysql_to_sqlite(
-        cls, column_type: t.Union[str, bytes], sqlite_json1_extension_enabled=False
+        cls, column_type: t.Union[str, bytes], sqlite_json1_extension_enabled: bool = False
     ) -> str:
         _column_type: str = cls._decode_column_type(column_type)
 
@@ -1136,20 +1140,22 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 WHERE TABLE_SCHEMA = SCHEMA()
             """)
 
-            def _coerce_row(row: t.Any) -> t.Tuple[str, str]:
+            def _stringify_row_item(value: object) -> str:
+                if isinstance(value, (bytes, bytearray)):
+                    return value.decode()
+                return str(value)
+
+            def _coerce_row(row: object) -> t.Tuple[str, str]:
                 try:
-                    # Row like (name, type)
-                    name = row[0].decode() if isinstance(row[0], (bytes, bytearray)) else row[0]
-                    ttype = (
-                        row[1].decode()
-                        if (isinstance(row, (list, tuple)) and len(row) > 1 and isinstance(row[1], (bytes, bytearray)))
-                        else (row[1] if (isinstance(row, (list, tuple)) and len(row) > 1) else "BASE TABLE")
-                    )
-                    return str(name), str(ttype)
+                    if isinstance(row, (list, tuple)):
+                        values = t.cast(t.Sequence[object], row)
+                        name = _stringify_row_item(values[0])
+                        table_type = _stringify_row_item(values[1]) if len(values) > 1 else "BASE TABLE"
+                        return name, table_type
+                    raise TypeError
                 except (TypeError, IndexError, UnicodeDecodeError):
                     # Fallback: treat as a single value name when row is not a 2-tuple or decoding fails
-                    name = row.decode() if isinstance(row, (bytes, bytearray)) else str(row)
-                    return name, "BASE TABLE"
+                    return _stringify_row_item(row), "BASE TABLE"
 
             tables = (_coerce_row(row) for row in self._mysql_cur.fetchall())
 
