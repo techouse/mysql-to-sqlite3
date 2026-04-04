@@ -187,8 +187,9 @@ class TestMySQLtoSQLite:
 
         caplog.set_level(logging.DEBUG)
         mocker.patch.object(mysql.connector, "connect", return_value=FakeMySQLConnection())
+        exception_errno = getattr(exception, "errno", None) if isinstance(exception, mysql.connector.Error) else None
         expected_exception: t.Type[BaseException] = (
-            ValueError if isinstance(exception, mysql.connector.Error) else type(exception)
+            ValueError if exception_errno == errorcode.ER_BAD_DB_ERROR else type(exception)
         )
         with pytest.raises(expected_exception) as excinfo:
             MySQLtoSQLite(  # type: ignore[call-arg]
