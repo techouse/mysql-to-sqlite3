@@ -115,6 +115,12 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
         self._mysql_ssl_key = kwargs.get("mysql_ssl_key") or None
         self._mysql_ssl_disabled = bool(kwargs.get("mysql_ssl_disabled", False))
 
+        if self._mysql_ssl_disabled and any((self._mysql_ssl_ca, self._mysql_ssl_cert, self._mysql_ssl_key)):
+            raise ValueError("Cannot use SSL certificate options when SSL is disabled")
+
+        if bool(self._mysql_ssl_cert) != bool(self._mysql_ssl_key):
+            raise ValueError("mysql_ssl_cert and mysql_ssl_key must be provided together")
+
         self._current_chunk_number = 0
 
         self._chunk_size = kwargs.get("chunk") or None

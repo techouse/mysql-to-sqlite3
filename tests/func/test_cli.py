@@ -773,10 +773,10 @@ class TestMySQLtoSQLiteSSL:
         self,
         cli_runner: CliRunner,
         sqlite_database: "os.PathLike[t.Any]",
-        mysql_database: Database,
         mysql_credentials: MySQLCredentials,
         mysql_ssl_certs: t.Optional["MySQLSSLCerts"],
     ) -> None:
+        """SSL cert without key should be rejected at CLI validation."""
         if mysql_ssl_certs is None:
             pytest.skip("SSL certs not available for this environment")
         result: Result = cli_runner.invoke(
@@ -794,22 +794,21 @@ class TestMySQLtoSQLiteSSL:
                 mysql_credentials.host,
                 "-P",
                 str(mysql_credentials.port),
-                "--mysql-ssl-ca",
-                str(mysql_ssl_certs.ca),
                 "--mysql-ssl-cert",
                 str(mysql_ssl_certs.client_cert),
             ],
         )
         assert result.exit_code > 0
+        assert "must be provided together" in result.output
 
     def test_ssl_connection_key_without_cert_fails(
         self,
         cli_runner: CliRunner,
         sqlite_database: "os.PathLike[t.Any]",
-        mysql_database: Database,
         mysql_credentials: MySQLCredentials,
         mysql_ssl_certs: t.Optional["MySQLSSLCerts"],
     ) -> None:
+        """SSL key without cert should be rejected at CLI validation."""
         if mysql_ssl_certs is None:
             pytest.skip("SSL certs not available for this environment")
         result: Result = cli_runner.invoke(
@@ -827,10 +826,9 @@ class TestMySQLtoSQLiteSSL:
                 mysql_credentials.host,
                 "-P",
                 str(mysql_credentials.port),
-                "--mysql-ssl-ca",
-                str(mysql_ssl_certs.ca),
                 "--mysql-ssl-key",
                 str(mysql_ssl_certs.client_key),
             ],
         )
         assert result.exit_code > 0
+        assert "must be provided together" in result.output

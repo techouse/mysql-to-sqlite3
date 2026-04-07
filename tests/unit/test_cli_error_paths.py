@@ -208,3 +208,67 @@ class TestCliErrorPaths:
         assert captured_kwargs["mysql_ssl_cert"] is None
         assert captured_kwargs["mysql_ssl_key"] is None
         assert captured_kwargs["mysql_ssl_disabled"] is False
+
+    def test_skip_ssl_with_ssl_options_rejected(self, monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+        """--skip-ssl and --mysql-ssl-* options are mutually exclusive."""
+        monkeypatch.setattr("mysql_to_sqlite3.cli.mysql_supported_character_sets", _fake_supported_charsets)
+        monkeypatch.setattr("mysql_to_sqlite3.cli.MySQLtoSQLite", _FakeConverter)
+
+        ca_file = tmp_path / "ca.pem"
+        ca_file.write_text("fake")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            mysql2sqlite,
+            [
+                "-f", "out.sqlite3",
+                "-d", "db",
+                "-u", "user",
+                "--skip-ssl",
+                "--mysql-ssl-ca", str(ca_file),
+            ],
+        )
+        assert result.exit_code > 0
+        assert "mutually exclusive" in result.output
+
+    def test_ssl_cert_without_key_rejected(self, monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+        """--mysql-ssl-cert without --mysql-ssl-key should be rejected."""
+        monkeypatch.setattr("mysql_to_sqlite3.cli.mysql_supported_character_sets", _fake_supported_charsets)
+        monkeypatch.setattr("mysql_to_sqlite3.cli.MySQLtoSQLite", _FakeConverter)
+
+        cert_file = tmp_path / "client-cert.pem"
+        cert_file.write_text("fake")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            mysql2sqlite,
+            [
+                "-f", "out.sqlite3",
+                "-d", "db",
+                "-u", "user",
+                "--mysql-ssl-cert", str(cert_file),
+            ],
+        )
+        assert result.exit_code > 0
+        assert "must be provided together" in result.output
+
+    def test_ssl_key_without_cert_rejected(self, monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+        """--mysql-ssl-key without --mysql-ssl-cert should be rejected."""
+        monkeypatch.setattr("mysql_to_sqlite3.cli.mysql_supported_character_sets", _fake_supported_charsets)
+        monkeypatch.setattr("mysql_to_sqlite3.cli.MySQLtoSQLite", _FakeConverter)
+
+        key_file = tmp_path / "client-key.pem"
+        key_file.write_text("fake")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            mysql2sqlite,
+            [
+                "-f", "out.sqlite3",
+                "-d", "db",
+                "-u", "user",
+                "--mysql-ssl-key", str(key_file),
+            ],
+        )
+        assert result.exit_code > 0
+        assert "must be provided together" in result.output

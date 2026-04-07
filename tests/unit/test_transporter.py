@@ -1061,3 +1061,49 @@ class TestSSLOptions:
         assert connect_kwargs["ssl_ca"] is None
         assert connect_kwargs["ssl_cert"] is None
         assert connect_kwargs["ssl_key"] is None
+
+    def test_ssl_disabled_with_ssl_options_raises(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """SSL disabled combined with SSL cert options should raise ValueError."""
+        with pytest.raises(ValueError, match="Cannot use SSL certificate options when SSL is disabled"):
+            self._make_instance(
+                monkeypatch,
+                sqlite_database,
+                mysql_credentials,
+                mysql_ssl_ca="/path/to/ca.pem",
+                mysql_ssl_disabled=True,
+            )
+
+    def test_ssl_cert_without_key_raises(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Providing ssl_cert without ssl_key should raise ValueError."""
+        with pytest.raises(ValueError, match="mysql_ssl_cert and mysql_ssl_key must be provided together"):
+            self._make_instance(
+                monkeypatch,
+                sqlite_database,
+                mysql_credentials,
+                mysql_ssl_cert="/path/to/client-cert.pem",
+            )
+
+    def test_ssl_key_without_cert_raises(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Providing ssl_key without ssl_cert should raise ValueError."""
+        with pytest.raises(ValueError, match="mysql_ssl_cert and mysql_ssl_key must be provided together"):
+            self._make_instance(
+                monkeypatch,
+                sqlite_database,
+                mysql_credentials,
+                mysql_ssl_key="/path/to/client-key.pem",
+            )

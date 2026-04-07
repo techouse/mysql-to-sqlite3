@@ -294,48 +294,57 @@ def mysql_ssl_certs(
     if not pytestconfig.getoption("use_docker"):
         return None
 
-    try:
-        client: DockerClient = docker.from_env()
-        container: t.Optional[Container] = None
-        for c in client.containers.list():
-            if c.name == "pytest_mysql_to_sqlite3":
-                container = c
-                break
+    client: DockerClient = docker.from_env()
+    container: t.Optional[Container] = None
+    for c in client.containers.list():
+        if c.name == "pytest_mysql_to_sqlite3":
+            container = c
+            break
 
-        if container is None:
+    if container is None:
+        return None
+
+    ssl_dir = tmp_path_factory.mktemp("mysql_ssl_certs")
+
+    cert_files = {
+        "ca.pem": "ca.pem",
+        "client-cert.pem": "client-cert.pem",
+        "client-key.pem": "client-key.pem",
+    }
+
+    extracted: t.Dict[str, str] = {}
+    for filename, dest_name in cert_files.items():
+        try:
+            data_stream, _stat = container.get_archive(f"/var/lib/mysql/{filename}")
+        except NotFound:
+            # Cert files not present - MySQL version likely doesn't auto-generate them
             return None
 
-        ssl_dir = tmp_path_factory.mktemp("mysql_ssl_certs")
+        buf = io.BytesIO()
+        for chunk in data_stream:
+            buf.write(chunk)
+        buf.seek(0)
+        with tarfile.open(fileobj=buf) as tar:
+            member = next(
+                (m for m in tar.getmembers() if Path(m.name).name == filename),
+                None,
+            )
+            if member is None:
+                return None
 
-        cert_files = {
-            "ca.pem": "ca.pem",
-            "client-cert.pem": "client-cert.pem",
-            "client-key.pem": "client-key.pem",
-        }
+            fobj = tar.extractfile(member)
+            if fobj is None:
+                return None
 
-        extracted: t.Dict[str, str] = {}
-        for filename, dest_name in cert_files.items():
-            data_stream, _stat = container.get_archive(f"/var/lib/mysql/{filename}")
-            buf = io.BytesIO()
-            for chunk in data_stream:
-                buf.write(chunk)
-            buf.seek(0)
-            with tarfile.open(fileobj=buf) as tar:
-                member = tar.getmember(filename)
-                fobj = tar.extractfile(member)
-                if fobj is None:
-                    return None
-                dest_path = ssl_dir / dest_name
-                dest_path.write_bytes(fobj.read())
-                extracted[filename] = str(dest_path)
+            dest_path = ssl_dir / dest_name
+            dest_path.write_bytes(fobj.read())
+            extracted[filename] = str(dest_path)
 
-        return MySQLSSLCerts(
-            ca=extracted["ca.pem"],
-            client_cert=extracted["client-cert.pem"],
-            client_key=extracted["client-key.pem"],
-        )
-    except Exception:
-        return None
+    return MySQLSSLCerts(
+        ca=extracted["ca.pem"],
+        client_cert=extracted["client-cert.pem"],
+        client_key=extracted["client-key.pem"],
+    )
 
 
 @pytest.fixture(scope="session")
