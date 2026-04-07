@@ -302,7 +302,7 @@ def mysql_ssl_certs(
             break
 
     if container is None:
-        return None
+        pytest.fail("MySQL test container is running, but SSL cert extraction could not find it")
 
     ssl_dir = tmp_path_factory.mktemp("mysql_ssl_certs")
 
@@ -330,11 +330,11 @@ def mysql_ssl_certs(
                 None,
             )
             if member is None:
-                return None
+                pytest.fail(f"Docker returned an archive for {filename}, but the file was not present")
 
             fobj = tar.extractfile(member)
             if fobj is None:
-                return None
+                pytest.fail(f"Could not read {filename} from the Docker archive")
 
             dest_path = ssl_dir / dest_name
             dest_path.write_bytes(fobj.read())
