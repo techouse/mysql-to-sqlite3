@@ -277,10 +277,12 @@ def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) ->
     yield  # type: ignore[misc]
 
     if use_docker:
-        if container is not None:
-            container.kill()
-        if client is not None:
-            client.close()
+        try:
+            if container is not None:
+                container.kill()
+        finally:
+            if client is not None:
+                client.close()
 
 
 class MySQLSSLCerts(t.NamedTuple):
