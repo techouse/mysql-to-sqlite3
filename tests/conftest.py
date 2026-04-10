@@ -94,10 +94,13 @@ def pytest_addoption(parser: "Parser"):
 def cleanup_hanged_docker_containers() -> None:
     try:
         client: DockerClient = docker.from_env()
-        for container in client.containers.list():
-            if container.name == "pytest_mysql_to_sqlite3":
-                container.kill()
-                break
+        try:
+            for container in client.containers.list():
+                if container.name == "pytest_mysql_to_sqlite3":
+                    container.kill()
+                    break
+        finally:
+            client.close()
     except Exception:
         pass
 
@@ -105,10 +108,13 @@ def cleanup_hanged_docker_containers() -> None:
 def pytest_keyboard_interrupt() -> None:
     try:
         client: DockerClient = docker.from_env()
-        for container in client.containers.list():
-            if container.name == "pytest_mysql_to_sqlite3":
-                container.kill()
-                break
+        try:
+            for container in client.containers.list():
+                if container.name == "pytest_mysql_to_sqlite3":
+                    container.kill()
+                    break
+        finally:
+            client.close()
     except Exception:
         pass
 
@@ -195,6 +201,7 @@ def mysql_credentials(pytestconfig: Config) -> MySQLCredentials:
 
 @pytest.fixture(scope="session")
 def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) -> t.Iterator[MySQLConnection]:
+    client: t.Optional[DockerClient] = None
     container: t.Optional[Container] = None
     mysql_connection: t.Optional[t.Union[PooledMySQLConnection, MySQLConnectionAbstract]] = None
     mysql_available: bool = False
@@ -269,8 +276,11 @@ def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) ->
 
     yield  # type: ignore[misc]
 
-    if use_docker and container is not None:
-        container.kill()
+    if use_docker:
+        if container is not None:
+            container.kill()
+        if client is not None:
+            client.close()
 
 
 class MySQLSSLCerts(t.NamedTuple):
