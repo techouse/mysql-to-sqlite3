@@ -173,6 +173,7 @@ class MySQLtoSQLite(MySQLtoSQLiteAttributes):
                 ssl_ca=self._mysql_ssl_ca,
                 ssl_cert=self._mysql_ssl_cert,
                 ssl_key=self._mysql_ssl_key,
+                ssl_verify_cert=self._mysql_ssl_ca is not None,
                 ssl_disabled=self._mysql_ssl_disabled,
                 charset=self._mysql_charset,
                 collation=self._mysql_collation,

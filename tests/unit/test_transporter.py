@@ -981,6 +981,7 @@ class TestSSLOptions:
         assert connect_kwargs["ssl_ca"] == "/path/to/ca.pem"
         assert connect_kwargs["ssl_cert"] == "/path/to/client-cert.pem"
         assert connect_kwargs["ssl_key"] == "/path/to/client-key.pem"
+        assert connect_kwargs["ssl_verify_cert"] is True
 
     def test_ssl_params_default_to_none(
         self,
@@ -1000,6 +1001,7 @@ class TestSSLOptions:
         assert connect_kwargs["ssl_ca"] is None
         assert connect_kwargs["ssl_cert"] is None
         assert connect_kwargs["ssl_key"] is None
+        assert connect_kwargs["ssl_verify_cert"] is False
 
     def test_ssl_ca_only(
         self,
@@ -1018,6 +1020,7 @@ class TestSSLOptions:
         assert instance._mysql_ssl_cert is None
         assert instance._mysql_ssl_key is None
         assert connect_kwargs["ssl_ca"] == "/path/to/ca.pem"
+        assert connect_kwargs["ssl_verify_cert"] is True
 
     def test_ssl_cert_and_key_without_ca(
         self,
@@ -1039,6 +1042,7 @@ class TestSSLOptions:
         assert connect_kwargs["ssl_ca"] is None
         assert connect_kwargs["ssl_cert"] == "/path/to/client-cert.pem"
         assert connect_kwargs["ssl_key"] == "/path/to/client-key.pem"
+        assert connect_kwargs["ssl_verify_cert"] is False
 
     def test_ssl_empty_strings_treated_as_none(
         self,
