@@ -69,7 +69,15 @@ Options:
   --mysql-charset TEXT            MySQL database and table character set
                                   [default: utf8mb4]
   --mysql-collation TEXT          MySQL database and table collation
+  --mysql-ssl-ca PATH             Path to SSL CA certificate file.
+  --mysql-ssl-cert PATH           Path to SSL certificate file.
+                                  Must be provided together with
+                                  --mysql-ssl-key.
+  --mysql-ssl-key PATH            Path to SSL key file.
+                                  Must be provided together with
+                                  --mysql-ssl-cert.
   -S, --skip-ssl                  Disable MySQL connection encryption.
+                                  Cannot be used with --mysql-ssl-* options.
   -c, --chunk INTEGER             Chunk reading/writing SQL records
   -l, --log-file PATH             Log file
   --json-as-text                  Transfer JSON columns as TEXT.

@@ -85,6 +85,9 @@ class TestCliErrorPaths:
             "mysql_port": 3306,
             "mysql_charset": "utf8mb4",
             "mysql_collation": None,
+            "mysql_ssl_ca": None,
+            "mysql_ssl_cert": None,
+            "mysql_ssl_key": None,
             "skip_ssl": False,
             "chunk": 200000,
             "log_file": None,
@@ -129,6 +132,9 @@ class TestCliErrorPaths:
             "mysql_port": 3306,
             "mysql_charset": "utf8mb4",
             "mysql_collation": None,
+            "mysql_ssl_ca": None,
+            "mysql_ssl_cert": None,
+            "mysql_ssl_key": None,
             "skip_ssl": False,
             "chunk": 200000,
             "log_file": None,
@@ -140,3 +146,129 @@ class TestCliErrorPaths:
         }
         with pytest.raises(RuntimeError):
             mysql2sqlite.callback(**kwargs)
+
+    def test_ssl_options_passed_to_converter(self, monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+        """SSL options from CLI should be forwarded to the MySQLtoSQLite constructor."""
+        captured_kwargs = {}
+
+        class CapturingConverter:
+            def __init__(self, **kwargs):
+                captured_kwargs.update(kwargs)
+
+            def transfer(self):
+                pass
+
+        monkeypatch.setattr("mysql_to_sqlite3.cli.mysql_supported_character_sets", _fake_supported_charsets)
+        monkeypatch.setattr("mysql_to_sqlite3.cli.MySQLtoSQLite", CapturingConverter)
+
+        ca_file = tmp_path / "ca.pem"
+        cert_file = tmp_path / "client-cert.pem"
+        key_file = tmp_path / "client-key.pem"
+        for f in (ca_file, cert_file, key_file):
+            f.write_text("fake")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            mysql2sqlite,
+            [
+                "-f", "out.sqlite3",
+                "-d", "db",
+                "-u", "user",
+                "--mysql-ssl-ca", str(ca_file),
+                "--mysql-ssl-cert", str(cert_file),
+                "--mysql-ssl-key", str(key_file),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert captured_kwargs["mysql_ssl_ca"] == str(ca_file)
+        assert captured_kwargs["mysql_ssl_cert"] == str(cert_file)
+        assert captured_kwargs["mysql_ssl_key"] == str(key_file)
+
+    def test_ssl_options_default_to_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """SSL options should default to None when not provided."""
+        captured_kwargs = {}
+
+        class CapturingConverter:
+            def __init__(self, **kwargs):
+                captured_kwargs.update(kwargs)
+
+            def transfer(self):
+                pass
+
+        monkeypatch.setattr("mysql_to_sqlite3.cli.mysql_supported_character_sets", _fake_supported_charsets)
+        monkeypatch.setattr("mysql_to_sqlite3.cli.MySQLtoSQLite", CapturingConverter)
+
+        runner = CliRunner()
+        result = runner.invoke(
+            mysql2sqlite,
+            ["-f", "out.sqlite3", "-d", "db", "-u", "user"],
+        )
+        assert result.exit_code == 0, result.output
+        assert captured_kwargs["mysql_ssl_ca"] is None
+        assert captured_kwargs["mysql_ssl_cert"] is None
+        assert captured_kwargs["mysql_ssl_key"] is None
+        assert captured_kwargs["mysql_ssl_disabled"] is False
+
+    def test_skip_ssl_with_ssl_options_rejected(self, monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+        """--skip-ssl and --mysql-ssl-* options are mutually exclusive."""
+        monkeypatch.setattr("mysql_to_sqlite3.cli.mysql_supported_character_sets", _fake_supported_charsets)
+        monkeypatch.setattr("mysql_to_sqlite3.cli.MySQLtoSQLite", _FakeConverter)
+
+        ca_file = tmp_path / "ca.pem"
+        ca_file.write_text("fake")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            mysql2sqlite,
+            [
+                "-f", "out.sqlite3",
+                "-d", "db",
+                "-u", "user",
+                "--skip-ssl",
+                "--mysql-ssl-ca", str(ca_file),
+            ],
+        )
+        assert result.exit_code > 0
+        assert "mutually exclusive" in result.output
+
+    def test_ssl_cert_without_key_rejected(self, monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+        """--mysql-ssl-cert without --mysql-ssl-key should be rejected."""
+        monkeypatch.setattr("mysql_to_sqlite3.cli.mysql_supported_character_sets", _fake_supported_charsets)
+        monkeypatch.setattr("mysql_to_sqlite3.cli.MySQLtoSQLite", _FakeConverter)
+
+        cert_file = tmp_path / "client-cert.pem"
+        cert_file.write_text("fake")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            mysql2sqlite,
+            [
+                "-f", "out.sqlite3",
+                "-d", "db",
+                "-u", "user",
+                "--mysql-ssl-cert", str(cert_file),
+            ],
+        )
+        assert result.exit_code > 0
+        assert "must be provided together" in result.output
+
+    def test_ssl_key_without_cert_rejected(self, monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+        """--mysql-ssl-key without --mysql-ssl-cert should be rejected."""
+        monkeypatch.setattr("mysql_to_sqlite3.cli.mysql_supported_character_sets", _fake_supported_charsets)
+        monkeypatch.setattr("mysql_to_sqlite3.cli.MySQLtoSQLite", _FakeConverter)
+
+        key_file = tmp_path / "client-key.pem"
+        key_file.write_text("fake")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            mysql2sqlite,
+            [
+                "-f", "out.sqlite3",
+                "-d", "db",
+                "-u", "user",
+                "--mysql-ssl-key", str(key_file),
+            ],
+        )
+        assert result.exit_code > 0
+        assert "must be provided together" in result.output

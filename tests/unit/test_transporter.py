@@ -897,3 +897,217 @@ def test_transfer_coerce_row_fallback_non_subscriptable() -> None:
     # The info call is like: ("%s%sTransferring table %s", prefix1, prefix2, table_name)
     called_with_123 = any(call.args and call.args[-1] == "123" for call in instance._logger.info.call_args_list)
     assert called_with_123
+
+
+class TestSSLOptions:
+    """Tests for MySQL SSL certificate options."""
+
+    def _make_instance(self, monkeypatch, sqlite_database, mysql_credentials, **extra_kwargs):
+        """Create a MySQLtoSQLite instance with fake MySQL connection."""
+        from mysql_to_sqlite3 import transporter as transporter_module
+
+        connect_kwargs = {}
+
+        class FakeMySQLConnection:
+            def __init__(self):
+                self.database = None
+
+            def is_connected(self):
+                return True
+
+            def cursor(self, *args, **kwargs):
+                return MagicMock()
+
+            def get_server_version(self):
+                return (8, 0, 21)
+
+            def reconnect(self):
+                return None
+
+        fake_conn = FakeMySQLConnection()
+
+        fake_charset = SimpleNamespace(
+            get_default_collation=lambda charset: ("utf8mb4_unicode_ci", None),
+            get_supported=lambda: ("utf8mb4",),
+        )
+
+        def fake_connect(**kwargs):
+            connect_kwargs.update(kwargs)
+            return fake_conn
+
+        monkeypatch.setattr("mysql_to_sqlite3.transporter.CharacterSet", lambda: fake_charset)
+        monkeypatch.setattr("mysql_to_sqlite3.transporter.mysql.connector.connect", fake_connect)
+        monkeypatch.setattr(MySQLtoSQLite, "_setup_logger", MagicMock(return_value=MagicMock()))
+
+        original_isinstance = builtins.isinstance
+
+        def fake_isinstance(obj, classinfo):
+            if obj is fake_conn and classinfo is transporter_module.MySQLConnectionAbstract:
+                return True
+            return original_isinstance(obj, classinfo)
+
+        monkeypatch.setattr("mysql_to_sqlite3.transporter.isinstance", fake_isinstance, raising=False)
+
+        kwargs = dict(
+            sqlite_file=sqlite_database,
+            mysql_user=mysql_credentials.user,
+            mysql_password=mysql_credentials.password,
+            mysql_host=mysql_credentials.host,
+            mysql_port=mysql_credentials.port,
+            mysql_database=mysql_credentials.database,
+        )
+        kwargs.update(extra_kwargs)
+        instance = MySQLtoSQLite(**kwargs)
+        return instance, connect_kwargs
+
+    def test_ssl_params_passed_to_mysql_connector(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """SSL certificate paths should be forwarded to mysql.connector.connect."""
+        instance, connect_kwargs = self._make_instance(
+            monkeypatch,
+            sqlite_database,
+            mysql_credentials,
+            mysql_ssl_ca="/path/to/ca.pem",
+            mysql_ssl_cert="/path/to/client-cert.pem",
+            mysql_ssl_key="/path/to/client-key.pem",
+        )
+        assert instance._mysql_ssl_ca == "/path/to/ca.pem"
+        assert instance._mysql_ssl_cert == "/path/to/client-cert.pem"
+        assert instance._mysql_ssl_key == "/path/to/client-key.pem"
+        assert connect_kwargs["ssl_ca"] == "/path/to/ca.pem"
+        assert connect_kwargs["ssl_cert"] == "/path/to/client-cert.pem"
+        assert connect_kwargs["ssl_key"] == "/path/to/client-key.pem"
+        assert connect_kwargs["ssl_verify_cert"] is True
+
+    def test_ssl_params_default_to_none(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """SSL certificate paths should default to None when not provided."""
+        instance, connect_kwargs = self._make_instance(
+            monkeypatch,
+            sqlite_database,
+            mysql_credentials,
+        )
+        assert instance._mysql_ssl_ca is None
+        assert instance._mysql_ssl_cert is None
+        assert instance._mysql_ssl_key is None
+        assert connect_kwargs["ssl_ca"] is None
+        assert connect_kwargs["ssl_cert"] is None
+        assert connect_kwargs["ssl_key"] is None
+        assert connect_kwargs["ssl_verify_cert"] is False
+
+    def test_ssl_ca_only(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Only ssl_ca can be provided without cert and key."""
+        instance, connect_kwargs = self._make_instance(
+            monkeypatch,
+            sqlite_database,
+            mysql_credentials,
+            mysql_ssl_ca="/path/to/ca.pem",
+        )
+        assert instance._mysql_ssl_ca == "/path/to/ca.pem"
+        assert instance._mysql_ssl_cert is None
+        assert instance._mysql_ssl_key is None
+        assert connect_kwargs["ssl_ca"] == "/path/to/ca.pem"
+        assert connect_kwargs["ssl_verify_cert"] is True
+
+    def test_ssl_cert_and_key_without_ca(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """cert and key can be provided without a CA certificate."""
+        instance, connect_kwargs = self._make_instance(
+            monkeypatch,
+            sqlite_database,
+            mysql_credentials,
+            mysql_ssl_cert="/path/to/client-cert.pem",
+            mysql_ssl_key="/path/to/client-key.pem",
+        )
+        assert instance._mysql_ssl_ca is None
+        assert instance._mysql_ssl_cert == "/path/to/client-cert.pem"
+        assert instance._mysql_ssl_key == "/path/to/client-key.pem"
+        assert connect_kwargs["ssl_ca"] is None
+        assert connect_kwargs["ssl_cert"] == "/path/to/client-cert.pem"
+        assert connect_kwargs["ssl_key"] == "/path/to/client-key.pem"
+        assert connect_kwargs["ssl_verify_cert"] is False
+
+    def test_ssl_empty_strings_treated_as_none(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Empty string SSL paths should be normalized to None."""
+        instance, connect_kwargs = self._make_instance(
+            monkeypatch,
+            sqlite_database,
+            mysql_credentials,
+            mysql_ssl_ca="",
+            mysql_ssl_cert="",
+            mysql_ssl_key="",
+        )
+        assert instance._mysql_ssl_ca is None
+        assert instance._mysql_ssl_cert is None
+        assert instance._mysql_ssl_key is None
+        assert connect_kwargs["ssl_ca"] is None
+        assert connect_kwargs["ssl_cert"] is None
+        assert connect_kwargs["ssl_key"] is None
+
+    def test_ssl_disabled_with_ssl_options_raises(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """SSL disabled combined with SSL cert options should raise ValueError."""
+        with pytest.raises(ValueError, match="Cannot use SSL certificate options when SSL is disabled"):
+            self._make_instance(
+                monkeypatch,
+                sqlite_database,
+                mysql_credentials,
+                mysql_ssl_ca="/path/to/ca.pem",
+                mysql_ssl_disabled=True,
+            )
+
+    def test_ssl_cert_without_key_raises(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Providing ssl_cert without ssl_key should raise ValueError."""
+        with pytest.raises(ValueError, match="mysql_ssl_cert and mysql_ssl_key must be provided together"):
+            self._make_instance(
+                monkeypatch,
+                sqlite_database,
+                mysql_credentials,
+                mysql_ssl_cert="/path/to/client-cert.pem",
+            )
+
+    def test_ssl_key_without_cert_raises(
+        self,
+        sqlite_database: "os.PathLike[t.Any]",
+        mysql_credentials: MySQLCredentials,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Providing ssl_key without ssl_cert should raise ValueError."""
+        with pytest.raises(ValueError, match="mysql_ssl_cert and mysql_ssl_key must be provided together"):
+            self._make_instance(
+                monkeypatch,
+                sqlite_database,
+                mysql_credentials,
+                mysql_ssl_key="/path/to/client-key.pem",
+            )

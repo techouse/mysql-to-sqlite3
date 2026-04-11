@@ -32,6 +32,9 @@ class MySQLtoSQLiteParams(TypedDict):
     mysql_port: int
     mysql_charset: t.Optional[str]
     mysql_collation: t.Optional[str]
+    mysql_ssl_ca: t.Optional[str]
+    mysql_ssl_cert: t.Optional[str]
+    mysql_ssl_key: t.Optional[str]
     mysql_ssl_disabled: t.Optional[bool]
     mysql_tables: t.Optional[t.Sequence[str]]
     mysql_user: str
@@ -67,6 +70,9 @@ class MySQLtoSQLiteAttributes:
     _mysql_port: int
     _mysql_charset: str
     _mysql_collation: str
+    _mysql_ssl_ca: t.Optional[str]
+    _mysql_ssl_cert: t.Optional[str]
+    _mysql_ssl_key: t.Optional[str]
     _mysql_ssl_disabled: bool
     _mysql_tables: t.Sequence[str]
     _mysql_user: str

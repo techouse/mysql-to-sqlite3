@@ -137,6 +137,24 @@ _copyright_header: str = f"mysql2sqlite version {package_version} Copyright (c) 
     default=None,
     help="MySQL database and table collation",
 )
+@click.option(
+    "--mysql-ssl-ca",
+    type=click.Path(exists=True, dir_okay=False, file_okay=True, readable=True),
+    default=None,
+    help="Path to SSL CA certificate file.",
+)
+@click.option(
+    "--mysql-ssl-cert",
+    type=click.Path(exists=True, dir_okay=False, file_okay=True, readable=True),
+    default=None,
+    help="Path to SSL certificate file.",
+)
+@click.option(
+    "--mysql-ssl-key",
+    type=click.Path(exists=True, dir_okay=False, file_okay=True, readable=True),
+    default=None,
+    help="Path to SSL key file.",
+)
 @click.option("-S", "--skip-ssl", is_flag=True, help="Disable MySQL connection encryption.")
 @click.option(
     "-c",
@@ -184,6 +202,9 @@ def cli(
     mysql_port: int,
     mysql_charset: str,
     mysql_collation: str,
+    mysql_ssl_ca: t.Optional[str],
+    mysql_ssl_cert: t.Optional[str],
+    mysql_ssl_key: t.Optional[str],
     skip_ssl: bool,
     chunk: int,
     log_file: t.Union[str, "os.PathLike[t.Any]"],
@@ -215,6 +236,16 @@ def cli(
         if mysql_tables is not None and exclude_mysql_tables is not None:
             raise click.UsageError("Illegal usage: --mysql-tables and --exclude-mysql-tables are mutually exclusive!")
 
+        if skip_ssl and any((mysql_ssl_ca, mysql_ssl_cert, mysql_ssl_key)):
+            raise click.UsageError(
+                "Illegal usage: --skip-ssl and --mysql-ssl-ca/--mysql-ssl-cert/--mysql-ssl-key are mutually exclusive!"
+            )
+
+        if bool(mysql_ssl_cert) != bool(mysql_ssl_key):
+            raise click.UsageError(
+                "Illegal usage: --mysql-ssl-cert and --mysql-ssl-key must be provided together."
+            )
+
         converter = MySQLtoSQLite(
             sqlite_file=sqlite_file,
             mysql_user=mysql_user,
@@ -234,6 +265,9 @@ def cli(
             mysql_port=mysql_port,
             mysql_charset=mysql_charset,
             mysql_collation=mysql_collation,
+            mysql_ssl_ca=mysql_ssl_ca,
+            mysql_ssl_cert=mysql_ssl_cert,
+            mysql_ssl_key=mysql_ssl_key,
             mysql_ssl_disabled=skip_ssl,
             chunk=chunk,
             json_as_text=json_as_text,

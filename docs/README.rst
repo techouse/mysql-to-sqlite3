@@ -47,8 +47,11 @@ Connection Options
 - ``-h, --mysql-host TEXT``: MySQL host. Defaults to localhost.
 - ``-P, --mysql-port INTEGER``: MySQL port. Defaults to 3306.
 - ``--mysql-charset TEXT``: MySQL database and table character set. The default is utf8mb4.
-- ``--mysql-collation TEXT``: MySQL database and table collation
-- ``-S, --skip-ssl``: Disable MySQL connection encryption.
+- ``--mysql-collation TEXT``: MySQL database and table collation.
+- ``--mysql-ssl-ca PATH``: Path to SSL CA certificate file.
+- ``--mysql-ssl-cert PATH``: Path to SSL certificate file. Must be provided together with ``--mysql-ssl-key``.
+- ``--mysql-ssl-key PATH``: Path to SSL key file. Must be provided together with ``--mysql-ssl-cert``.
+- ``-S, --skip-ssl``: Disable MySQL connection encryption. Cannot be used together with ``--mysql-ssl-*`` options.
 
 Other Options
 """""""""""""
