@@ -105,7 +105,7 @@ def cleanup_hanged_docker_containers() -> None:
         pass
 
 
-def pytest_keyboard_interrupt() -> None:
+def pytest_keyboard_interrupt(excinfo: t.Any) -> None:
     try:
         client: DockerClient = docker.from_env()
         try:
@@ -249,40 +249,41 @@ def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) ->
             auto_remove=True,
         )
 
-    while not mysql_available and mysql_connection_retries > 0:
-        try:
-            mysql_connection = mysql.connector.connect(
-                user=mysql_credentials.user,
-                password=mysql_credentials.password,
-                host=mysql_credentials.host,
-                port=mysql_credentials.port,
-                charset="utf8mb4",
-                collation="utf8mb4_unicode_ci",
-            )
-        except mysql.connector.Error as err:
-            if err.errno == errorcode.CR_SERVER_LOST:
-                # sleep for two seconds and retry the connection
-                sleep(2)
-            else:
-                raise
-        finally:
-            mysql_connection_retries -= 1
-            if mysql_connection and mysql_connection.is_connected():
-                mysql_available = True
-                mysql_connection.close()
-    else:
-        if not mysql_available and mysql_connection_retries <= 0:
-            raise ConnectionAbortedError("Maximum MySQL connection retries exhausted! Are you sure MySQL is running?")
+    try:
+        while not mysql_available and mysql_connection_retries > 0:
+            try:
+                mysql_connection = mysql.connector.connect(
+                    user=mysql_credentials.user,
+                    password=mysql_credentials.password,
+                    host=mysql_credentials.host,
+                    port=mysql_credentials.port,
+                    charset="utf8mb4",
+                    collation="utf8mb4_unicode_ci",
+                )
+            except mysql.connector.Error as err:
+                if err.errno == errorcode.CR_SERVER_LOST:
+                    # sleep for two seconds and retry the connection
+                    sleep(2)
+                else:
+                    raise
+            finally:
+                mysql_connection_retries -= 1
+                if mysql_connection and mysql_connection.is_connected():
+                    mysql_available = True
+                    mysql_connection.close()
+        else:
+            if not mysql_available and mysql_connection_retries <= 0:
+                raise ConnectionAbortedError("Maximum MySQL connection retries exhausted! Are you sure MySQL is running?")
 
-    yield  # type: ignore[misc]
-
-    if use_docker:
-        try:
-            if container is not None:
-                container.kill()
-        finally:
-            if client is not None:
-                client.close()
+        yield  # type: ignore[misc]
+    finally:
+        if use_docker:
+            try:
+                if container is not None:
+                    container.kill()
+            finally:
+                if client is not None:
+                    client.close()
 
 
 class MySQLSSLCerts(t.NamedTuple):
