@@ -222,34 +222,35 @@ def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) ->
         except Exception as err:
             pytest.fail(str(err))
 
-        docker_mysql_image = pytestconfig.getoption("docker_mysql_image") or "mysql:latest"
-
-        if not any(docker_mysql_image in image.tags for image in client.images.list()):
-            print(f"Attempting to download Docker image {docker_mysql_image}'")
-            try:
-                client.images.pull(docker_mysql_image)
-            except (HTTPError, NotFound) as err:
-                pytest.fail(str(err))
-
-        container = client.containers.run(
-            image=docker_mysql_image,
-            name="pytest_mysql_to_sqlite3",
-            ports={"3306/tcp": (mysql_credentials.host, f"{mysql_credentials.port}/tcp")},
-            environment={
-                "MYSQL_RANDOM_ROOT_PASSWORD": "yes",
-                "MYSQL_USER": mysql_credentials.user,
-                "MYSQL_PASSWORD": mysql_credentials.password,
-                "MYSQL_DATABASE": mysql_credentials.database,
-            },
-            command=[
-                "--character-set-server=utf8mb4",
-                "--collation-server=utf8mb4_unicode_ci",
-            ],
-            detach=True,
-            auto_remove=True,
-        )
-
     try:
+        if use_docker:
+            docker_mysql_image = pytestconfig.getoption("docker_mysql_image") or "mysql:latest"
+
+            if not any(docker_mysql_image in image.tags for image in client.images.list()):
+                print(f"Attempting to download Docker image {docker_mysql_image}'")
+                try:
+                    client.images.pull(docker_mysql_image)
+                except (HTTPError, NotFound) as err:
+                    pytest.fail(str(err))
+
+            container = client.containers.run(
+                image=docker_mysql_image,
+                name="pytest_mysql_to_sqlite3",
+                ports={"3306/tcp": (mysql_credentials.host, f"{mysql_credentials.port}/tcp")},
+                environment={
+                    "MYSQL_RANDOM_ROOT_PASSWORD": "yes",
+                    "MYSQL_USER": mysql_credentials.user,
+                    "MYSQL_PASSWORD": mysql_credentials.password,
+                    "MYSQL_DATABASE": mysql_credentials.database,
+                },
+                command=[
+                    "--character-set-server=utf8mb4",
+                    "--collation-server=utf8mb4_unicode_ci",
+                ],
+                detach=True,
+                auto_remove=True,
+            )
+
         while not mysql_available and mysql_connection_retries > 0:
             try:
                 mysql_connection = mysql.connector.connect(
