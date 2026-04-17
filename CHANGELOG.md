@@ -1,3 +1,8 @@
+# 2.6.0
+
+* [FEAT] Add MySQL SSL certificate options: `--mysql-ssl-ca`, `--mysql-ssl-cert`, `--mysql-ssl-key`
+* [TEST] close DockerClient instances in test fixtures
+
 # 2.5.7
 
 * [CHORE] pin sqlglot to >=30.0.0,<31.0.0
