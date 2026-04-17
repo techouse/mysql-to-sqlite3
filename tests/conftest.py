@@ -94,21 +94,27 @@ def pytest_addoption(parser: "Parser"):
 def cleanup_hanged_docker_containers() -> None:
     try:
         client: DockerClient = docker.from_env()
-        for container in client.containers.list():
-            if container.name == "pytest_mysql_to_sqlite3":
-                container.kill()
-                break
+        try:
+            for container in client.containers.list():
+                if container.name == "pytest_mysql_to_sqlite3":
+                    container.kill()
+                    break
+        finally:
+            client.close()
     except Exception:
         pass
 
 
-def pytest_keyboard_interrupt() -> None:
+def pytest_keyboard_interrupt(excinfo: t.Any) -> None:
     try:
         client: DockerClient = docker.from_env()
-        for container in client.containers.list():
-            if container.name == "pytest_mysql_to_sqlite3":
-                container.kill()
-                break
+        try:
+            for container in client.containers.list():
+                if container.name == "pytest_mysql_to_sqlite3":
+                    container.kill()
+                    break
+        finally:
+            client.close()
     except Exception:
         pass
 
@@ -195,6 +201,7 @@ def mysql_credentials(pytestconfig: Config) -> MySQLCredentials:
 
 @pytest.fixture(scope="session")
 def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) -> t.Iterator[MySQLConnection]:
+    client: t.Optional[DockerClient] = None
     container: t.Optional[Container] = None
     mysql_connection: t.Optional[t.Union[PooledMySQLConnection, MySQLConnectionAbstract]] = None
     mysql_available: bool = False
@@ -215,62 +222,69 @@ def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) ->
         except Exception as err:
             pytest.fail(str(err))
 
-        docker_mysql_image = pytestconfig.getoption("docker_mysql_image") or "mysql:latest"
+    try:
+        if use_docker:
+            docker_mysql_image = pytestconfig.getoption("docker_mysql_image") or "mysql:latest"
 
-        if not any(docker_mysql_image in image.tags for image in client.images.list()):
-            print(f"Attempting to download Docker image {docker_mysql_image}'")
-            try:
-                client.images.pull(docker_mysql_image)
-            except (HTTPError, NotFound) as err:
-                pytest.fail(str(err))
+            if not any(docker_mysql_image in image.tags for image in client.images.list()):
+                print(f"Attempting to download Docker image {docker_mysql_image}'")
+                try:
+                    client.images.pull(docker_mysql_image)
+                except (HTTPError, NotFound) as err:
+                    pytest.fail(str(err))
 
-        container = client.containers.run(
-            image=docker_mysql_image,
-            name="pytest_mysql_to_sqlite3",
-            ports={"3306/tcp": (mysql_credentials.host, f"{mysql_credentials.port}/tcp")},
-            environment={
-                "MYSQL_RANDOM_ROOT_PASSWORD": "yes",
-                "MYSQL_USER": mysql_credentials.user,
-                "MYSQL_PASSWORD": mysql_credentials.password,
-                "MYSQL_DATABASE": mysql_credentials.database,
-            },
-            command=[
-                "--character-set-server=utf8mb4",
-                "--collation-server=utf8mb4_unicode_ci",
-            ],
-            detach=True,
-            auto_remove=True,
-        )
-
-    while not mysql_available and mysql_connection_retries > 0:
-        try:
-            mysql_connection = mysql.connector.connect(
-                user=mysql_credentials.user,
-                password=mysql_credentials.password,
-                host=mysql_credentials.host,
-                port=mysql_credentials.port,
-                charset="utf8mb4",
-                collation="utf8mb4_unicode_ci",
+            container = client.containers.run(
+                image=docker_mysql_image,
+                name="pytest_mysql_to_sqlite3",
+                ports={"3306/tcp": (mysql_credentials.host, f"{mysql_credentials.port}/tcp")},
+                environment={
+                    "MYSQL_RANDOM_ROOT_PASSWORD": "yes",
+                    "MYSQL_USER": mysql_credentials.user,
+                    "MYSQL_PASSWORD": mysql_credentials.password,
+                    "MYSQL_DATABASE": mysql_credentials.database,
+                },
+                command=[
+                    "--character-set-server=utf8mb4",
+                    "--collation-server=utf8mb4_unicode_ci",
+                ],
+                detach=True,
+                auto_remove=True,
             )
-        except mysql.connector.Error as err:
-            if err.errno == errorcode.CR_SERVER_LOST:
-                # sleep for two seconds and retry the connection
-                sleep(2)
-            else:
-                raise
-        finally:
-            mysql_connection_retries -= 1
-            if mysql_connection and mysql_connection.is_connected():
-                mysql_available = True
-                mysql_connection.close()
-    else:
-        if not mysql_available and mysql_connection_retries <= 0:
-            raise ConnectionAbortedError("Maximum MySQL connection retries exhausted! Are you sure MySQL is running?")
 
-    yield  # type: ignore[misc]
+        while not mysql_available and mysql_connection_retries > 0:
+            try:
+                mysql_connection = mysql.connector.connect(
+                    user=mysql_credentials.user,
+                    password=mysql_credentials.password,
+                    host=mysql_credentials.host,
+                    port=mysql_credentials.port,
+                    charset="utf8mb4",
+                    collation="utf8mb4_unicode_ci",
+                )
+            except mysql.connector.Error as err:
+                if err.errno == errorcode.CR_SERVER_LOST:
+                    # sleep for two seconds and retry the connection
+                    sleep(2)
+                else:
+                    raise
+            finally:
+                mysql_connection_retries -= 1
+                if mysql_connection and mysql_connection.is_connected():
+                    mysql_available = True
+                    mysql_connection.close()
+        else:
+            if not mysql_available and mysql_connection_retries <= 0:
+                raise ConnectionAbortedError("Maximum MySQL connection retries exhausted! Are you sure MySQL is running?")
 
-    if use_docker and container is not None:
-        container.kill()
+        yield  # type: ignore[misc]
+    finally:
+        if use_docker:
+            try:
+                if container is not None:
+                    container.kill()
+            finally:
+                if client is not None:
+                    client.close()
 
 
 class MySQLSSLCerts(t.NamedTuple):
