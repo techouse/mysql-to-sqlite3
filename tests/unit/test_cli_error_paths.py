@@ -171,12 +171,18 @@ class TestCliErrorPaths:
         result = runner.invoke(
             mysql2sqlite,
             [
-                "-f", "out.sqlite3",
-                "-d", "db",
-                "-u", "user",
-                "--mysql-ssl-ca", str(ca_file),
-                "--mysql-ssl-cert", str(cert_file),
-                "--mysql-ssl-key", str(key_file),
+                "-f",
+                "out.sqlite3",
+                "-d",
+                "db",
+                "-u",
+                "user",
+                "--mysql-ssl-ca",
+                str(ca_file),
+                "--mysql-ssl-cert",
+                str(cert_file),
+                "--mysql-ssl-key",
+                str(key_file),
             ],
         )
         assert result.exit_code == 0, result.output
@@ -221,11 +227,15 @@ class TestCliErrorPaths:
         result = runner.invoke(
             mysql2sqlite,
             [
-                "-f", "out.sqlite3",
-                "-d", "db",
-                "-u", "user",
+                "-f",
+                "out.sqlite3",
+                "-d",
+                "db",
+                "-u",
+                "user",
                 "--skip-ssl",
-                "--mysql-ssl-ca", str(ca_file),
+                "--mysql-ssl-ca",
+                str(ca_file),
             ],
         )
         assert result.exit_code > 0
@@ -243,10 +253,14 @@ class TestCliErrorPaths:
         result = runner.invoke(
             mysql2sqlite,
             [
-                "-f", "out.sqlite3",
-                "-d", "db",
-                "-u", "user",
-                "--mysql-ssl-cert", str(cert_file),
+                "-f",
+                "out.sqlite3",
+                "-d",
+                "db",
+                "-u",
+                "user",
+                "--mysql-ssl-cert",
+                str(cert_file),
             ],
         )
         assert result.exit_code > 0
@@ -264,10 +278,14 @@ class TestCliErrorPaths:
         result = runner.invoke(
             mysql2sqlite,
             [
-                "-f", "out.sqlite3",
-                "-d", "db",
-                "-u", "user",
-                "--mysql-ssl-key", str(key_file),
+                "-f",
+                "out.sqlite3",
+                "-d",
+                "db",
+                "-u",
+                "user",
+                "--mysql-ssl-key",
+                str(key_file),
             ],
         )
         assert result.exit_code > 0

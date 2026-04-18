@@ -242,9 +242,7 @@ def cli(
             )
 
         if bool(mysql_ssl_cert) != bool(mysql_ssl_key):
-            raise click.UsageError(
-                "Illegal usage: --mysql-ssl-cert and --mysql-ssl-key must be provided together."
-            )
+            raise click.UsageError("Illegal usage: --mysql-ssl-cert and --mysql-ssl-key must be provided together.")
 
         converter = MySQLtoSQLite(
             sqlite_file=sqlite_file,

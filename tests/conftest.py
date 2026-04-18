@@ -274,7 +274,9 @@ def mysql_instance(mysql_credentials: MySQLCredentials, pytestconfig: Config) ->
                     mysql_connection.close()
         else:
             if not mysql_available and mysql_connection_retries <= 0:
-                raise ConnectionAbortedError("Maximum MySQL connection retries exhausted! Are you sure MySQL is running?")
+                raise ConnectionAbortedError(
+                    "Maximum MySQL connection retries exhausted! Are you sure MySQL is running?"
+                )
 
         yield  # type: ignore[misc]
     finally:
