@@ -81,7 +81,7 @@ Use these options to adapt the base command:
 - Large transfers: tune `--chunk 50000` when needed and add `--vacuum` if the user wants SQLite repacked after transfer.
 - MySQL views: by default, MySQL views become SQLite views; add `--mysql-views-as-tables` only when the user wants materialized tables.
 - JSON: add `--json-as-text` when the user wants MySQL/MariaDB JSON columns forced to SQLite `TEXT`.
-- SQLite STRICT tables: add `--strict` only when the user's local SQLite is 3.37 or newer.
+- SQLite STRICT tables: add `--strict` to request STRICT tables; older SQLite versions log a warning and create non-STRICT tables.
 
 ## Combinations To Check
 
@@ -95,7 +95,7 @@ Warn before producing commands with these invalid or risky combinations:
 - `--mysql-ssl-cert` and `--mysql-ssl-key` must be provided together.
 - `--mysql-collation` must belong to the selected `--mysql-charset`.
 - `--limit-rows` must be `0` or a positive integer; negative values are invalid.
-- `--strict` only creates SQLite STRICT tables on SQLite 3.37 or newer.
+- `--strict` requests SQLite STRICT tables; older SQLite versions log a warning and create non-STRICT tables.
 
 ## MySQL, MariaDB, And SQLite Notes
 

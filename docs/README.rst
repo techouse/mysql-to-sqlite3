@@ -228,7 +228,7 @@ Options at a glance
    * - ``-W``, ``--without-data``
      - Create schema only and skip table data.
    * - ``-M``, ``--strict``
-     - Create SQLite STRICT tables when the local SQLite version supports them.
+     - Request SQLite STRICT tables; older SQLite versions fall back to non-STRICT tables with a warning.
    * - ``--mysql-charset TEXT``
      - MySQL database and table character set. Defaults to ``utf8mb4``.
    * - ``--mysql-collation TEXT``
@@ -274,8 +274,9 @@ Combinations and caveats
 - ``--mysql-ssl-cert`` and ``--mysql-ssl-key`` must be provided together.
 - ``--mysql-collation`` must be valid for the selected ``--mysql-charset``.
 - ``--limit-rows`` must be ``0`` or a positive integer. ``0`` means no limit.
-- ``--strict`` requires SQLite 3.37 or newer. If SQLite rejects a STRICT schema,
-  rerun without ``--strict``.
+- ``--strict`` requests SQLite STRICT tables. On SQLite older than 3.37, the
+  tool logs a warning and automatically creates non-STRICT tables instead; rerun
+  with SQLite 3.37 or newer to get STRICT schemas.
 - MySQL views become SQLite views by default. Use ``--mysql-views-as-tables``
   for the older materialized-table behavior.
 
