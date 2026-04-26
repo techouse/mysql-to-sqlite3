@@ -57,9 +57,10 @@ docker run --rm ghcr.io/techouse/mysql-to-sqlite3:latest --help
 
 ## Agent skill
 
-This repo includes an optional agent skill at [`skills/mysql-to-sqlite3/`](skills/mysql-to-sqlite3/) for users who want
-Codex or another compatible agent to help prepare a safe `mysql2sqlite` transfer command. The skill is user-facing: it
-focuses on migration planning, CLI recipes, password-safe defaults, and MySQL/MariaDB caveats.
+This repo includes an optional agent skill at
+[`skills/mysql-to-sqlite3/`](https://github.com/techouse/mysql-to-sqlite3/tree/master/skills/mysql-to-sqlite3) for users
+who want Codex or another compatible agent to help prepare a safe `mysql2sqlite` transfer command. The skill is
+user-facing: it focuses on migration planning, CLI recipes, password-safe defaults, and MySQL/MariaDB caveats.
 
 ## Quick start
 
