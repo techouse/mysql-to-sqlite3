@@ -16,8 +16,8 @@ CLI defined in `cli.py`. The transfer pipeline:
 
 ## 2. Key Modules & Responsibilities
 
-- `src/mysql_to_sqlite3/cli.py`: Click command. Central place to add new user-facing options (update docs + README +
-  `docs/index.rst` if changed).
+- `src/mysql_to_sqlite3/cli.py`: Click command. Central place to add new user-facing options (update `README.md`,
+  `docs/README.rst`, and `docs/index.rst` if changed).
 - `src/mysql_to_sqlite3/transporter.py`: Core transfer logic, schema introspection, type/default translation, batching,
   logging, reconnection handling.
 - `sqlite_utils.py` / `mysql_utils.py`: Helpers for charset/collation sets, adapting/encoding values and SQLite
@@ -25,6 +25,8 @@ CLI defined in `cli.py`. The transfer pipeline:
 - `types.py`: Typed parameter & attribute Protocols / TypedDict-like structures for constructor kwargs (mypy relies on
   this; keep hints exhaustive).
 - `debug_info.py`: Version table printed with `--version` (tabulated output).
+- `skills/mysql-to-sqlite3/SKILL.md`: User-facing migration-assistant skill. Keep it about planning and running
+  transfers, not repository maintenance.
 
 ## 3. Patterns & Conventions
 
@@ -74,7 +76,7 @@ CLI defined in `cli.py`. The transfer pipeline:
 
 1. Add `@click.option` in `cli.py` (keep mutually exclusive logic consistent).
 2. Thread parameter through `MySQLtoSQLite` constructor (update typing + tests).
-3. Update docs: `README.md` + `docs/index.rst` + optionally changelog.
+3. Update docs: `README.md`, `docs/README.rst`, `docs/index.rst`, and optionally changelog.
 4. Add at least one unit test exercising the new behavior / validation.
 
 ## 8. Error Handling Philosophy
@@ -95,7 +97,7 @@ CLI defined in `cli.py`. The transfer pipeline:
 
 ## 11. Examples
 
-- Chunked transfer: `mysql2sqlite -f out.db -d db -u user -p -c 50000` (efficient large table copy).
+- Chunked transfer: `mysql2sqlite -f out.db -d db -u user -p -c 50000` (efficient large table transfer).
 - Subset tables (no FKs): `mysql2sqlite -f out.db -d db -u user -t users orders`.
 
 ## 12. PR Expectations

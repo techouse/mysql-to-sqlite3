@@ -124,3 +124,9 @@ dmypy.json
 # Potential leftovers
 tests/db_credentials.json
 log.txt
+
+# AI related
+.junie/
+
+# VSCode
+.history
