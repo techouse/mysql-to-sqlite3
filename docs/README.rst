@@ -1,105 +1,298 @@
 Usage
 -----
 
-Options
-^^^^^^^
+``mysql2sqlite`` transfers MySQL or MariaDB schema and data to a SQLite 3
+database file. It reads the source schema from MySQL/MariaDB, creates
+equivalent SQLite tables, indexes, views, and foreign keys where possible, then
+transfers table data into the SQLite file.
 
-The command line options for the ``mysql2sqlite`` tool are as follows:
+Prerequisites
+^^^^^^^^^^^^^
+
+- Python 3.9 or newer, unless you use the Docker image.
+- A reachable MySQL or MariaDB server.
+- A MySQL user that can read the source database and its metadata in
+  ``information_schema``.
+- A writable destination path for the SQLite database file.
+
+The project CI tests MySQL 5.5, 5.6, 5.7, 8.0, and 8.4, plus MariaDB 5.5,
+10.0, 10.6, 10.11, 11.4, and 11.8. Very old server versions are more likely to
+differ in type, default-value, authentication, or metadata behavior.
+
+Installation
+^^^^^^^^^^^^
+
+Install from PyPI:
 
 .. code-block:: bash
 
-   mysql2sqlite [OPTIONS]
+   pip install mysql-to-sqlite3
+   mysql2sqlite --help
 
-Required Options
-""""""""""""""""
+On macOS, you can also install with Homebrew:
 
-- ``-f, --sqlite-file PATH``: SQLite3 database file. This option is required.
-- ``-d, --mysql-database TEXT``: MySQL database name. This option is required.
-- ``-u, --mysql-user TEXT``: MySQL user. This option is required.
-
-Password Options
-""""""""""""""""
-
-- ``-p, --prompt-mysql-password``: Prompt for MySQL password.
-- ``--mysql-password TEXT``: MySQL password.
-
-Table Options
-"""""""""""""
-
-- ``-t, --mysql-tables TUPLE``: Transfer only these specific tables (space separated table names). Implies --without-foreign-keys which inhibits the transfer of foreign keys. Can not be used together with --exclude-mysql-tables.
-- ``-e, --exclude-mysql-tables TUPLE``: Transfer all tables except these specific tables (space separated table names). Implies --without-foreign-keys which inhibits the transfer of foreign keys. Can not be used together with --mysql-tables.
-
-Transfer Options
-""""""""""""""""
-
-- ``-T, --mysql-views-as-tables``: Materialize MySQL VIEWs as SQLite tables (legacy behavior).
-- ``-L, --limit-rows INTEGER``: Transfer only a limited number of rows from each table.
-- ``-C, --collation [BINARY|NOCASE|RTRIM]``: Create datatypes of TEXT affinity using a specified collation sequence. The default is BINARY.
-- ``-K, --prefix-indices``: Prefix indices with their corresponding tables. This ensures that their names remain unique across the SQLite database.
-- ``-X, --without-foreign-keys``: Do not transfer foreign keys.
-- ``-Z, --without-tables``: Do not transfer tables, data only.
-- ``-W, --without-data``: Do not transfer table data, DDL only.
-- ``-M, --strict``: Create SQLite STRICT tables when supported.
-
-Connection Options
-""""""""""""""""""
-
-- ``-h, --mysql-host TEXT``: MySQL host. Defaults to localhost.
-- ``-P, --mysql-port INTEGER``: MySQL port. Defaults to 3306.
-- ``--mysql-charset TEXT``: MySQL database and table character set. The default is utf8mb4.
-- ``--mysql-collation TEXT``: MySQL database and table collation.
-- ``--mysql-ssl-ca PATH``: Path to SSL CA certificate file.
-- ``--mysql-ssl-cert PATH``: Path to SSL certificate file. Must be provided together with ``--mysql-ssl-key``.
-- ``--mysql-ssl-key PATH``: Path to SSL key file. Must be provided together with ``--mysql-ssl-cert``.
-- ``-S, --skip-ssl``: Disable MySQL connection encryption. Cannot be used together with ``--mysql-ssl-*`` options.
-
-Other Options
-"""""""""""""
-
-- ``-c, --chunk INTEGER``: Chunk reading/writing SQL records.
-- ``-l, --log-file PATH``: Log file.
-- ``--json-as-text``: Transfer JSON columns as TEXT.
-- ``-V, --vacuum``: Use the VACUUM command to rebuild the SQLite database file, repacking it into a minimal amount of disk space.
-- ``--use-buffered-cursors``: Use MySQLCursorBuffered for reading the MySQL database. This can be useful in situations where multiple queries, with small result sets, need to be combined or computed with each other.
-- ``-q, --quiet``: Quiet. Display only errors.
-- ``--debug``: Debug mode. Will throw exceptions.
-- ``--version``: Show the version and exit.
-- ``--help``: Show this message and exit.
-
-Docker
-^^^^^^
-
-If you don’t want to install the tool on your system, you can use the
-Docker image instead.
-
-.. code:: bash
-
-   docker run -it \
-       --workdir $(pwd) \
-       --volume $(pwd):$(pwd) \
-       --rm ghcr.io/techouse/mysql-to-sqlite3:latest \
-       --sqlite-file baz.db \
-       --mysql-user foo \
-       --mysql-password bar \
-       --mysql-database baz \
-       --mysql-host host.docker.internal
-
-This will mount your host current working directory (pwd) inside the
-Docker container as the current working directory. Any files Docker
-would write to the current working directory are written to the host
-directory where you did docker run. Note that you have to also use a
-`special
-hostname <https://docs.docker.com/desktop/networking/#use-cases-and-workarounds-for-all-platforms>`__
-``host.docker.internal`` to access your host machine from inside the
-Docker container.
-
-Homebrew
-^^^^^^^^
-
-If you’re on macOS, you can install the tool using
-`Homebrew <https://brew.sh/>`__.
-
-.. code:: bash
+.. code-block:: bash
 
    brew install mysql-to-sqlite3
    mysql2sqlite --help
+
+Or run the published Docker image:
+
+.. code-block:: bash
+
+   docker run --rm ghcr.io/techouse/mysql-to-sqlite3:latest --help
+
+Quick start
+^^^^^^^^^^^
+
+Use ``-p`` / ``--prompt-mysql-password`` for interactive password entry. This
+avoids putting the password in shell history or process listings.
+
+.. code-block:: bash
+
+   mysql2sqlite \
+       --sqlite-file ./app.sqlite3 \
+       --mysql-database app_db \
+       --mysql-user app_user \
+       --prompt-mysql-password \
+       --mysql-host 127.0.0.1 \
+       --mysql-port 3306
+
+Short options are equivalent:
+
+.. code-block:: bash
+
+   mysql2sqlite -f ./app.sqlite3 -d app_db -u app_user -p -h 127.0.0.1 -P 3306
+
+For automation, ``--mysql-password`` is available, but prefer a secret manager
+or environment-expanded value rather than typing the password directly into your
+shell history.
+
+Common recipes
+^^^^^^^^^^^^^^
+
+Run with Docker
+"""""""""""""""
+
+Use ``host.docker.internal`` when the MySQL server is running on the host
+machine and the Docker container needs to reach it.
+
+.. code-block:: bash
+
+   docker run -it \
+       --rm \
+       --workdir "$PWD" \
+       --volume "$PWD:$PWD" \
+       ghcr.io/techouse/mysql-to-sqlite3:latest \
+       -f ./app.sqlite3 \
+       -d app_db \
+       -u app_user \
+       -p \
+       -h host.docker.internal
+
+Files written inside the mounted working directory are written back to the host
+directory.
+
+Transfer schema only
+""""""""""""""""""""
+
+Create the SQLite tables, indexes, views, and foreign keys without transferring
+table rows.
+
+.. code-block:: bash
+
+   mysql2sqlite -f ./schema.sqlite3 -d app_db -u app_user -p --without-data
+
+Transfer data into an existing SQLite schema
+""""""""""""""""""""""""""""""""""""""""""""
+
+``--without-tables`` skips DDL creation and only inserts data. The SQLite tables
+must already exist.
+
+.. code-block:: bash
+
+   mysql2sqlite -f ./app.sqlite3 -d app_db -u app_user -p --without-tables
+
+A common two-step flow is:
+
+.. code-block:: bash
+
+   mysql2sqlite -f ./app.sqlite3 -d app_db -u app_user -p --without-data
+   mysql2sqlite -f ./app.sqlite3 -d app_db -u app_user -p --without-tables
+
+Transfer only some tables
+"""""""""""""""""""""""""
+
+Table names are space-separated and are consumed until the next CLI option.
+
+.. code-block:: bash
+
+   mysql2sqlite -f ./subset.sqlite3 -d app_db -u app_user -p --mysql-tables users orders invoices
+
+Transfer everything except selected tables:
+
+.. code-block:: bash
+
+   mysql2sqlite -f ./subset.sqlite3 -d app_db -u app_user -p --exclude-mysql-tables audit_log temp_imports
+
+Selecting or excluding tables disables foreign key transfer because the
+referenced tables may not be present.
+
+Sample rows from every table
+""""""""""""""""""""""""""""
+
+Transfer at most 100 rows from each table:
+
+.. code-block:: bash
+
+   mysql2sqlite -f ./sample.sqlite3 -d app_db -u app_user -p --limit-rows 100
+
+Tune large transfers
+""""""""""""""""""""
+
+The CLI fetches and writes rows in batches by default. Use ``--chunk`` to tune
+the batch size. ``--vacuum`` repacks the SQLite file after the transfer
+finishes.
+
+.. code-block:: bash
+
+   mysql2sqlite -f ./app.sqlite3 -d app_db -u app_user -p --chunk 50000 --vacuum
+
+Use SSL certificates
+""""""""""""""""""""
+
+Verify the server certificate with a CA file:
+
+.. code-block:: bash
+
+   mysql2sqlite -f ./app.sqlite3 -d app_db -u app_user -p --mysql-ssl-ca /path/to/ca.pem
+
+Use a client certificate and key:
+
+.. code-block:: bash
+
+   mysql2sqlite \
+       -f ./app.sqlite3 \
+       -d app_db \
+       -u app_user \
+       -p \
+       --mysql-ssl-ca /path/to/ca.pem \
+       --mysql-ssl-cert /path/to/client-cert.pem \
+       --mysql-ssl-key /path/to/client-key.pem
+
+Use ``--skip-ssl`` only when you explicitly need to disable MySQL connection
+encryption.
+
+Options at a glance
+^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+
+   * - Option
+     - Purpose
+   * - ``-f``, ``--sqlite-file PATH``
+     - Destination SQLite database file. Required.
+   * - ``-d``, ``--mysql-database TEXT``
+     - Source MySQL/MariaDB database name. Required.
+   * - ``-u``, ``--mysql-user TEXT``
+     - MySQL/MariaDB user. Required.
+   * - ``-p``, ``--prompt-mysql-password``
+     - Prompt for the MySQL password. Preferred for interactive use.
+   * - ``--mysql-password TEXT``
+     - Provide the MySQL password directly. Useful for automation, but handle carefully.
+   * - ``-h``, ``--mysql-host TEXT``
+     - MySQL host. Defaults to ``localhost``.
+   * - ``-P``, ``--mysql-port INTEGER``
+     - MySQL port. Defaults to ``3306``.
+   * - ``-t``, ``--mysql-tables TUPLE``
+     - Transfer only the listed tables. Implies no foreign key transfer.
+   * - ``-e``, ``--exclude-mysql-tables TUPLE``
+     - Transfer every table except the listed tables. Implies no foreign key transfer.
+   * - ``-T``, ``--mysql-views-as-tables``
+     - Materialize MySQL views as SQLite tables instead of creating SQLite views.
+   * - ``-L``, ``--limit-rows INTEGER``
+     - Transfer at most this many rows from each table. ``0`` means no limit.
+   * - ``-C``, ``--collation [BINARY|NOCASE|RTRIM]``
+     - Add a SQLite collation to text-affinity columns. Defaults to ``BINARY``.
+   * - ``-K``, ``--prefix-indices``
+     - Prefix SQLite index names with their table names.
+   * - ``-X``, ``--without-foreign-keys``
+     - Do not create foreign keys in the SQLite schema.
+   * - ``-Z``, ``--without-tables``
+     - Skip table/view creation and transfer data only.
+   * - ``-W``, ``--without-data``
+     - Create schema only and skip table data.
+   * - ``-M``, ``--strict``
+     - Create SQLite STRICT tables when the local SQLite version supports them.
+   * - ``--mysql-charset TEXT``
+     - MySQL connection character set. Defaults to ``utf8mb4``.
+   * - ``--mysql-collation TEXT``
+     - MySQL connection collation. Must belong to the selected charset.
+   * - ``--mysql-ssl-ca PATH``
+     - Path to an SSL CA certificate file.
+   * - ``--mysql-ssl-cert PATH``
+     - Path to an SSL client certificate file. Must be paired with ``--mysql-ssl-key``.
+   * - ``--mysql-ssl-key PATH``
+     - Path to an SSL client key file. Must be paired with ``--mysql-ssl-cert``.
+   * - ``-S``, ``--skip-ssl``
+     - Disable MySQL connection encryption. Cannot be used with SSL certificate options.
+   * - ``-c``, ``--chunk INTEGER``
+     - Read and write SQL records in batches. Defaults to ``200000``.
+   * - ``-l``, ``--log-file PATH``
+     - Write logs to a file.
+   * - ``--json-as-text``
+     - Force MySQL/MariaDB JSON columns to SQLite ``TEXT``.
+   * - ``-V``, ``--vacuum``
+     - Run SQLite ``VACUUM`` after transfer.
+   * - ``--use-buffered-cursors``
+     - Use buffered MySQL cursors.
+   * - ``-q``, ``--quiet``
+     - Show only errors after the initial command banner.
+   * - ``--debug``
+     - Re-raise exceptions for debugging instead of printing friendly errors.
+   * - ``--version``
+     - Show environment and dependency versions.
+   * - ``--help``
+     - Show CLI help.
+
+Combinations and caveats
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+- ``--mysql-tables`` and ``--exclude-mysql-tables`` are mutually exclusive.
+- ``--mysql-tables`` or ``--exclude-mysql-tables`` automatically disables
+  foreign key transfer.
+- ``--without-tables`` and ``--without-data`` cannot be used together because
+  there would be nothing to do.
+- ``--without-tables`` requires the destination SQLite schema to already exist.
+- ``--skip-ssl`` cannot be combined with ``--mysql-ssl-ca``,
+  ``--mysql-ssl-cert``, or ``--mysql-ssl-key``.
+- ``--mysql-ssl-cert`` and ``--mysql-ssl-key`` must be provided together.
+- ``--mysql-collation`` must be valid for the selected ``--mysql-charset``.
+- ``--limit-rows`` must be ``0`` or a positive integer. ``0`` means no limit.
+- ``--strict`` requires SQLite 3.37 or newer. If SQLite rejects a STRICT schema,
+  rerun without ``--strict``.
+- MySQL views become SQLite views by default. Use ``--mysql-views-as-tables``
+  for the older materialized-table behavior.
+
+MySQL, MariaDB, and SQLite notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- MySQL and MariaDB are similar but not identical. Default expressions,
+  generated defaults, authentication plugins, JSON behavior, and metadata
+  returned from ``information_schema`` can differ by server family and version.
+- Older legacy servers may not support newer column types such as native
+  ``JSON``.
+- MySQL/MariaDB ``JSON`` columns map to SQLite ``JSON`` only when this tool
+  detects SQLite JSON1 support. Otherwise they map to ``TEXT``. Use
+  ``--json-as-text`` to force ``TEXT``.
+- ``ENUM``, ``SET``, unsupported spatial/network-style types, and unknown types
+  fall back to ``TEXT``.
+- MySQL ``TIMESTAMP`` columns are represented as SQLite ``DATETIME``.
+- Unsigned integer types are converted to their signed SQLite-compatible type
+  names.
+- Table names, column names, and index names are quoted for SQLite. Duplicate
+  SQLite index names are made unique, and ``--prefix-indices`` can make this
+  behavior explicit.
+- After transfer, verify schema details that are important to your application,
+  especially defaults, collations, JSON columns, views, and foreign keys.
