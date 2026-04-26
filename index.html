@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>MySQL to SQLite3 &#8212; mysql-to-sqlite3 2.6.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=ae39cb24"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Usage" href="README.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="mysql-to-sqlite3">
+<h1>MySQL to SQLite3<a class="headerlink" href="#mysql-to-sqlite3" title="Link to this heading">¶</a></h1>
+<p>A Python CLI for transferring MySQL or MariaDB schema and data to a SQLite 3
+database file.</p>
+<p><a class="reference external" href="https://pypi.org/project/mysql-to-sqlite3/"><img alt="PyPI" src="https://img.shields.io/pypi/v/mysql-to-sqlite3?logo=pypi" /></a> <a class="reference external" href="https://pypistats.org/packages/mysql-to-sqlite3"><img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/mysql-to-sqlite3?logo=pypi&amp;label=PyPI%20downloads" /></a> <a class="reference external" href="https://formulae.brew.sh/formula/mysql-to-sqlite3"><img alt="Homebrew Formula Downloads" src="https://img.shields.io/homebrew/installs/dm/mysql-to-sqlite3?logo=homebrew&amp;label=Homebrew%20downloads" /></a> <a class="reference external" href="https://pypi.org/project/mysql-to-sqlite3/"><img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/mysql-to-sqlite3?logo=python" /></a>
+<a class="reference external" href="https://github.com/techouse/mysql-to-sqlite3/actions/workflows/test.yml"><img alt="MySQL Support" src="https://img.shields.io/static/v1?logo=mysql&amp;label=MySQL&amp;message=5.5%7C5.6%7C5.7%7C8.0%7C8.4&amp;color=2b5d80" /></a> <a class="reference external" href="https://github.com/techouse/mysql-to-sqlite3/actions/workflows/test.yml"><img alt="MariaDB Support" src="https://img.shields.io/static/v1?logo=mariadb&amp;label=MariaDB&amp;message=5.5%7C10.0%7C10.6%7C10.11%7C11.4%7C11.8&amp;color=C0765A" /></a> <a class="reference external" href="https://github.com/techouse/mysql-to-sqlite3/blob/master/LICENSE"><img alt="GitHub license" src="https://img.shields.io/github/license/techouse/mysql-to-sqlite3" /></a> <a class="reference external" href="CODE-OF-CONDUCT.md"><img alt="Contributor Covenant" src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg?logo=contributorcovenant" /></a>
+<a class="reference external" href="https://pypi.org/project/mysql-to-sqlite3/"><img alt="PyPI - Format" src="https://img.shields.io/pypi/format/mysql-to-sqlite3?logo=python" /></a> <a class="reference external" href="https://github.com/ambv/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg?logo=python" /></a> <a class="reference external" href="https://www.codacy.com/manual/techouse/mysql-to-sqlite3?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=techouse/mysql-to-sqlite3&amp;utm_campaign=Badge_Grade"><img alt="Codacy Badge" src="https://api.codacy.com/project/badge/Grade/64aae8e9599746d58d277852b35cc2bd" /></a> <a class="reference external" href="https://github.com/techouse/mysql-to-sqlite3/actions/workflows/test.yml"><img alt="Test Status" src="https://github.com/techouse/mysql-to-sqlite3/actions/workflows/test.yml/badge.svg" /></a> <a class="reference external" href="https://github.com/techouse/mysql-to-sqlite3/actions/workflows/github-code-scanning/codeql"><img alt="CodeQL Status" src="https://github.com/techouse/mysql-to-sqlite3/actions/workflows/github-code-scanning/codeql/badge.svg" /></a>
+<a class="reference external" href="https://github.com/techouse/mysql-to-sqlite3/actions/workflows/publish.yml"><img alt="Publish PyPI Package Status" src="https://github.com/techouse/mysql-to-sqlite3/actions/workflows/publish.yml/badge.svg" /></a> <a class="reference external" href="https://codecov.io/gh/techouse/mysql-to-sqlite3"><img alt="codecov" src="https://codecov.io/gh/techouse/mysql-to-sqlite3/branch/master/graph/badge.svg" /></a> <a class="reference external" href="https://github.com/sponsors/techouse"><img alt="GitHub Sponsors" src="https://img.shields.io/github/sponsors/techouse?logo=github" /></a> <a class="reference external" href="https://github.com/techouse/mysql-to-sqlite3/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/techouse/mysql-to-sqlite3.svg?style=social&amp;label=Star&amp;maxAge=2592000" /></a></p>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>mysql-to-sqlite3
+</pre></div>
+</div>
+</section>
+<section id="basic-usage">
+<h2>Basic Usage<a class="headerlink" href="#basic-usage" title="Link to this heading">¶</a></h2>
+<p>Use the password prompt for interactive use:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mysql2sqlite<span class="w"> </span>-f<span class="w"> </span>./app.sqlite3<span class="w"> </span>-d<span class="w"> </span>app_db<span class="w"> </span>-u<span class="w"> </span>app_user<span class="w"> </span>-p<span class="w"> </span>-h<span class="w"> </span><span class="m">127</span>.0.0.1<span class="w"> </span>-P<span class="w"> </span><span class="m">3306</span>
+</pre></div>
+</div>
+</section>
+<section id="tested-databases">
+<h2>Tested Databases<a class="headerlink" href="#tested-databases" title="Link to this heading">¶</a></h2>
+<p>See the <a class="reference external" href="https://github.com/techouse/mysql-to-sqlite3/blob/master/.github/workflows/test.yml">GitHub Actions CI matrix</a>
+for the current MySQL and MariaDB versions tested by the project.</p>
+</section>
+<section id="common-tasks">
+<h2>Common Tasks<a class="headerlink" href="#common-tasks" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">--without-data</span></code> to create schema only.</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">--without-tables</span></code> to transfer data into an existing SQLite schema.</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">--mysql-tables</span></code> or <code class="docutils literal notranslate"><span class="pre">--exclude-mysql-tables</span></code> to transfer a table
+subset; this disables foreign key transfer.</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">--mysql-ssl-ca</span></code>, <code class="docutils literal notranslate"><span class="pre">--mysql-ssl-cert</span></code>, and <code class="docutils literal notranslate"><span class="pre">--mysql-ssl-key</span></code> for
+certificate-based MySQL connections.</p></li>
+</ul>
+<p>See <a class="reference internal" href="README.html"><span class="doc">Usage</span></a> for full recipes, option notes, and MySQL/MariaDB caveats.</p>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="README.html">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="README.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="README.html#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="README.html#quick-start">Quick start</a></li>
+<li class="toctree-l2"><a class="reference internal" href="README.html#common-recipes">Common recipes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="README.html#options-at-a-glance">Options at a glance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="README.html#combinations-and-caveats">Combinations and caveats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="README.html#mysql-mariadb-and-sqlite-notes">MySQL, MariaDB, and SQLite notes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">mysql_to_sqlite3</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="mysql_to_sqlite3.html">mysql_to_sqlite3 package</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+<section id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading">¶</a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">mysql-to-sqlite3</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="README.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">mysql_to_sqlite3</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="README.html" title="next chapter">Usage</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Klemen Tusar.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
