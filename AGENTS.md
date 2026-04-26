@@ -19,13 +19,14 @@ with `python -m build` or `hatch build`.
 ## Coding Style & Naming Conventions
 
 Format code with `black` (120-char lines) and keep imports sorted via `isort --profile black`. Prefer descriptive
-snake_case for functions and variables, CamelCase for classes, and suffix CLI command callbacks with `_cmd`. Maintain
-full type hints; the package is shipped as typed and mypy checks run with `python_version=3.9`. Avoid introducing new
-modules without tests.
+snake_case for functions and variables, and CamelCase for classes. For Click command callbacks, follow the repository's
+existing convention: reuse the established top-level `cli` entrypoint or a single consistent descriptive name across
+commands. Maintain full type hints; the package is shipped as typed and mypy checks run with `python_version=3.9`. Avoid
+introducing new modules without tests.
 
 ## Testing Guidelines
 
-Write `pytest` unit tests using alongside the feature under `tests/unit/` and integration cases under `tests/func/`.
+Write `pytest` unit tests for the feature under `tests/unit/` and integration tests under `tests/func/`.
 Name test files `test_<feature>.py` and mark long-running scenarios with existing pytest markers (
 `@pytest.mark.transfer`, etc.). Ensure the functional suite can target the dockerised MySQL instance configured in
 `tests/db_credentials.json`; set `LEGACY_DB` when validating backward compatibility. Keep coverage trending upward;

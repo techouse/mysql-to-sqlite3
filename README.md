@@ -91,7 +91,8 @@ typing the password directly into your shell history.
 ### Run with Docker
 
 Use `host.docker.internal` when the MySQL server is running on the host machine and the Docker container needs to reach
-it.
+it. On Linux Docker Engine, add `--add-host=host.docker.internal:host-gateway` before the image name if
+`host.docker.internal` is not resolvable.
 
 ```bash
 docker run -it \
@@ -208,8 +209,8 @@ Use `--skip-ssl` only when you explicitly need to disable MySQL connection encry
 | `-Z`, `--without-tables` | Skip table/view creation and transfer data only. |
 | `-W`, `--without-data` | Create schema only and skip table data. |
 | `-M`, `--strict` | Create SQLite STRICT tables when the local SQLite version supports them. |
-| `--mysql-charset TEXT` | MySQL connection character set. Defaults to `utf8mb4`. |
-| `--mysql-collation TEXT` | MySQL connection collation. Must belong to the selected charset. |
+| `--mysql-charset TEXT` | MySQL database and table character set. Defaults to `utf8mb4`. |
+| `--mysql-collation TEXT` | MySQL database and table collation. Must belong to the selected charset. |
 | `--mysql-ssl-ca PATH` | Path to an SSL CA certificate file. |
 | `--mysql-ssl-cert PATH` | Path to an SSL client certificate file. Must be paired with `--mysql-ssl-key`. |
 | `--mysql-ssl-key PATH` | Path to an SSL client key file. Must be paired with `--mysql-ssl-cert`. |

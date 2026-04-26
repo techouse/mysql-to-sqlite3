@@ -40,7 +40,9 @@ Use short flags when the user asks for a compact command:
 mysql2sqlite -f ./app.sqlite3 -d app_db -u app_user -p -h 127.0.0.1 -P 3306
 ```
 
-For Docker, mount the working directory and use `host.docker.internal` when MySQL or MariaDB runs on the host machine:
+For Docker, mount the working directory and use `host.docker.internal` when MySQL or MariaDB runs on the host machine.
+On Linux Docker Engine, include `--add-host=host.docker.internal:host-gateway` before the image name when the user is on
+Linux or says `host.docker.internal` does not resolve:
 
 ```bash
 docker run -it \
@@ -55,7 +57,7 @@ docker run -it \
     -h host.docker.internal
 ```
 
-If the CLI is not installed, give the install command that matches the user's platform:
+If the CLI is not installed, give the installation command that matches the user's platform:
 
 ```bash
 pip install mysql-to-sqlite3

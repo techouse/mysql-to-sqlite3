@@ -75,7 +75,9 @@ Run with Docker
 """""""""""""""
 
 Use ``host.docker.internal`` when the MySQL server is running on the host
-machine and the Docker container needs to reach it.
+machine and the Docker container needs to reach it. On Linux Docker Engine, add
+``--add-host=host.docker.internal:host-gateway`` before the image name if
+``host.docker.internal`` is not resolvable.
 
 .. code-block:: bash
 
@@ -226,9 +228,9 @@ Options at a glance
    * - ``-M``, ``--strict``
      - Create SQLite STRICT tables when the local SQLite version supports them.
    * - ``--mysql-charset TEXT``
-     - MySQL connection character set. Defaults to ``utf8mb4``.
+     - MySQL database and table character set. Defaults to ``utf8mb4``.
    * - ``--mysql-collation TEXT``
-     - MySQL connection collation. Must belong to the selected charset.
+     - MySQL database and table collation. Must belong to the selected charset.
    * - ``--mysql-ssl-ca PATH``
      - Path to an SSL CA certificate file.
    * - ``--mysql-ssl-cert PATH``
