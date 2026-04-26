@@ -27,8 +27,8 @@ introducing new modules without tests.
 ## Testing Guidelines
 
 Write `pytest` unit tests for the feature under `tests/unit/` and integration tests under `tests/func/`.
-Name test files `test_<feature>.py` and mark long-running scenarios with existing pytest markers (
-`@pytest.mark.transfer`, etc.). Ensure the functional suite can target the dockerised MySQL instance configured in
+Name test files `test_<feature>.py`. Mark long-running scenarios with existing pytest markers such as
+`@pytest.mark.transfer`. Ensure the functional suite can target the dockerised MySQL instance configured in
 `tests/db_credentials.json`; set `LEGACY_DB` when validating backward compatibility. Keep coverage trending upward;
 update `coverage.xml` only through the tooling.
 

@@ -101,7 +101,7 @@ Warn before producing commands with these invalid or risky combinations:
 
 Use these notes when users ask about compatibility or results:
 
-- The project CI tests MySQL 5.5, 5.6, 5.7, 8.0, and 8.4, plus MariaDB 5.5, 10.0, 10.6, 10.11, 11.4, and 11.8.
+- Use the GitHub Actions CI matrix as the source of truth for currently tested MySQL and MariaDB versions.
 - MySQL and MariaDB have drifted; defaults, JSON behavior, authentication plugins, and `information_schema` metadata can differ by version.
 - Older servers may not support newer native types such as `JSON`.
 - MySQL/MariaDB `JSON` maps to SQLite `JSON` only when SQLite JSON1 is available; otherwise it maps to `TEXT`. `--json-as-text` forces `TEXT`.

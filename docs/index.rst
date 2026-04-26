@@ -28,8 +28,9 @@ Use the password prompt for interactive use:
 Tested Databases
 ----------------
 
-The CI matrix tests MySQL 5.5, 5.6, 5.7, 8.0, and 8.4, plus MariaDB 5.5,
-10.0, 10.6, 10.11, 11.4, and 11.8.
+See the `GitHub Actions CI matrix
+<https://github.com/techouse/mysql-to-sqlite3/blob/master/.github/workflows/test.yml>`__
+for the current MySQL and MariaDB versions tested by the project.
 
 Common Tasks
 ------------
