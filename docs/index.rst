@@ -1,7 +1,8 @@
 MySQL to SQLite3
 ================
 
-A simple Python tool to transfer data from MySQL to SQLite 3
+A Python CLI for transferring MySQL or MariaDB schema and data to a SQLite 3
+database file.
 
 |PyPI| |PyPI - Downloads| |Homebrew Formula Downloads| |PyPI - Python Version|
 |MySQL Support| |MariaDB Support| |GitHub license| |Contributor Covenant|
@@ -11,16 +12,37 @@ A simple Python tool to transfer data from MySQL to SQLite 3
 Installation
 ------------
 
-.. code:: bash
+.. code-block:: bash
 
    pip install mysql-to-sqlite3
 
 Basic Usage
 -----------
 
-.. code:: bash
+Use the password prompt for interactive use:
 
-   mysql2sqlite -f path/to/foo.sqlite -d foo_db -u foo_user -p
+.. code-block:: bash
+
+   mysql2sqlite -f ./app.sqlite3 -d app_db -u app_user -p -h 127.0.0.1 -P 3306
+
+Tested Databases
+----------------
+
+See the `GitHub Actions CI matrix
+<https://github.com/techouse/mysql-to-sqlite3/blob/master/.github/workflows/test.yml>`__
+for the current MySQL and MariaDB versions tested by the project.
+
+Common Tasks
+------------
+
+- Use ``--without-data`` to create schema only.
+- Use ``--without-tables`` to transfer data into an existing SQLite schema.
+- Use ``--mysql-tables`` or ``--exclude-mysql-tables`` to transfer a table
+  subset; this disables foreign key transfer.
+- Use ``--mysql-ssl-ca``, ``--mysql-ssl-cert``, and ``--mysql-ssl-key`` for
+  certificate-based MySQL connections.
+
+See :doc:`README` for full recipes, option notes, and MySQL/MariaDB caveats.
 
 .. toctree::
    :maxdepth: 2
@@ -44,16 +66,16 @@ Indices and tables
    :target: https://formulae.brew.sh/formula/mysql-to-sqlite3
 .. |PyPI - Python Version| image:: https://img.shields.io/pypi/pyversions/mysql-to-sqlite3?logo=python
    :target: https://pypi.org/project/mysql-to-sqlite3/
-.. |MySQL Support| image:: https://img.shields.io/static/v1?logo=mysql&label=MySQL&message=5.5+%7C+5.6+%7C+5.7+%7C+8.0&color=2b5d80
-   :target: https://img.shields.io/static/v1?label=MySQL&message=5.6+%7C+5.7+%7C+8.0&color=2b5d80
-.. |MariaDB Support| image:: https://img.shields.io/static/v1?logo=mariadb&label=MariaDB&message=5.5+%7C+10.0+%7C+10.1+%7C+10.2+%7C+10.3+%7C+10.4+%7C+10.5+%7C+10.6%7C+10.11&color=C0765A
-   :target: https://img.shields.io/static/v1?label=MariaDB&message=10.0+%7C+10.1+%7C+10.2+%7C+10.3+%7C+10.4+%7C+10.5&color=C0765A
+.. |MySQL Support| image:: https://img.shields.io/static/v1?logo=mysql&label=MySQL&message=5.5%7C5.6%7C5.7%7C8.0%7C8.4&color=2b5d80
+   :target: https://github.com/techouse/mysql-to-sqlite3/actions/workflows/test.yml
+.. |MariaDB Support| image:: https://img.shields.io/static/v1?logo=mariadb&label=MariaDB&message=5.5%7C10.0%7C10.6%7C10.11%7C11.4%7C11.8&color=C0765A
+   :target: https://github.com/techouse/mysql-to-sqlite3/actions/workflows/test.yml
 .. |GitHub license| image:: https://img.shields.io/github/license/techouse/mysql-to-sqlite3
    :target: https://github.com/techouse/mysql-to-sqlite3/blob/master/LICENSE
 .. |Contributor Covenant| image:: https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg?logo=contributorcovenant
    :target: CODE-OF-CONDUCT.md
 .. |PyPI - Format| image:: https://img.shields.io/pypi/format/mysql-to-sqlite3?logo=python
-   :target: https://pypi.org/project/sqlite3-to-mysql/
+   :target: https://pypi.org/project/mysql-to-sqlite3/
 .. |Code style: black| image:: https://img.shields.io/badge/code%20style-black-000000.svg?logo=python
    :target: https://github.com/ambv/black
 .. |Codacy Badge| image:: https://api.codacy.com/project/badge/Grade/64aae8e9599746d58d277852b35cc2bd
@@ -61,7 +83,7 @@ Indices and tables
 .. |Test Status| image:: https://github.com/techouse/mysql-to-sqlite3/actions/workflows/test.yml/badge.svg
    :target: https://github.com/techouse/mysql-to-sqlite3/actions/workflows/test.yml
 .. |CodeQL Status| image:: https://github.com/techouse/mysql-to-sqlite3/actions/workflows/github-code-scanning/codeql/badge.svg
-   :target: https://github.com/techouse/mysql-to-sqlite3/actions/workflows/codeql-analysis.yml
+   :target: https://github.com/techouse/mysql-to-sqlite3/actions/workflows/github-code-scanning/codeql
 .. |Publish PyPI Package Status| image:: https://github.com/techouse/mysql-to-sqlite3/actions/workflows/publish.yml/badge.svg
    :target: https://github.com/techouse/mysql-to-sqlite3/actions/workflows/publish.yml
 .. |codecov| image:: https://codecov.io/gh/techouse/mysql-to-sqlite3/branch/master/graph/badge.svg
