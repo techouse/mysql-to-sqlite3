@@ -2,7 +2,7 @@
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/mysql-to-sqlite3?logo=pypi&label=PyPI%20downloads)](https://pypistats.org/packages/mysql-to-sqlite3)
 [![Homebrew Formula Downloads](https://img.shields.io/homebrew/installs/dm/mysql-to-sqlite3?logo=homebrew&label=Homebrew%20downloads)](https://formulae.brew.sh/formula/mysql-to-sqlite3)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mysql-to-sqlite3?logo=python)](https://pypi.org/project/mysql-to-sqlite3/)
-[![MySQL Support](https://img.shields.io/static/v1?logo=mysql&label=MySQL&message=5.5%7C5.6%7C5.7%7C8.0%7C8.4&color=2b5d80)](https://github.com/techouse/mysql-to-sqlite3/actions/workflows/test.yml)
+[![MySQL Support](https://img.shields.io/static/v1?logo=mysql&label=MySQL&message=5.5%7C5.6%7C5.7%7C8.0%7C8.4%7C9.7&color=2b5d80)](https://github.com/techouse/mysql-to-sqlite3/actions/workflows/test.yml)
 [![MariaDB Support](https://img.shields.io/static/v1?logo=mariadb&label=MariaDB&message=5.5%7C10.0%7C10.6%7C10.11%7C11.4%7C11.8&color=C0765A)](https://github.com/techouse/mysql-to-sqlite3/actions/workflows/test.yml)
 [![GitHub license](https://img.shields.io/github/license/techouse/mysql-to-sqlite3)](https://github.com/techouse/mysql-to-sqlite3/blob/master/LICENSE)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg?logo=contributorcovenant)](CODE-OF-CONDUCT.md)
@@ -192,40 +192,40 @@ Use `--skip-ssl` only when you explicitly need to disable MySQL connection encry
 
 ## Options at a glance
 
-| Option | Purpose |
-| --- | --- |
-| `-f`, `--sqlite-file PATH` | Destination SQLite database file. Required. |
-| `-d`, `--mysql-database TEXT` | Source MySQL/MariaDB database name. Required. |
-| `-u`, `--mysql-user TEXT` | MySQL/MariaDB user. Required. |
-| `-p`, `--prompt-mysql-password` | Prompt for the MySQL password. Preferred for interactive use. |
-| `--mysql-password TEXT` | Provide the MySQL password directly. Useful for automation, but handle carefully. |
-| `-h`, `--mysql-host TEXT` | MySQL host. Defaults to `localhost`. |
-| `-P`, `--mysql-port INTEGER` | MySQL port. Defaults to `3306`. |
-| `-t`, `--mysql-tables TUPLE` | Transfer only the listed tables. Implies no foreign key transfer. |
-| `-e`, `--exclude-mysql-tables TUPLE` | Transfer every table except the listed tables. Implies no foreign key transfer. |
-| `-T`, `--mysql-views-as-tables` | Materialize MySQL views as SQLite tables instead of creating SQLite views. |
-| `-L`, `--limit-rows INTEGER` | Transfer at most this many rows from each table. `0` means no limit. |
-| `-C`, `--collation [BINARY\|NOCASE\|RTRIM]` | Add a SQLite collation to text-affinity columns. Defaults to `BINARY`. |
-| `-K`, `--prefix-indices` | Prefix SQLite index names with their table names. |
-| `-X`, `--without-foreign-keys` | Do not create foreign keys in the SQLite schema. |
-| `-Z`, `--without-tables` | Skip table/view creation and transfer data only. |
-| `-W`, `--without-data` | Create schema only and skip table data. |
-| `-M`, `--strict` | Request SQLite STRICT tables; older SQLite versions fall back to non-STRICT tables with a warning. |
-| `--mysql-charset TEXT` | MySQL database and table character set. Defaults to `utf8mb4`. |
-| `--mysql-collation TEXT` | MySQL database and table collation. Must belong to the selected charset. |
-| `--mysql-ssl-ca PATH` | Path to an SSL CA certificate file. |
-| `--mysql-ssl-cert PATH` | Path to an SSL client certificate file. Must be paired with `--mysql-ssl-key`. |
-| `--mysql-ssl-key PATH` | Path to an SSL client key file. Must be paired with `--mysql-ssl-cert`. |
-| `-S`, `--skip-ssl` | Disable MySQL connection encryption. Cannot be used with SSL certificate options. |
-| `-c`, `--chunk INTEGER` | Read and write SQL records in batches. Defaults to `200000`. |
-| `-l`, `--log-file PATH` | Write logs to a file. |
-| `--json-as-text` | Force MySQL/MariaDB JSON columns to SQLite `TEXT`. |
-| `-V`, `--vacuum` | Run SQLite `VACUUM` after transfer. |
-| `--use-buffered-cursors` | Use buffered MySQL cursors. |
-| `-q`, `--quiet` | Show only errors after the initial command banner. |
-| `--debug` | Re-raise exceptions for debugging instead of printing friendly errors. |
-| `--version` | Show environment and dependency versions. |
-| `--help` | Show CLI help. |
+| Option                                      | Purpose                                                                                            |
+|---------------------------------------------|----------------------------------------------------------------------------------------------------|
+| `-f`, `--sqlite-file PATH`                  | Destination SQLite database file. Required.                                                        |
+| `-d`, `--mysql-database TEXT`               | Source MySQL/MariaDB database name. Required.                                                      |
+| `-u`, `--mysql-user TEXT`                   | MySQL/MariaDB user. Required.                                                                      |
+| `-p`, `--prompt-mysql-password`             | Prompt for the MySQL password. Preferred for interactive use.                                      |
+| `--mysql-password TEXT`                     | Provide the MySQL password directly. Useful for automation, but handle carefully.                  |
+| `-h`, `--mysql-host TEXT`                   | MySQL host. Defaults to `localhost`.                                                               |
+| `-P`, `--mysql-port INTEGER`                | MySQL port. Defaults to `3306`.                                                                    |
+| `-t`, `--mysql-tables TUPLE`                | Transfer only the listed tables. Implies no foreign key transfer.                                  |
+| `-e`, `--exclude-mysql-tables TUPLE`        | Transfer every table except the listed tables. Implies no foreign key transfer.                    |
+| `-T`, `--mysql-views-as-tables`             | Materialize MySQL views as SQLite tables instead of creating SQLite views.                         |
+| `-L`, `--limit-rows INTEGER`                | Transfer at most this many rows from each table. `0` means no limit.                               |
+| `-C`, `--collation [BINARY\|NOCASE\|RTRIM]` | Add a SQLite collation to text-affinity columns. Defaults to `BINARY`.                             |
+| `-K`, `--prefix-indices`                    | Prefix SQLite index names with their table names.                                                  |
+| `-X`, `--without-foreign-keys`              | Do not create foreign keys in the SQLite schema.                                                   |
+| `-Z`, `--without-tables`                    | Skip table/view creation and transfer data only.                                                   |
+| `-W`, `--without-data`                      | Create schema only and skip table data.                                                            |
+| `-M`, `--strict`                            | Request SQLite STRICT tables; older SQLite versions fall back to non-STRICT tables with a warning. |
+| `--mysql-charset TEXT`                      | MySQL database and table character set. Defaults to `utf8mb4`.                                     |
+| `--mysql-collation TEXT`                    | MySQL database and table collation. Must belong to the selected charset.                           |
+| `--mysql-ssl-ca PATH`                       | Path to an SSL CA certificate file.                                                                |
+| `--mysql-ssl-cert PATH`                     | Path to an SSL client certificate file. Must be paired with `--mysql-ssl-key`.                     |
+| `--mysql-ssl-key PATH`                      | Path to an SSL client key file. Must be paired with `--mysql-ssl-cert`.                            |
+| `-S`, `--skip-ssl`                          | Disable MySQL connection encryption. Cannot be used with SSL certificate options.                  |
+| `-c`, `--chunk INTEGER`                     | Read and write SQL records in batches. Defaults to `200000`.                                       |
+| `-l`, `--log-file PATH`                     | Write logs to a file.                                                                              |
+| `--json-as-text`                            | Force MySQL/MariaDB JSON columns to SQLite `TEXT`.                                                 |
+| `-V`, `--vacuum`                            | Run SQLite `VACUUM` after transfer.                                                                |
+| `--use-buffered-cursors`                    | Use buffered MySQL cursors.                                                                        |
+| `-q`, `--quiet`                             | Show only errors after the initial command banner.                                                 |
+| `--debug`                                   | Re-raise exceptions for debugging instead of printing friendly errors.                             |
+| `--version`                                 | Show environment and dependency versions.                                                          |
+| `--help`                                    | Show CLI help.                                                                                     |
 
 ## Combinations and caveats
 
