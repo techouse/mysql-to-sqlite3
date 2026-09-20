@@ -1,6 +1,15 @@
+# 2.6.1
+
+* [FEAT] add MySQL 9.7.0 support
+* [FIX] improve error message formatting
+* [DOCS] improve project documentation and user guidance
+* [CHORE] stop upgrading pip during Docker image builds
+* [CHORE] update GitHub Actions dependencies
+* [TEST] improve test readability
+
 # 2.6.0
 
-* [FEAT] Add MySQL SSL certificate options: `--mysql-ssl-ca`, `--mysql-ssl-cert`, `--mysql-ssl-key`
+* [FEAT] add MySQL SSL certificate options: `--mysql-ssl-ca`, `--mysql-ssl-cert`, `--mysql-ssl-key`
 * [TEST] close DockerClient instances in test fixtures
 
 # 2.5.7
