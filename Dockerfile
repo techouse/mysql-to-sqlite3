@@ -2,7 +2,6 @@ FROM python:3.14-alpine
 
 LABEL maintainer="https://github.com/techouse"
 
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir mysql-to-sqlite3
+RUN pip install --no-cache-dir mysql-to-sqlite3
 
 ENTRYPOINT ["mysql2sqlite"]
