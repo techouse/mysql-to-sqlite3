@@ -83,6 +83,18 @@ jobs:
             experimental: true
             py: "3.14t"
 
+          - toxenv: "python3.15"
+            db: "mariadb:5.5"
+            legacy_db: 1
+            experimental: true
+            py: "3.15"
+
+          - toxenv: "python3.15t"
+            db: "mariadb:5.5"
+            legacy_db: 1
+            experimental: true
+            py: "3.15t"
+            
           - toxenv: "python3.9"
             db: "mariadb:10.0"
             legacy_db: 1
@@ -125,6 +137,18 @@ jobs:
             experimental: true
             py: "3.14t"
 
+          - toxenv: "python3.15"
+            db: "mariadb:10.0"
+            legacy_db: 1
+            experimental: true
+            py: "3.15"
+
+          - toxenv: "python3.15t"
+            db: "mariadb:10.0"
+            legacy_db: 1
+            experimental: true
+            py: "3.15t"
+            
           - toxenv: "python3.9"
             db: "mariadb:10.6"
             legacy_db: 0
@@ -167,6 +191,18 @@ jobs:
             experimental: true
             py: "3.14t"
 
+          - toxenv: "python3.15"
+            db: "mariadb:10.6"
+            legacy_db: 0
+            experimental: true
+            py: "3.15"
+
+          - toxenv: "python3.15t"
+            db: "mariadb:10.6"
+            legacy_db: 0
+            experimental: true
+            py: "3.15t"
+            
           - toxenv: "python3.9"
             db: "mariadb:10.11"
             legacy_db: 0
@@ -209,6 +245,18 @@ jobs:
             experimental: true
             py: "3.14t"
 
+          - toxenv: "python3.15"
+            db: "mariadb:10.11"
+            legacy_db: 0
+            experimental: true
+            py: "3.15"
+
+          - toxenv: "python3.15t"
+            db: "mariadb:10.11"
+            legacy_db: 0
+            experimental: true
+            py: "3.15t"
+            
           - toxenv: "python3.9"
             db: "mariadb:11.4"
             legacy_db: 0
@@ -251,6 +299,18 @@ jobs:
             experimental: true
             py: "3.14t"
 
+          - toxenv: "python3.15"
+            db: "mariadb:11.4"
+            legacy_db: 0
+            experimental: true
+            py: "3.15"
+
+          - toxenv: "python3.15t"
+            db: "mariadb:11.4"
+            legacy_db: 0
+            experimental: true
+            py: "3.15t"
+            
           - toxenv: "python3.9"
             db: "mariadb:11.8"
             legacy_db: 0
@@ -293,6 +353,18 @@ jobs:
             experimental: true
             py: "3.14t"
 
+          - toxenv: "python3.15"
+            db: "mariadb:11.8"
+            legacy_db: 0
+            experimental: true
+            py: "3.15"
+
+          - toxenv: "python3.15t"
+            db: "mariadb:11.8"
+            legacy_db: 0
+            experimental: true
+            py: "3.15t"
+            
           - toxenv: "python3.9"
             db: "mariadb:12.3"
             legacy_db: 0
@@ -335,6 +407,18 @@ jobs:
             experimental: true
             py: "3.14t"
 
+          - toxenv: "python3.15"
+            db: "mariadb:12.3"
+            legacy_db: 0
+            experimental: true
+            py: "3.15"
+
+          - toxenv: "python3.15t"
+            db: "mariadb:12.3"
+            legacy_db: 0
+            experimental: true
+            py: "3.15t"
+            
           - toxenv: "python3.9"
             db: "mysql:5.5"
             legacy_db: 1
@@ -377,6 +461,18 @@ jobs:
             experimental: true
             py: "3.14t"
 
+          - toxenv: "python3.15"
+            db: "mysql:5.5"
+            legacy_db: 1
+            experimental: true
+            py: "3.15"
+
+          - toxenv: "python3.15t"
+            db: "mysql:5.5"
+            legacy_db: 1
+            experimental: true
+            py: "3.15t"
+            
           - toxenv: "python3.9"
             db: "mysql:5.6"
             legacy_db: 1
@@ -419,6 +515,18 @@ jobs:
             experimental: true
             py: "3.14t"
 
+          - toxenv: "python3.15"
+            db: "mysql:5.6"
+            legacy_db: 1
+            experimental: true
+            py: "3.15"
+
+          - toxenv: "python3.15t"
+            db: "mysql:5.6"
+            legacy_db: 1
+            experimental: true
+            py: "3.15t"
+            
           - toxenv: "python3.9"
             db: "mysql:5.7"
             legacy_db: 0
@@ -461,6 +569,18 @@ jobs:
             experimental: true
             py: "3.14t"
 
+          - toxenv: "python3.15"
+            db: "mysql:5.7"
+            legacy_db: 0
+            experimental: true
+            py: "3.15"
+
+          - toxenv: "python3.15t"
+            db: "mysql:5.7"
+            legacy_db: 0
+            experimental: true
+            py: "3.15t"
+            
           - toxenv: "python3.9"
             db: "mysql:8.0"
             legacy_db: 0
@@ -503,6 +623,18 @@ jobs:
             experimental: true
             py: "3.14t"
 
+          - toxenv: "python3.15"
+            db: "mysql:8.0"
+            legacy_db: 0
+            experimental: true
+            py: "3.15"
+
+          - toxenv: "python3.15t"
+            db: "mysql:8.0"
+            legacy_db: 0
+            experimental: true
+            py: "3.15t"
+            
           - toxenv: "python3.9"
             db: "mysql:8.4"
             legacy_db: 0
@@ -545,6 +677,18 @@ jobs:
             experimental: true
             py: "3.14t"
 
+          - toxenv: "python3.15"
+            db: "mysql:8.4"
+            legacy_db: 0
+            experimental: true
+            py: "3.15"
+
+          - toxenv: "python3.15t"
+            db: "mysql:8.4"
+            legacy_db: 0
+            experimental: true
+            py: "3.15t"
+            
           - toxenv: "python3.9"
             db: "mysql:9.7"
             legacy_db: 0
@@ -587,6 +731,18 @@ jobs:
             experimental: true
             py: "3.14t"
 
+          - toxenv: "python3.15"
+            db: "mysql:9.7"
+            legacy_db: 0
+            experimental: true
+            py: "3.15"
+
+          - toxenv: "python3.15t"
+            db: "mysql:9.7"
+            legacy_db: 0
+            experimental: true
+            py: "3.15t"
+            
     continue-on-error: ${{ matrix.experimental }}
     services:
       mysql:
