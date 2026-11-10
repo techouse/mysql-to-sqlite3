@@ -46,6 +46,11 @@ class TestSQLiteUtils:
         assert convert_timedelta("01:30:00") == timedelta(hours=1, minutes=30, seconds=0)
         assert convert_timedelta("00:01:30") == timedelta(hours=0, minutes=1, seconds=30)
 
+    def test_convert_timedelta_invalid_value(self) -> None:
+        """Test convert_timedelta raises a clear error on unparsable values."""
+        with pytest.raises(ValueError, match="Invalid TIME value"):
+            convert_timedelta("garbage")
+
     def test_encode_data_for_sqlite_string(self) -> None:
         """Test encode_data_for_sqlite with string."""
         assert encode_data_for_sqlite("test") == "test"

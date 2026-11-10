@@ -29,7 +29,10 @@ def adapt_timedelta(value: t.Any) -> str:
 
 def convert_timedelta(value: t.Any) -> timedelta:
     """Convert %H:%M:%S string to datetime.timedelta."""
-    return timedelta(seconds=parse(value))
+    seconds = parse(value)
+    if seconds is None:
+        raise ValueError(f"Invalid TIME value: {value!r}")
+    return timedelta(seconds=seconds)
 
 
 def encode_data_for_sqlite(value: t.Any) -> t.Any:
